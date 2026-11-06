@@ -2,11 +2,12 @@
 ### Real-Time Space Situational Awareness, Conjunction Assessment & Ground Station Toolkit
 
 [![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20v4.2-000000.svg?style=flat&logo=vercel)](https://orbit-guard-tan.vercel.app)
+[![Windows Desktop](https://img.shields.io/badge/Windows%20App-Electron%2031%20%7C%20x64-0078D6.svg?style=flat&logo=windows)](https://github.com/Hitesh070/Orbit-Guard/releases)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Hitesh070%2FOrbit--Guard-181717.svg?style=flat&logo=github)](https://github.com/Hitesh070/Orbit-Guard)
 [![Astrodynamics](https://img.shields.io/badge/Astrodynamics-SGP4%20%7C%20Vallado%20Verified-009688.svg?style=flat)](https://celestrak.org)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-61DAFB.svg?style=flat&logo=react)](https://reactjs.org/)
 [![Three.js](https://img.shields.io/badge/3D%20Graphics-Three.js%20%7C%20GPU%20Shader-black.svg?style=flat&logo=three.js)](https://threejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-35%20Vitest%20%2B%208%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
+[![Tests](https://img.shields.io/badge/Tests-66%20Vitest%20%2B%208%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **OrbitGuard** is an advanced, production-grade Space Situational Awareness (SSA) and RF ground-station operations platform. It propagates thousands of active spacecraft and space debris fragments in real time, evaluates bivariate collision probabilities ($P_c$) via 2-D encounter plane integration, estimates RF Doppler shifts with Earth-rotation tangential velocity compensation, computes pass-resolved link budgets, and drives dual-axis antenna rotators.
@@ -15,8 +16,13 @@
 
 ## 🌐 Live Production Deployment
 
-- **Production Application**: [https://orbit-guard-tan.vercel.app](https://orbit-guard-tan.vercel.app)
+- **Production Web Application**: [https://orbit-guard-tan.vercel.app](https://orbit-guard-tan.vercel.app)
+- **Windows Desktop Releases**: [GitHub Releases (NSIS Installer, Portable .exe, .zip)](https://github.com/Hitesh070/Orbit-Guard/releases)
 - **Source Code**: [https://github.com/Hitesh070/Orbit-Guard](https://github.com/Hitesh070/Orbit-Guard)
+- **Desktop Architecture Specification**: [`docs/DESKTOP_ARCHITECTURE.md`](docs/DESKTOP_ARCHITECTURE.md)
+- **Windows Hardware & Serial Setup Guide**: [`docs/hardware/WINDOWS_SERIAL_SETUP.md`](docs/hardware/WINDOWS_SERIAL_SETUP.md)
+- **Windows Testing & Verification Matrix**: [`docs/WINDOWS_TESTING.md`](docs/WINDOWS_TESTING.md)
+- **ADR 003 (Electron Architecture Choice)**: [`docs/adr/003-electron-over-tauri.md`](docs/adr/003-electron-over-tauri.md)
 - **Technical Interview Notes**: [`docs/INTERVIEW_NOTES.md`](docs/INTERVIEW_NOTES.md)
 - **90-Second Demo Presentation Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
@@ -105,31 +111,42 @@ flowchart TD
 ## ⚡ Quick Start & Local Development
 
 ### 1. Prerequisites
-- **Node.js**: v18+ and `npm`
+- **Node.js**: v20+ and `npm`
 - **Python**: v3.11+ and `pip`
 
-### 2. Frontend Setup
+### 2. Web Development (Browser)
 ```bash
-cd frontend
-npm install
-npm run dev
+# Start frontend dev server
+npm run dev:web
 ```
 Open [http://localhost:5173](http://localhost:5173).
 
-### 3. Run Test Suite
+### 3. Windows Desktop Development (Electron + Hot Reload)
 ```bash
-# Frontend Unit & Validation Tests (Vitest - 31 tests)
-npm test --prefix frontend
+# Launch Electron dev environment with live Vite reload
+npm run dev:desktop
+```
+
+### 4. Build Windows Installers & Packages
+```bash
+# Produces NSIS Setup, Portable .exe, and .zip in dist-electron/
+npm run dist:win
+```
+
+### 5. Run Test Suite
+```bash
+# Full Test Suite (66 Vitest unit tests: 35 frontend + 31 desktop)
+npm test
 
 # Backend Math & Conjunction Tests (Pytest - 8 tests)
 pytest tests/
 ```
 
-### 4. Optional: Run Local Antenna Rotator Bridge Daemon
+### 6. Optional: Run Local Antenna Rotator Bridge Daemon
 ```bash
 python tools/orbitguard-bridge/bridge.py
 ```
-Starts WebSocket server on `ws://127.0.0.1:8765` bridging to USB serial or internal GS-232 emulator.
+Starts WebSocket server on `ws://127.0.0.1:8765` bridging to USB serial or internal GS-232 emulator. Note that on Windows Desktop, the built-in Native Serial and Hamlib rotctld options connect directly without needing this bridge daemon.
 
 ---
 

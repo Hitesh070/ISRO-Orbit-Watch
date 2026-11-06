@@ -1,0 +1,59 @@
+name: Release Windows Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    name: Build & Release Windows Packages (x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+
+      - name: Run Full Test Suite
+        run: npm test
+
+      - name: Build Windows Desktop Installers (NSIS, Portable, Zip)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:win
+
+      - name: Generate SHA-256 Checksums
+        shell: pwsh
+        run: |
+          Get-FileHash -Path dist-electron/OrbitGuard-*.exe, dist-electron/OrbitGuard-*.zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $($_.Path | Split-Path -Leaf)" } |
+            Out-File -FilePath dist-electron/SHA256SUMS.txt -Encoding utf8
+          Get-Content dist-electron/SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist-electron/OrbitGuard-Setup-*.exe
+            dist-electron/OrbitGuard-Portable-*.exe
+            dist-electron/OrbitGuard-*-win.zip
+            dist-electron/latest.yml
+            dist-electron/SHA256SUMS.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true

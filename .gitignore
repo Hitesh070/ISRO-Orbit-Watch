@@ -17,6 +17,10 @@ frontend/dist/
 dist/
 .vite/
 
+# Electron
+dist-electron/
+desktop/dist/
+
 # System / OS
 .DS_Store
 Thumbs.db

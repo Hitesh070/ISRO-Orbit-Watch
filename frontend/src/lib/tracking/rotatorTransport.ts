@@ -13,8 +13,9 @@ import {
   encodeGS232Query,
   parseGS232Reply,
 } from './protocolEncoders';
+import { platform } from '../../platform';
 
-export type TransportType = 'SIMULATOR' | 'WEB_SERIAL' | 'LOCAL_BRIDGE';
+export type TransportType = 'SIMULATOR' | 'NATIVE_SERIAL' | 'WEB_SERIAL' | 'LOCAL_BRIDGE' | 'TCP_ROTCTLD';
 
 export interface RotatorStatus {
   connected: boolean;
@@ -461,3 +462,291 @@ export class LocalBridgeTransport implements RotatorTransport {
     this.statusListeners.forEach((cb) => cb(s));
   }
 }
+
+// ==========================================
+// 4. NATIVE SERIAL TRANSPORT (Desktop COM Ports via platform.serial)
+// ==========================================
+
+export class NativeSerialTransport implements RotatorTransport {
+  public type: TransportType = 'NATIVE_SERIAL';
+
+  private status: RotatorStatus = {
+    connected: false,
+    transportType: 'NATIVE_SERIAL',
+    actualAz: 0.0,
+    actualEl: 0.0,
+    commandedAz: 0.0,
+    commandedEl: 0.0,
+    isMoving: false,
+    pointingErrorDeg: 0.0,
+    error: null,
+    lastUpdatedMs: Date.now(),
+  };
+
+  private statusListeners = new Set<(status: RotatorStatus) => void>();
+  private logListeners = new Set<(entry: CommandLogEntry) => void>();
+  private unsubscribeListeners: Array<() => void> = [];
+
+  async connect(options?: { path: string; baudRate?: number }): Promise<boolean> {
+    if (!options?.path) {
+      this.status.error = 'Please select a COM port';
+      this.notifyStatus();
+      return false;
+    }
+
+    const res = await platform.serial.open({
+      path: options.path,
+      baudRate: options.baudRate || 9600,
+    });
+
+    if (!res.success) {
+      this.status.connected = false;
+      this.status.error = res.error || 'Failed to open serial port';
+      this.emitLog(`ERROR: ${this.status.error}`, 'RX');
+      this.notifyStatus();
+      return false;
+    }
+
+    this.status.connected = true;
+    this.status.error = null;
+    this.emitLog(`NATIVE_SERIAL: Connected to ${options.path} @ ${options.baudRate || 9600} baud`, 'RX');
+
+    // Subscribe to incoming stream
+    const unsubData = platform.serial.onData((data) => {
+      this.emitLog(data.trim(), 'RX');
+      const parsed = parseGS232Reply(data);
+      if (parsed) {
+        this.status.actualAz = parsed.azDeg;
+        this.status.actualEl = parsed.elDeg;
+        this.status.lastUpdatedMs = Date.now();
+        this.notifyStatus();
+      }
+    });
+
+    const unsubErr = platform.serial.onError((err) => {
+      this.status.error = err;
+      this.emitLog(`ERROR: ${err}`, 'RX');
+      this.notifyStatus();
+    });
+
+    const unsubDisc = platform.serial.onDisconnect(() => {
+      this.status.connected = false;
+      this.emitLog('NATIVE_SERIAL: Port disconnected.', 'RX');
+      this.notifyStatus();
+    });
+
+    this.unsubscribeListeners = [unsubData, unsubErr, unsubDisc];
+    this.notifyStatus();
+    return true;
+  }
+
+  async disconnect(): Promise<void> {
+    this.unsubscribeListeners.forEach((unsub) => unsub());
+    this.unsubscribeListeners = [];
+    await platform.serial.close();
+    this.status.connected = false;
+    this.emitLog('NATIVE_SERIAL: Disconnected.', 'RX');
+    this.notifyStatus();
+  }
+
+  async setTarget(azDeg: number, elDeg: number): Promise<void> {
+    if (!this.status.connected) return;
+    this.status.commandedAz = azDeg;
+    this.status.commandedEl = elDeg;
+    this.status.isMoving = true;
+
+    const cmd = encodeGS232Position(azDeg, elDeg);
+    const res = await platform.serial.write(cmd);
+    if (!res.success) {
+      this.status.error = res.error || 'Write error';
+    } else {
+      this.emitLog(cmd.trim(), 'TX');
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (!this.status.connected) return;
+    this.status.isMoving = false;
+    const cmd = encodeGS232Stop();
+    await platform.serial.write(cmd);
+    this.emitLog(cmd.trim(), 'TX');
+  }
+
+  getStatus(): RotatorStatus {
+    return { ...this.status };
+  }
+
+  onStatusUpdate(listener: (status: RotatorStatus) => void): () => void {
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
+  }
+
+  onCommandLog(listener: (entry: CommandLogEntry) => void): () => void {
+    this.logListeners.add(listener);
+    return () => this.logListeners.delete(listener);
+  }
+
+  private emitLog(command: string, direction: 'TX' | 'RX') {
+    const entry: CommandLogEntry = {
+      time: new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      command,
+      direction,
+    };
+    this.logListeners.forEach((cb) => cb(entry));
+  }
+
+  private notifyStatus() {
+    const s = this.getStatus();
+    this.statusListeners.forEach((cb) => cb(s));
+  }
+}
+
+// ==========================================
+// 5. TCP ROTCTLD TRANSPORT (Hamlib rotctld)
+// ==========================================
+
+export class TcpTransport implements RotatorTransport {
+  public type: TransportType = 'TCP_ROTCTLD';
+
+  private status: RotatorStatus = {
+    connected: false,
+    transportType: 'TCP_ROTCTLD',
+    actualAz: 0.0,
+    actualEl: 0.0,
+    commandedAz: 0.0,
+    commandedEl: 0.0,
+    isMoving: false,
+    pointingErrorDeg: 0.0,
+    error: null,
+    lastUpdatedMs: Date.now(),
+  };
+
+  private statusListeners = new Set<(status: RotatorStatus) => void>();
+  private logListeners = new Set<(entry: CommandLogEntry) => void>();
+  private unsubscribeListeners: Array<() => void> = [];
+
+  async connect(options?: { host?: string; port?: number }): Promise<boolean> {
+    const res = await platform.rotctld.connect({
+      host: options?.host || '127.0.0.1',
+      port: options?.port || 4533,
+    });
+
+    if (!res.success) {
+      this.status.connected = false;
+      this.status.error = res.error || 'Connection failed';
+      this.emitLog(`ERROR: ${this.status.error}`, 'RX');
+      this.notifyStatus();
+      return false;
+    }
+
+    this.status.connected = true;
+    this.status.error = null;
+    this.emitLog(`rotctld: Connected to ${options?.host || '127.0.0.1'}:${options?.port || 4533}`, 'RX');
+
+    const unsubData = platform.rotctld.onData((data) => {
+      this.emitLog(data.trim(), 'RX');
+      // Format: <az> <el> or similar
+      const parts = data.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        const az = parseFloat(parts[0]);
+        const el = parseFloat(parts[1]);
+        if (!isNaN(az) && !isNaN(el)) {
+          this.status.actualAz = az;
+          this.status.actualEl = el;
+          this.status.lastUpdatedMs = Date.now();
+          this.notifyStatus();
+        }
+      }
+    });
+
+    const unsubErr = platform.rotctld.onError((err) => {
+      this.status.error = err;
+      this.emitLog(`ERROR: ${err}`, 'RX');
+      this.notifyStatus();
+    });
+
+    this.unsubscribeListeners = [unsubData, unsubErr];
+    this.notifyStatus();
+    return true;
+  }
+
+  async disconnect(): Promise<void> {
+    this.unsubscribeListeners.forEach((unsub) => unsub());
+    this.unsubscribeListeners = [];
+    await platform.rotctld.disconnect();
+    this.status.connected = false;
+    this.emitLog('rotctld: Disconnected.', 'RX');
+    this.notifyStatus();
+  }
+
+  async setTarget(azDeg: number, elDeg: number): Promise<void> {
+    if (!this.status.connected) return;
+    this.status.commandedAz = azDeg;
+    this.status.commandedEl = elDeg;
+    this.status.isMoving = true;
+
+    const cmd = `P ${azDeg.toFixed(1)} ${elDeg.toFixed(1)}`;
+    const res = await platform.rotctld.sendCommand(cmd);
+    if (!res.success) {
+      this.status.error = res.error || 'Write error';
+    } else {
+      this.emitLog(cmd, 'TX');
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (!this.status.connected) return;
+    this.status.isMoving = false;
+    await platform.rotctld.sendCommand('S');
+    this.emitLog('S', 'TX');
+  }
+
+  getStatus(): RotatorStatus {
+    return { ...this.status };
+  }
+
+  onStatusUpdate(listener: (status: RotatorStatus) => void): () => void {
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
+  }
+
+  onCommandLog(listener: (entry: CommandLogEntry) => void): () => void {
+    this.logListeners.add(listener);
+    return () => this.logListeners.delete(listener);
+  }
+
+  private emitLog(command: string, direction: 'TX' | 'RX') {
+    const entry: CommandLogEntry = {
+      time: new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      command,
+      direction,
+    };
+    this.logListeners.forEach((cb) => cb(entry));
+  }
+
+  private notifyStatus() {
+    const s = this.getStatus();
+    this.statusListeners.forEach((cb) => cb(s));
+  }
+}
+
+// ==========================================
+// 6. FACTORY
+// ==========================================
+
+export function createRotatorTransport(type: TransportType): RotatorTransport {
+  switch (type) {
+    case 'NATIVE_SERIAL':
+      return new NativeSerialTransport();
+    case 'TCP_ROTCTLD':
+      return new TcpTransport();
+    case 'WEB_SERIAL':
+      return new WebSerialTransport();
+    case 'LOCAL_BRIDGE':
+      return new LocalBridgeTransport();
+    case 'SIMULATOR':
+    default:
+      return new SimulatorTransport();
+  }
+}
+

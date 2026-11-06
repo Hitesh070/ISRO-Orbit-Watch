@@ -1,0 +1,1223 @@
+{
+  "screen_time_utc": "2026-11-06T16:22:20.735354+00:00",
+  "total_conjunctions": 27,
+  "critical_conjunctions": 0,
+  "warning_conjunctions": 5,
+  "conjunctions": [
+    {
+      "id": "CONJ-5730-35169-1794029898",
+      "tca_utc": "2026-11-07T05:38:18.613916+00:00",
+      "tca_timestamp_ms": 1794029898613,
+      "miss_distance_km": 1.016,
+      "relative_speed_kms": 14.635,
+      "pc_foster": 8.1783e-05,
+      "pc_max": 8.6419e-05,
+      "k_at_pc_max": 1.38,
+      "mahalanobis_dist": 1.66,
+      "hbr_m": 12.0,
+      "risk_level": "WARNING",
+      "status_color": "yellow",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 246.2,
+        "transverse": 253.6,
+        "normal": -952.1
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -0.5551,
+        "miss_y_km": -0.8505,
+        "cov_xx": 0.1128,
+        "cov_xy": 0.16028,
+        "cov_yy": 0.67131
+      },
+      "object1": {
+        "norad_id": 5730,
+        "name": "SL-8 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 0.82
+      },
+      "object2": {
+        "norad_id": 35169,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 2.17
+      }
+    },
+    {
+      "id": "CONJ-41877-31515-1794046031",
+      "tca_utc": "2026-11-07T10:07:11.090743+00:00",
+      "tca_timestamp_ms": 1794046031090,
+      "miss_distance_km": 3.894,
+      "relative_speed_kms": 2.05,
+      "pc_foster": 3.5501e-07,
+      "pc_max": 7.4642e-07,
+      "k_at_pc_max": 2.76,
+      "mahalanobis_dist": 2.35,
+      "hbr_m": 12.0,
+      "risk_level": "WARNING",
+      "status_color": "yellow",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 1698.0,
+        "transverse": 3474.3,
+        "normal": -458.9
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 2.0607,
+        "miss_y_km": 3.3043,
+        "cov_xx": 4.1694,
+        "cov_xy": 33.725,
+        "cov_yy": 312.5
+      },
+      "object1": {
+        "norad_id": 41877,
+        "name": "RESOURCESAT-2A",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.72
+      },
+      "object2": {
+        "norad_id": 31515,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 12.22
+      }
+    },
+    {
+      "id": "CONJ-41877-29798-1794060989",
+      "tca_utc": "2026-11-07T14:16:29.467277+00:00",
+      "tca_timestamp_ms": 1794060989467,
+      "miss_distance_km": 7.47,
+      "relative_speed_kms": 0.26,
+      "pc_foster": 3.0108e-11,
+      "pc_max": 3.2084e-06,
+      "k_at_pc_max": 15.67,
+      "mahalanobis_dist": 5.53,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 1108.4,
+        "transverse": 7335.9,
+        "normal": -872.2
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 3.5911,
+        "miss_y_km": -6.5504,
+        "cov_xx": 0.78056,
+        "cov_xy": -1.9218,
+        "cov_yy": 5.1038
+      },
+      "object1": {
+        "norad_id": 41877,
+        "name": "RESOURCESAT-2A",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.72
+      },
+      "object2": {
+        "norad_id": 29798,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.52
+      }
+    },
+    {
+      "id": "CONJ-11574-47062-1794032422",
+      "tca_utc": "2026-11-07T06:20:22.394983+00:00",
+      "tca_timestamp_ms": 1794032422394,
+      "miss_distance_km": 3.415,
+      "relative_speed_kms": 11.678,
+      "pc_foster": 1.3711e-13,
+      "pc_max": 1.345e-06,
+      "k_at_pc_max": 19.75,
+      "mahalanobis_dist": 6.34,
+      "hbr_m": 12.0,
+      "risk_level": "WARNING",
+      "status_color": "yellow",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 2038.3,
+        "transverse": 1732.3,
+        "normal": 2122.3
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -3.1124,
+        "miss_y_km": 1.4044,
+        "cov_xx": 2.2911,
+        "cov_xy": -3.8908,
+        "cov_yy": 7.0259
+      },
+      "object1": {
+        "norad_id": 11574,
+        "name": "SL-8 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.27
+      },
+      "object2": {
+        "norad_id": 47062,
+        "name": "COSMOS 2251 DEB",
+        "object_type": "Debris",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 3.56
+      }
+    },
+    {
+      "id": "CONJ-44804-36047-1794067650",
+      "tca_utc": "2026-11-07T16:07:30.147086+00:00",
+      "tca_timestamp_ms": 1794067650147,
+      "miss_distance_km": 5.983,
+      "relative_speed_kms": 3.144,
+      "pc_foster": 3.763e-14,
+      "pc_max": 4.6537e-07,
+      "k_at_pc_max": 20.93,
+      "mahalanobis_dist": 6.38,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -2511.8,
+        "transverse": -5313.3,
+        "normal": 1120.6
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 4.9109,
+        "miss_y_km": -3.4174,
+        "cov_xx": 48.024,
+        "cov_xy": -8.4047,
+        "cov_yy": 1.6337
+      },
+      "object1": {
+        "norad_id": 44804,
+        "name": "CARTOSAT-3",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.72
+      },
+      "object2": {
+        "norad_id": 36047,
+        "name": "COSMOS 2251 DEB",
+        "object_type": "Debris",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 5.47
+      }
+    },
+    {
+      "id": "CONJ-17590-32094-1794018741",
+      "tca_utc": "2026-11-07T02:32:21.484697+00:00",
+      "tca_timestamp_ms": 1794018741484,
+      "miss_distance_km": 5.025,
+      "relative_speed_kms": 14.801,
+      "pc_foster": 1.8726e-17,
+      "pc_max": 3.9694e-06,
+      "k_at_pc_max": 31.39,
+      "mahalanobis_dist": 7.81,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 887.2,
+        "transverse": -539.4,
+        "normal": -4916.1
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -2.5898,
+        "miss_y_km": -4.3057,
+        "cov_xx": 0.14612,
+        "cov_xy": 0.1175,
+        "cov_yy": 0.42177
+      },
+      "object1": {
+        "norad_id": 17590,
+        "name": "SL-16 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 0.8
+      },
+      "object2": {
+        "norad_id": 32094,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 3.77
+      }
+    },
+    {
+      "id": "CONJ-877-30312-1794058703",
+      "tca_utc": "2026-11-07T13:38:23.297230+00:00",
+      "tca_timestamp_ms": 1794058703297,
+      "miss_distance_km": 7.355,
+      "relative_speed_kms": 9.456,
+      "pc_foster": 8.0543e-22,
+      "pc_max": 1.6394e-06,
+      "k_at_pc_max": 39.58,
+      "mahalanobis_dist": 8.94,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -1762.8,
+        "transverse": 5534.7,
+        "normal": 4511.8
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 1.3376,
+        "miss_y_km": -7.2325,
+        "cov_xx": 0.61687,
+        "cov_xy": -1.252,
+        "cov_yy": 2.8061
+      },
+      "object1": {
+        "norad_id": 877,
+        "name": "SL-3 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.32
+      },
+      "object2": {
+        "norad_id": 30312,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 0.89
+      }
+    },
+    {
+      "id": "CONJ-19257-36274-1794058211",
+      "tca_utc": "2026-11-07T13:30:11.703066+00:00",
+      "tca_timestamp_ms": 1794058211703,
+      "miss_distance_km": 8.984,
+      "relative_speed_kms": 4.082,
+      "pc_foster": 2.4991e-25,
+      "pc_max": 5.7781e-07,
+      "k_at_pc_max": 47.09,
+      "mahalanobis_dist": 9.71,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -2606.7,
+        "transverse": 8273.6,
+        "normal": 2336.8
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 4.8972,
+        "miss_y_km": -7.5317,
+        "cov_xx": 7.2518,
+        "cov_xy": -6.0536,
+        "cov_yy": 5.1837
+      },
+      "object1": {
+        "norad_id": 19257,
+        "name": "SL-8 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.05
+      },
+      "object2": {
+        "norad_id": 36274,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 2.61
+      }
+    },
+    {
+      "id": "CONJ-16882-30546-1794006442",
+      "tca_utc": "2026-11-06T23:07:22.345209+00:00",
+      "tca_timestamp_ms": 1794006442345,
+      "miss_distance_km": 12.309,
+      "relative_speed_kms": 6.247,
+      "pc_foster": 5.6318e-27,
+      "pc_max": 1.1372e-06,
+      "k_at_pc_max": 52.88,
+      "mahalanobis_dist": 10.17,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -1789.5,
+        "transverse": -11081.7,
+        "normal": -5051.5
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 2.1419,
+        "miss_y_km": 12.1217,
+        "cov_xx": 0.47364,
+        "cov_xy": 1.2798,
+        "cov_yy": 3.8859
+      },
+      "object1": {
+        "norad_id": 16882,
+        "name": "SL-14 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.04
+      },
+      "object2": {
+        "norad_id": 30546,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.09
+      }
+    },
+    {
+      "id": "CONJ-36795-46990-1794033142",
+      "tca_utc": "2026-11-07T06:32:22.467689+00:00",
+      "tca_timestamp_ms": 1794033142467,
+      "miss_distance_km": 11.069,
+      "relative_speed_kms": 14.208,
+      "pc_foster": 6.4637e-40,
+      "pc_max": 5.4903e-07,
+      "k_at_pc_max": 79.32,
+      "mahalanobis_dist": 12.75,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 3437.1,
+        "transverse": -3762.4,
+        "normal": -9826.2
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -6.0652,
+        "miss_y_km": 9.2594,
+        "cov_xx": 2.1477,
+        "cov_xy": -1.5494,
+        "cov_yy": 1.2818
+      },
+      "object1": {
+        "norad_id": 36795,
+        "name": "CARTOSAT-2B",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.71
+      },
+      "object2": {
+        "norad_id": 46990,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 3.9
+      }
+    },
+    {
+      "id": "CONJ-17589-30654-1794032060",
+      "tca_utc": "2026-11-07T06:14:20.015569+00:00",
+      "tca_timestamp_ms": 1794032060015,
+      "miss_distance_km": 12.626,
+      "relative_speed_kms": 9.61,
+      "pc_foster": 1.5773e-48,
+      "pc_max": 4.6608e-07,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 14.22,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 3272.0,
+        "transverse": 9290.2,
+        "normal": 7900.1
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -6.8151,
+        "miss_y_km": 10.6292,
+        "cov_xx": 0.52772,
+        "cov_xy": -1.4632,
+        "cov_yy": 4.6552
+      },
+      "object1": {
+        "norad_id": 17589,
+        "name": "COSMOS 1833",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.07
+      },
+      "object2": {
+        "norad_id": 30654,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.9
+      }
+    },
+    {
+      "id": "CONJ-5560-30341-1794015771",
+      "tca_utc": "2026-11-07T01:42:51.327937+00:00",
+      "tca_timestamp_ms": 1794015771327,
+      "miss_distance_km": 3.913,
+      "relative_speed_kms": 0.935,
+      "pc_foster": 1.5914e-68,
+      "pc_max": 3.059e-07,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 17.16,
+      "hbr_m": 12.0,
+      "risk_level": "WARNING",
+      "status_color": "yellow",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -3833.4,
+        "transverse": 785.0,
+        "normal": 35.4
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -2.5904,
+        "miss_y_km": -2.933,
+        "cov_xx": 4.3903,
+        "cov_xy": -2.501,
+        "cov_yy": 1.491
+      },
+      "object1": {
+        "norad_id": 5560,
+        "name": "ASTEX 1",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 0.95
+      },
+      "object2": {
+        "norad_id": 30341,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.36
+      }
+    },
+    {
+      "id": "CONJ-8459-31743-1794012853",
+      "tca_utc": "2026-11-07T00:54:13.950690+00:00",
+      "tca_timestamp_ms": 1794012853950,
+      "miss_distance_km": 4.305,
+      "relative_speed_kms": 5.055,
+      "pc_foster": 1.9897e-69,
+      "pc_max": 3.0413e-07,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 17.29,
+      "hbr_m": 12.0,
+      "risk_level": "WARNING",
+      "status_color": "yellow",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -3892.9,
+        "transverse": 1733.8,
+        "normal": 612.2
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -4.1545,
+        "miss_y_km": 1.1296,
+        "cov_xx": 2.3688,
+        "cov_xy": 2.7177,
+        "cov_yy": 3.2372
+      },
+      "object1": {
+        "norad_id": 8459,
+        "name": "SL-8 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 0.75
+      },
+      "object2": {
+        "norad_id": 31743,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.58
+      }
+    },
+    {
+      "id": "CONJ-19574-32128-1794049759",
+      "tca_utc": "2026-11-07T11:09:19.756262+00:00",
+      "tca_timestamp_ms": 1794049759756,
+      "miss_distance_km": 8.999,
+      "relative_speed_kms": 15.23,
+      "pc_foster": 1.5254e-82,
+      "pc_max": 7.103e-07,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 19.01,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -612.1,
+        "transverse": 175.5,
+        "normal": -8976.9
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -8.8326,
+        "miss_y_km": -1.7249,
+        "cov_xx": 0.22313,
+        "cov_xy": 0.013115,
+        "cov_yy": 0.12491
+      },
+      "object1": {
+        "norad_id": 19574,
+        "name": "SL-14 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.06
+      },
+      "object2": {
+        "norad_id": 32128,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 4.32
+      }
+    },
+    {
+      "id": "CONJ-5560-30432-1793997715",
+      "tca_utc": "2026-11-06T20:41:55.800285+00:00",
+      "tca_timestamp_ms": 1793997715800,
+      "miss_distance_km": 7.584,
+      "relative_speed_kms": 0.984,
+      "pc_foster": 1.4104e-116,
+      "pc_max": 1.0007e-07,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 22.72,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 5078.8,
+        "transverse": -5612.4,
+        "normal": 474.0
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 7.5831,
+        "miss_y_km": -0.123,
+        "cov_xx": 3.1897,
+        "cov_xy": -2.9172,
+        "cov_yy": 2.7613
+      },
+      "object1": {
+        "norad_id": 5560,
+        "name": "ASTEX 1",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 0.95
+      },
+      "object2": {
+        "norad_id": 30432,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.37
+      }
+    },
+    {
+      "id": "CONJ-5560-35987-1794043940",
+      "tca_utc": "2026-11-07T09:32:20.698084+00:00",
+      "tca_timestamp_ms": 1794043940698,
+      "miss_distance_km": 9.26,
+      "relative_speed_kms": 14.653,
+      "pc_foster": 1.047e-139,
+      "pc_max": 6.3758e-08,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 24.95,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 8963.4,
+        "transverse": 513.6,
+        "normal": -2266.5
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 9.1406,
+        "miss_y_km": -1.4811,
+        "cov_xx": 0.42313,
+        "cov_xy": 0.66857,
+        "cov_yy": 1.653
+      },
+      "object1": {
+        "norad_id": 5560,
+        "name": "ASTEX 1",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 0.95
+      },
+      "object2": {
+        "norad_id": 35987,
+        "name": "COSMOS 2251 DEB",
+        "object_type": "Debris",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 4.57
+      }
+    },
+    {
+      "id": "CONJ-5560-31642-1794011181",
+      "tca_utc": "2026-11-07T00:26:21.849918+00:00",
+      "tca_timestamp_ms": 1794011181849,
+      "miss_distance_km": 12.404,
+      "relative_speed_kms": 14.724,
+      "pc_foster": 4.3024e-162,
+      "pc_max": 7.8708e-08,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 26.97,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -6789.2,
+        "transverse": 1919.7,
+        "normal": -10201.9
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -11.0571,
+        "miss_y_km": 5.621,
+        "cov_xx": 0.22548,
+        "cov_xy": -0.25548,
+        "cov_yy": 0.54747
+      },
+      "object1": {
+        "norad_id": 5560,
+        "name": "ASTEX 1",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 0.95
+      },
+      "object2": {
+        "norad_id": 31642,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 3.0
+      }
+    },
+    {
+      "id": "CONJ-17912-32221-1794025218",
+      "tca_utc": "2026-11-07T04:20:18.540864+00:00",
+      "tca_timestamp_ms": 1794025218540,
+      "miss_distance_km": 7.711,
+      "relative_speed_kms": 6.562,
+      "pc_foster": 1.6039e-233,
+      "pc_max": 9.2266e-09,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 32.49,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 6756.0,
+        "transverse": 3389.9,
+        "normal": -1522.3
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 7.5931,
+        "miss_y_km": 1.3408,
+        "cov_xx": 0.4176,
+        "cov_xy": 1.1001,
+        "cov_yy": 3.2776
+      },
+      "object1": {
+        "norad_id": 17912,
+        "name": "SL-14 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 0.9
+      },
+      "object2": {
+        "norad_id": 32221,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 0.99
+      }
+    },
+    {
+      "id": "CONJ-18749-36390-1794063080",
+      "tca_utc": "2026-11-07T14:51:20.341155+00:00",
+      "tca_timestamp_ms": 1794063080341,
+      "miss_distance_km": 13.273,
+      "relative_speed_kms": 15.013,
+      "pc_foster": 1.4802e-311,
+      "pc_max": 3.7044e-09,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 37.64,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -9957.7,
+        "transverse": -889.4,
+        "normal": 8730.2
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 1.9861,
+        "miss_y_km": -13.1232,
+        "cov_xx": 0.24598,
+        "cov_xy": -0.099887,
+        "cov_yy": 0.14889
+      },
+      "object1": {
+        "norad_id": 18749,
+        "name": "SL-14 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.35
+      },
+      "object2": {
+        "norad_id": 36390,
+        "name": "IRIDIUM 33 DEB",
+        "object_type": "Debris",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 2.82
+      }
+    },
+    {
+      "id": "CONJ-6153-30450-1794000743",
+      "tca_utc": "2026-11-06T21:32:23.076396+00:00",
+      "tca_timestamp_ms": 1794000743076,
+      "miss_distance_km": 8.97,
+      "relative_speed_kms": 8.525,
+      "pc_foster": 0.0,
+      "pc_max": 2.3806e-10,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 42.38,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 8940.0,
+        "transverse": 518.2,
+        "normal": -526.0
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -4.2279,
+        "miss_y_km": -7.9116,
+        "cov_xx": 2.3218,
+        "cov_xy": -1.4545,
+        "cov_yy": 0.9736
+      },
+      "object1": {
+        "norad_id": 6153,
+        "name": "OAO 3 (COPERNICUS)",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 1.22
+      },
+      "object2": {
+        "norad_id": 30450,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 0.7
+      }
+    },
+    {
+      "id": "CONJ-41877-31082-1794064405",
+      "tca_utc": "2026-11-07T15:13:25.138722+00:00",
+      "tca_timestamp_ms": 1794064405138,
+      "miss_distance_km": 11.264,
+      "relative_speed_kms": 8.386,
+      "pc_foster": 0.0,
+      "pc_max": 4.988e-11,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 45.16,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -10651.6,
+        "transverse": 3057.4,
+        "normal": 2018.7
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 10.7697,
+        "miss_y_km": 3.3004,
+        "cov_xx": 0.06087,
+        "cov_xy": 0.16137,
+        "cov_yy": 5.1942
+      },
+      "object1": {
+        "norad_id": 41877,
+        "name": "RESOURCESAT-2A",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.72
+      },
+      "object2": {
+        "norad_id": 31082,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.86
+      }
+    },
+    {
+      "id": "CONJ-18153-37927-1794045137",
+      "tca_utc": "2026-11-07T09:52:17.994543+00:00",
+      "tca_timestamp_ms": 1794045137994,
+      "miss_distance_km": 11.777,
+      "relative_speed_kms": 2.682,
+      "pc_foster": 0.0,
+      "pc_max": 3.9505e-12,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 50.5,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 11218.6,
+        "transverse": 3523.6,
+        "normal": 648.3
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -9.7024,
+        "miss_y_km": -6.6751,
+        "cov_xx": 3.5472,
+        "cov_xy": -2.7068,
+        "cov_yy": 2.144
+      },
+      "object1": {
+        "norad_id": 18153,
+        "name": "SL-14 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 0.83
+      },
+      "object2": {
+        "norad_id": 37927,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.43
+      }
+    },
+    {
+      "id": "CONJ-36795-35744-1794015260",
+      "tca_utc": "2026-11-07T01:34:20.845046+00:00",
+      "tca_timestamp_ms": 1794015260845,
+      "miss_distance_km": 11.938,
+      "relative_speed_kms": 15.079,
+      "pc_foster": 0.0,
+      "pc_max": 5.298e-10,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 44.95,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -4610.2,
+        "transverse": 582.2,
+        "normal": 10996.2
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 10.8059,
+        "miss_y_km": -5.0737,
+        "cov_xx": 0.083888,
+        "cov_xy": -0.0019617,
+        "cov_yy": 0.037024
+      },
+      "object1": {
+        "norad_id": 36795,
+        "name": "CARTOSAT-2B",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.71
+      },
+      "object2": {
+        "norad_id": 35744,
+        "name": "IRIDIUM 33 DEB",
+        "object_type": "Debris",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 0.73
+      }
+    },
+    {
+      "id": "CONJ-6153-34446-1794009923",
+      "tca_utc": "2026-11-07T00:05:23.136985+00:00",
+      "tca_timestamp_ms": 1794009923136,
+      "miss_distance_km": 11.971,
+      "relative_speed_kms": 12.139,
+      "pc_foster": 0.0,
+      "pc_max": 2.1955e-10,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 43.02,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -9438.3,
+        "transverse": -4343.0,
+        "normal": 5946.3
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 4.9196,
+        "miss_y_km": -10.9133,
+        "cov_xx": 1.9034,
+        "cov_xy": -0.45073,
+        "cov_yy": 0.15843
+      },
+      "object1": {
+        "norad_id": 6153,
+        "name": "OAO 3 (COPERNICUS)",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 1.22
+      },
+      "object2": {
+        "norad_id": 34446,
+        "name": "COSMOS 2251 DEB",
+        "object_type": "Debris",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.03
+      }
+    },
+    {
+      "id": "CONJ-3669-32414-1794004160",
+      "tca_utc": "2026-11-06T22:29:20.137265+00:00",
+      "tca_timestamp_ms": 1794004160137,
+      "miss_distance_km": 12.374,
+      "relative_speed_kms": 11.969,
+      "pc_foster": 0.0,
+      "pc_max": 7.7026e-10,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 39.29,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -10253.5,
+        "transverse": 3606.5,
+        "normal": 5914.3
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": 11.2237,
+        "miss_y_km": 5.2104,
+        "cov_xx": 0.12696,
+        "cov_xy": 0.36837,
+        "cov_yy": 2.4252
+      },
+      "object1": {
+        "norad_id": 3669,
+        "name": "ISIS 1",
+        "object_type": "Satellite",
+        "country": "International",
+        "is_isro": false,
+        "tle_age_days": 1.24
+      },
+      "object2": {
+        "norad_id": 32414,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.21
+      }
+    },
+    {
+      "id": "CONJ-41877-30401-1794050779",
+      "tca_utc": "2026-11-07T11:26:19.844684+00:00",
+      "tca_timestamp_ms": 1794050779844,
+      "miss_distance_km": 12.669,
+      "relative_speed_kms": 14.697,
+      "pc_foster": 0.0,
+      "pc_max": 1.1852e-14,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 64.02,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": 12291.3,
+        "transverse": -425.2,
+        "normal": 3041.3
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -7.5438,
+        "miss_y_km": -10.1783,
+        "cov_xx": 0.13877,
+        "cov_xy": -0.041965,
+        "cov_yy": 0.054775
+      },
+      "object1": {
+        "norad_id": 41877,
+        "name": "RESOURCESAT-2A",
+        "object_type": "Satellite",
+        "country": "India (ISRO)",
+        "is_isro": true,
+        "tle_age_days": 0.72
+      },
+      "object2": {
+        "norad_id": 30401,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 0.74
+      }
+    },
+    {
+      "id": "CONJ-877-38121-1794014838",
+      "tca_utc": "2026-11-07T01:27:18.875979+00:00",
+      "tca_timestamp_ms": 1794014838875,
+      "miss_distance_km": 13.54,
+      "relative_speed_kms": 14.09,
+      "pc_foster": 0.0,
+      "pc_max": 4.3285e-11,
+      "k_at_pc_max": 100.0,
+      "mahalanobis_dist": 46.68,
+      "hbr_m": 12.0,
+      "risk_level": "MONITORED",
+      "status_color": "green",
+      "is_co_orbital": false,
+      "covariance_source": "Synthetic RTN (Screening-Grade)",
+      "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
+      "miss_vector_rtn_m": {
+        "radial": -12041.0,
+        "transverse": 2311.9,
+        "normal": -5744.9
+      },
+      "encounter_plane_2d": {
+        "miss_x_km": -12.8696,
+        "miss_y_km": 4.208,
+        "cov_xx": 0.098462,
+        "cov_xy": -0.19962,
+        "cov_yy": 1.3677
+      },
+      "object1": {
+        "norad_id": 877,
+        "name": "SL-3 R/B",
+        "object_type": "Satellite",
+        "country": "Russia",
+        "is_isro": false,
+        "tle_age_days": 1.32
+      },
+      "object2": {
+        "norad_id": 38121,
+        "name": "FENGYUN 1C DEB",
+        "object_type": "Debris",
+        "country": "China",
+        "is_isro": false,
+        "tle_age_days": 1.99
+      }
+    }
+  ]
+}

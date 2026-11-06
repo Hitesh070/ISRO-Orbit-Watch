@@ -1,0 +1,36 @@
+{
+  "name": "orbitguard",
+  "version": "4.2.0",
+  "description": "Real-Time Space Situational Awareness, Conjunction Assessment & RF Ground Station",
+  "author": "Hitesh",
+  "license": "MIT",
+  "main": "desktop/dist/main/index.js",
+  "scripts": {
+    "dev:web": "npm run dev --prefix frontend",
+    "build:web": "npm run build --prefix frontend",
+    "dev:desktop": "cross-env NODE_ENV=development node scripts/dev-desktop.js",
+    "build:desktop": "npm run build --prefix frontend && npm run build:electron",
+    "build:electron": "tsup desktop/main/index.ts --out-dir desktop/dist/main --format cjs --target node20 --clean && tsup desktop/preload/index.ts --out-dir desktop/dist/preload --format cjs --target node20 --clean",
+    "dist:win": "npm run build:desktop && electron-builder --win --x64",
+    "test": "npm test --prefix frontend && npm run test:desktop",
+    "test:desktop": "vitest run desktop/tests",
+    "typecheck": "npm run typecheck --prefix frontend && tsc -p desktop/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "electron-log": "^5.2.4",
+    "electron-updater": "^6.3.9",
+    "serialport": "^12.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.4.0",
+    "electron-builder": "^24.13.3",
+    "tsup": "^8.3.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.1",
+    "wait-on": "^7.2.0"
+  }
+}

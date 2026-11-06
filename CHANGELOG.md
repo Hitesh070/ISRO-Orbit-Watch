@@ -5,6 +5,41 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [v4.2.0] - 2026-11-06 (Phase W: Native Windows Desktop App & Phase 5 Hardware Extension)
+### Added
+- **Native Windows Desktop Application (Electron 31 + Node.js 20)**:
+  - Single unified codebase sharing 100% of the React 18, Three.js/R3F, and Web Worker astrodynamics engine between web (Vercel) and desktop.
+  - Native Windows packaging using `electron-builder` producing:
+    - Customizable NSIS x64 installer (`OrbitGuard-Setup-4.2.0.exe`, 75.9 MB).
+    - Zero-install standalone portable executable (`OrbitGuard-Portable-4.2.0.exe`, 75.6 MB).
+    - Portable application archive (`OrbitGuard-4.2.0-win.zip`, 102.3 MB).
+  - Background auto-updater integration (`electron-updater`) with active rotator motion locking.
+  - Single-instance application lock, deep-linking protocol registration (`orbitguard://`), and persistent window geometry.
+- **Direct Serial (COM Port) Rotator Control**:
+  - Direct hardware access via native C++ bindings (`serialport` / `@serialport/bindings-cpp`) without external bridge daemons or Web Serial permissions.
+  - Automatic Windows Win32 COM port name normalization (`\\.\COM10+` for double-digit ports).
+  - Main process safety supervision: 5 Hz command rate limiting, physical Az/El range clamping ($0^\circ\text{--}450^\circ$ Az, $0^\circ\text{--}180^\circ$ El), and 3-second motor deadman watchdog (auto-transmits emergency stop `S\r` on renderer freeze).
+  - Integrated "Test Link (C2)" transaction verification button and real-time baud rate selector (1200 to 115200 baud).
+- **Hamlib TCP rotctld Daemon Client**:
+  - Direct TCP socket client (`net.Socket`) in the Main process connecting to `127.0.0.1:4533`.
+- **Offline-First Data Storage & Direct CelesTrak Fetching**:
+  - Local atomic caching in `%APPDATA%/OrbitGuard/data/` (`.tmp` write followed by atomic rename).
+  - 2-hour refresh throttling with HTTPS ETag / `If-Modified-Since` conditional headers.
+  - Bundled fallback catalog snapshot (3,789 tracked space objects) seeded on clean installs for offline field operation.
+- **Native Windows Notifications & Tray**:
+  - Windows Toast Notifications for upcoming satellite passes with customizable lead time.
+  - System Tray integration with minimization and quick-action menu.
+- **Comprehensive Desktop Documentation**:
+  - `docs/DESKTOP_ARCHITECTURE.md`: Process isolation, IPC router, and Mermaid architecture diagram.
+  - `docs/hardware/WINDOWS_SERIAL_SETUP.md`: COM port troubleshooting, CH340/CP2102/FTDI drivers, and wiring guide.
+  - `docs/WINDOWS_TESTING.md`: High-DPI display matrix (100% to 200%), offline launch, and SmartScreen disclaimer.
+  - `docs/adr/003-electron-over-tauri.md`: Architecture Decision Record detailing selection of Electron over Tauri.
+- **Desktop CI/CD Workflows**:
+  - `.github/workflows/ci.yml`: Desktop typecheck and full 66-test verification suite on Windows.
+  - `.github/workflows/release-desktop.yml`: Automated tag-triggered release packaging with SHA-256 checksum generation.
+
+---
+
 ## [v4.2] - 2026-11-06 (Phase 6 Final: Deep-Linking, Settings Drawer, Interview Trainer & Offline PWA)
 ### Added
 - **State Deep-Linking & Share System**: URL query synchronization (`?norad=<id>&speed=<warp>`) with automatic state restoration on load, history push/replace, and one-click "Share State" button in the Navbar.

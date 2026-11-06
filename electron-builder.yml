@@ -1,0 +1,61 @@
+appId: com.orbitguard.app
+productName: OrbitGuard
+copyright: Copyright © 2026 OrbitGuard
+directories:
+  output: dist-electron
+  buildResources: resources
+
+files:
+  - desktop/dist/**/*
+  - frontend/dist/**/*
+  - package.json
+  - "!node_modules/**/test/**"
+  - "!node_modules/**/tests/**"
+  - "!node_modules/**/docs/**"
+  - "!node_modules/**/*.md"
+  - "!node_modules/**/*.ts"
+
+asar: true
+asarUnpack:
+  - "**/node_modules/serialport/**"
+  - "**/node_modules/@serialport/**"
+
+extraResources:
+  - from: resources/catalog-snapshot
+    to: catalog-snapshot
+    filter:
+      - "**/*"
+
+electronLanguages:
+  - en-US
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+  icon: resources/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: OrbitGuard
+  runAfterFinish: true
+  artifactName: "${productName}-Setup-${version}.${ext}"
+
+portable:
+  artifactName: "${productName}-Portable-${version}.${ext}"
+
+publish:
+  provider: github
+  owner: Hitesh070
+  repo: Orbit-Guard

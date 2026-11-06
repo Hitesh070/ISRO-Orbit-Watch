@@ -13,6 +13,8 @@ import {
   SimulatorTransport,
   WebSerialTransport,
   LocalBridgeTransport,
+  NativeSerialTransport,
+  TcpTransport,
   RotatorTransport,
   RotatorStatus,
   CommandLogEntry,
@@ -24,6 +26,8 @@ import {
   DEFAULT_TRACKING_CONFIG,
 } from '../../lib/tracking/trackingLogic';
 import { DetailedPass } from '../../lib/rf/passPlanner';
+import { platform } from '../../platform';
+import { SerialPortInfo } from '../../shared/ipc';
 import {
   Radio,
   Sliders,
@@ -37,6 +41,9 @@ import {
   AlertTriangle,
   RotateCcw,
   Zap,
+  Cpu,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface RotatorPanelProps {
@@ -44,18 +51,54 @@ interface RotatorPanelProps {
 }
 
 export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
-  const [selectedTransportType, setSelectedTransportType] = useState<TransportType>('SIMULATOR');
+  const isDesktop = platform.isDesktop;
+  const [selectedTransportType, setSelectedTransportType] = useState<TransportType>(
+    isDesktop ? 'NATIVE_SERIAL' : 'SIMULATOR'
+  );
+
+  // Available COM ports on Windows
+  const [availablePorts, setAvailablePorts] = useState<SerialPortInfo[]>([]);
+  const [selectedPort, setSelectedPort] = useState<string>('');
+  const [selectedBaud, setSelectedBaud] = useState<number>(9600);
+  const [motionConfirmed, setMotionConfirmed] = useState<boolean>(false);
+  const [showMotionConfirmDialog, setShowMotionConfirmDialog] = useState<boolean>(false);
 
   // Transports
   const simTransport = useMemo(() => new SimulatorTransport(), []);
-  const serialTransport = useMemo(() => new WebSerialTransport(), []);
+  const webSerialTransport = useMemo(() => new WebSerialTransport(), []);
   const bridgeTransport = useMemo(() => new LocalBridgeTransport(), []);
+  const nativeSerialTransport = useMemo(() => new NativeSerialTransport(), []);
+  const tcpTransport = useMemo(() => new TcpTransport(), []);
 
   const activeTransport: RotatorTransport = useMemo(() => {
-    if (selectedTransportType === 'WEB_SERIAL') return serialTransport;
+    if (selectedTransportType === 'NATIVE_SERIAL') return nativeSerialTransport;
+    if (selectedTransportType === 'TCP_ROTCTLD') return tcpTransport;
+    if (selectedTransportType === 'WEB_SERIAL') return webSerialTransport;
     if (selectedTransportType === 'LOCAL_BRIDGE') return bridgeTransport;
     return simTransport;
-  }, [selectedTransportType, serialTransport, bridgeTransport, simTransport]);
+  }, [
+    selectedTransportType,
+    nativeSerialTransport,
+    tcpTransport,
+    webSerialTransport,
+    bridgeTransport,
+    simTransport,
+  ]);
+
+  // Load available COM ports on desktop
+  const refreshPorts = async () => {
+    if (isDesktop) {
+      const ports = await platform.serial.listPorts();
+      setAvailablePorts(ports);
+      if (ports.length > 0 && !selectedPort) {
+        setSelectedPort(ports[0].path);
+      }
+    }
+  };
+
+  useEffect(() => {
+    refreshPorts();
+  }, [isDesktop]);
 
   // Controller
   const controller = useMemo(() => new TrackingController(activeTransport), [activeTransport]);
@@ -103,7 +146,26 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
       setIsAutoTracking(false);
       controller.stop();
     } else {
-      await activeTransport.connect();
+      if (selectedTransportType === 'NATIVE_SERIAL') {
+        if (!selectedPort && availablePorts.length > 0) {
+          setSelectedPort(availablePorts[0].path);
+        }
+        await activeTransport.connect({
+          path: selectedPort || (availablePorts[0]?.path || 'COM3'),
+          baudRate: selectedBaud,
+        });
+      } else {
+        await activeTransport.connect();
+      }
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!rotStatus.connected) return;
+    if (selectedTransportType === 'NATIVE_SERIAL') {
+      await platform.serial.write('C2\r');
+    } else if (selectedTransportType === 'TCP_ROTCTLD') {
+      await platform.rotctld.sendCommand('p');
     }
   };
 
@@ -151,9 +213,11 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
               if (rotStatus.connected) activeTransport.disconnect();
               setSelectedTransportType(e.target.value as TransportType);
             }}
-            className="px-2.5 py-1.5 rounded-lg bg-space-950 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-cyan-400"
+            className="px-2.5 py-1.5 rounded-lg bg-space-950 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-cyan-400 font-bold"
           >
             <option value="SIMULATOR">Virtual Simulator (GS-232 Emulation)</option>
+            {isDesktop && <option value="NATIVE_SERIAL">Windows COM Port (Native SerialPort)</option>}
+            {isDesktop && <option value="TCP_ROTCTLD">Hamlib rotctld TCP (127.0.0.1:4533)</option>}
             <option value="WEB_SERIAL">Web Serial API (USB CDC Direct)</option>
             <option value="LOCAL_BRIDGE">Local Bridge (ws://127.0.0.1:8765)</option>
           </select>
@@ -171,6 +235,70 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
           </button>
         </div>
       </div>
+
+      {/* Desktop Native Serial Hardware Configuration Bar */}
+      {selectedTransportType === 'NATIVE_SERIAL' && (
+        <div className="p-3 rounded-xl bg-space-950 border border-cyan-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-slate-400 flex items-center gap-1 text-[11px]">
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" /> COM Port:
+            </span>
+            <select
+              value={selectedPort}
+              onChange={(e) => setSelectedPort(e.target.value)}
+              disabled={rotStatus.connected}
+              className="px-2.5 py-1 rounded bg-space-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-cyan-400 font-mono"
+            >
+              {availablePorts.length > 0 ? (
+                availablePorts.map((p) => (
+                  <option key={p.path} value={p.path}>
+                    {p.friendlyName}
+                  </option>
+                ))
+              ) : (
+                <option value="COM3">COM3 (Default)</option>
+              )}
+            </select>
+
+            <button
+              onClick={refreshPorts}
+              title="Rescan Windows Device Manager for connected USB-Serial COM ports"
+              className="p-1.5 rounded bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-400 hover:text-white transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="text-slate-400 text-[11px] ml-2">Baud Rate:</span>
+            <select
+              value={selectedBaud}
+              onChange={(e) => setSelectedBaud(Number(e.target.value))}
+              disabled={rotStatus.connected}
+              className="px-2 py-1 rounded bg-space-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-cyan-400 font-mono"
+            >
+              {[9600, 19200, 38400, 57600, 115200].map((b) => (
+                <option key={b} value={b}>
+                  {b} 8N1
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {rotStatus.connected && (
+              <button
+                onClick={handleTestConnection}
+                className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 text-[11px] font-bold transition flex items-center gap-1"
+                title="Send harmless GS-232 C2 query to verify controller response"
+              >
+                <Zap className="w-3 h-3 text-cyan-400" /> Test Link (C2)
+              </button>
+            )}
+            <span className="text-[10px] text-slate-500 font-sans hidden lg:inline">
+              * Supports FTDI, CH340, CP210x, and ESP32 drivers.
+            </span>
+          </div>
+        </div>
+      )}
 
       {rotStatus.error && (
         <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-300 text-[11px] flex items-center gap-2">
