@@ -84,7 +84,7 @@ def root():
 
 @app.get("/api/satellites")
 def get_satellites(
-    limit: Optional[int] = Query(default=None, description="Maximum number of satellites to return"),
+    limit: Optional[int] = Query(default=150, description="Maximum number of satellites to return"),
     regime: Optional[str] = Query(default=None, description="Filter by orbital regime: LEO, MEO, GEO, HEO"),
     country: Optional[str] = Query(default=None, description="Filter by country or operating agency"),
     search: Optional[str] = Query(default=None, description="Search query by name or NORAD ID"),
@@ -93,8 +93,9 @@ def get_satellites(
     Returns real-time propagated positions (lat, lon, alt, velocity) and orbital elements
     for operational satellites, annotated with real-time risk scores.
     """
-    active_data = propagator.propagate_catalog(tle_fetcher.active_file, limit=limit)
-    debris_data = propagator.propagate_catalog(tle_fetcher.debris_file, limit=50)
+    effective_limit = limit if (limit and limit > 0) else 150
+    active_data = propagator.propagate_catalog(tle_fetcher.active_file, limit=effective_limit)
+    debris_data = propagator.propagate_catalog(tle_fetcher.debris_file, limit=40)
 
     # Attach risk scores to active satellites
     risk_summary = risk_engine.compute_all_risks(active_data, debris_data)
@@ -194,8 +195,8 @@ def get_risk_overview():
     Returns risk scores for all active satellites, top 10 highest-risk satellites,
     orbital shell breakdown (LEO, MEO, GEO), and altitude x inclination risk heatmap.
     """
-    active_data = propagator.propagate_catalog(tle_fetcher.active_file)
-    debris_data = propagator.propagate_catalog(tle_fetcher.debris_file)
+    active_data = propagator.propagate_catalog(tle_fetcher.active_file, limit=100)
+    debris_data = propagator.propagate_catalog(tle_fetcher.debris_file, limit=50)
 
     summary = risk_engine.compute_all_risks(active_data, debris_data)
     return summary
@@ -315,8 +316,8 @@ def get_analytics():
     Returns macro analytics: object breakdown (satellites, debris, rocket bodies),
     altitude distribution histogram, launch year trend (1957-present), and country counts.
     """
-    active_data = propagator.propagate_catalog(tle_fetcher.active_file)
-    debris_data = propagator.propagate_catalog(tle_fetcher.debris_file)
+    active_data = propagator.propagate_catalog(tle_fetcher.active_file, limit=150)
+    debris_data = propagator.propagate_catalog(tle_fetcher.debris_file, limit=60)
     all_objects = active_data + debris_data
 
     # Breakdown by object type
