@@ -1,5 +1,5 @@
 /**
- * EarthGlobe Component (v3.0 High-Performance SSA & Point Cloud Architecture)
+ * EarthGlobe Component (v3.2 High-Performance SSA & Point Cloud Architecture)
  * ============================================================================
  * Renders high-fidelity 3D Earth aligned with Greenwich Mean Sidereal Time (GMST)
  * in the TEME (True Equator, Mean Equinox) celestial inertial frame.
@@ -8,6 +8,12 @@
  * (propagator.worker.ts) using ping-pong zero-copy transferable buffers.
  * Visualization of 25,000+ objects is rendered in ONE single draw call using
  * custom GLSL shaders (PointCloud.jsx) with linear velocity extrapolation at 60 FPS.
+ *
+ * Includes:
+ * - Earth rotation dynamically connected to simulated time and time-warp (1x-60x)
+ * - Ground Station observer marker with pulsing radar beacon at user's GPS/timezone coordinates
+ * - Dynamic Sun illumination position matching subsolar point in TEME
+ * - Atmospheric Rayleigh scattering glow & animated cloud drift
  */
 
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
@@ -21,17 +27,17 @@ import PointCloud from './PointCloud';
 import OrbitPath from './OrbitPath';
 
 /**
- * Calculates current real-time astronomical solar position in Three.js TEME coordinates.
+ * Calculates current astronomical solar position in Three.js TEME coordinates.
  * (+Y is North celestial pole, +X is vernal equinox, +Z is -Y_TEME)
  */
-function getSunPositionInTEME(now = new Date()) {
-  const gmst = satellite.gstime(now);
-  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+function getSunPositionInTEME(simDate: Date = new Date()): [number, number, number] {
+  const gmst = satellite.gstime(simDate);
+  const utcHours = simDate.getUTCHours() + simDate.getUTCMinutes() / 60 + simDate.getUTCSeconds() / 3600;
   const subsolarLon = -(utcHours - 12) * 15 * (Math.PI / 180);
 
   // Solar declination approximation based on Earth's axial tilt (23.44°)
-  const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+  const startOfYear = new Date(Date.UTC(simDate.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((simDate.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
   const declination = (-23.44 * (Math.PI / 180)) * Math.cos(((2 * Math.PI) / 365.25) * (dayOfYear + 10));
 
   // Sun right ascension in TEME
@@ -45,12 +51,95 @@ function getSunPositionInTEME(now = new Date()) {
 }
 
 /**
+ * Observer Ground Station Beacon
+ * Renders an emerald beacon with vertical pin and pulsing radar concentric rings
+ * on Earth's surface at (lat, lon), rotating rigidly with Earth in ECEF.
+ */
+interface ObserverBeaconProps {
+  lat: number;
+  lon: number;
+  name: string;
+}
+
+const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
+  const phi = (lat * Math.PI) / 180;
+  const lambda = (lon * Math.PI) / 180;
+  const R = 1.0025; // Placed slightly above Earth surface to prevent z-fighting
+
+  // Cartesian coordinates on Three.js Earth sphere
+  const x = R * Math.cos(phi) * Math.cos(lambda);
+  const y = R * Math.sin(phi);
+  const z = -R * Math.cos(phi) * Math.sin(lambda);
+
+  const ring1Ref = useRef<THREE.Mesh>(null);
+  const ring2Ref = useRef<THREE.Mesh>(null);
+
+  // Align beacon local +Z with surface normal pointing outward
+  const orientation = useMemo(() => {
+    const normal = new THREE.Vector3(x, y, z).normalize();
+    const q = new THREE.Quaternion();
+    q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+    return q;
+  }, [x, y, z]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (ring1Ref.current) {
+      const p1 = (t * 1.5) % 1;
+      const s1 = 1 + p1 * 2.8;
+      ring1Ref.current.scale.set(s1, s1, s1);
+      (ring1Ref.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.9 * (1 - p1));
+    }
+    if (ring2Ref.current) {
+      const p2 = ((t * 1.5) + 0.5) % 1;
+      const s2 = 1 + p2 * 2.8;
+      ring2Ref.current.scale.set(s2, s2, s2);
+      (ring2Ref.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.9 * (1 - p2));
+    }
+  });
+
+  return (
+    <group position={[x, y, z]} quaternion={orientation}>
+      {/* Ground Station Core Dot */}
+      <mesh>
+        <sphereGeometry args={[0.016, 16, 16]} />
+        <meshBasicMaterial color="#10b981" />
+      </mesh>
+
+      {/* Vertical Laser Beacon Pin */}
+      <mesh position={[0, 0, 0.03]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.0025, 0.0025, 0.06, 8]} />
+        <meshBasicMaterial color="#34d399" transparent opacity={0.85} />
+      </mesh>
+
+      {/* Pulsing Concentric Radar Rings */}
+      <mesh ref={ring1Ref} position={[0, 0, 0.001]}>
+        <ringGeometry args={[0.018, 0.024, 32]} />
+        <meshBasicMaterial color="#10b981" transparent opacity={0.8} side={THREE.DoubleSide} />
+      </mesh>
+
+      <mesh ref={ring2Ref} position={[0, 0, 0.001]}>
+        <ringGeometry args={[0.018, 0.024, 32]} />
+        <meshBasicMaterial color="#34d399" transparent opacity={0.5} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  );
+};
+
+/**
  * 3D Earth Globe Sphere Mesh with GMST Inertial Rotation & Atmospheric Shaders
  */
 const RealisticEarthMesh = () => {
   const earthRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
   const layers = useOrbitStore((state) => state.layers);
+  const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
+  const observerLocation = useOrbitStore((state) => state.observerLocation);
+  const setSimulatedTimeMs = useOrbitStore((state) => state.setSimulatedTimeMs);
+
+  const simTimeRef = useRef(Date.now());
+  const cloudDriftRef = useRef(0);
+  const lastSyncRef = useRef(0);
 
   // Load NASA Blue Marble daymap, night lights, and cloud layer textures
   const [dayTexture, nightTexture, cloudsTexture] = useLoader(THREE.TextureLoader, [
@@ -60,17 +149,26 @@ const RealisticEarthMesh = () => {
   ]);
 
   useFrame((_, delta) => {
-    const now = new Date();
-    const gmst = satellite.gstime(now);
+    // Advance simulated time with user-selected simulation speed (1x, 5x, 15x, 60x)
+    simTimeRef.current += delta * 1000 * simulationSpeed;
+    const simDate = new Date(simTimeRef.current);
+    const gmst = satellite.gstime(simDate);
 
     // Rotate Earth by Greenwich Mean Sidereal Time in the TEME frame
     if (earthRef.current) {
       earthRef.current.rotation.y = gmst;
     }
 
-    // Dynamic cloud layer atmospheric drift
+    // Dynamic cloud layer atmospheric drift (faster than surface rotation for realistic weather motion)
     if (cloudsRef.current && layers.clouds) {
-      cloudsRef.current.rotation.y = gmst + delta * 0.02;
+      cloudDriftRef.current += delta * (0.012 + 0.004 * Math.min(simulationSpeed, 10));
+      cloudsRef.current.rotation.y = gmst + cloudDriftRef.current;
+    }
+
+    // Throttle sync of simulated time to Zustand store (~10 Hz)
+    if (Math.abs(simTimeRef.current - lastSyncRef.current) > 100) {
+      lastSyncRef.current = simTimeRef.current;
+      setSimulatedTimeMs(simTimeRef.current);
     }
   });
 
@@ -116,6 +214,15 @@ const RealisticEarthMesh = () => {
           />
         </mesh>
       )}
+
+      {/* Ground Station Observer Marker Beacon (rotates rigidly with Earth surface) */}
+      {observerLocation && (
+        <ObserverBeacon
+          lat={observerLocation.lat}
+          lon={observerLocation.lon}
+          name={observerLocation.name}
+        />
+      )}
     </group>
   );
 };
@@ -140,6 +247,10 @@ const GlobeScene = () => {
   const setWorkerLatencyMs = useOrbitStore((state) => state.setWorkerLatencyMs);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const layers = useOrbitStore((state) => state.layers);
+  const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
+
+  const sunLightRef = useRef<THREE.DirectionalLight>(null);
+  const fillLightRef = useRef<THREE.PointLight>(null);
 
   // Web Worker SGP4 Propagator Hook with ping-pong transferable buffers
   const {
@@ -164,8 +275,17 @@ const GlobeScene = () => {
     }
   }, [selectedSatellite?.norad_id, requestOrbitPath]);
 
-  // Real-time Astronomical Sun Light Position in TEME
-  const sunPos = useMemo(() => getSunPositionInTEME(new Date()), []);
+  // Update real-time astronomical sun light in TEME
+  useFrame(() => {
+    const simDate = new Date(simulatedTimeMs || Date.now());
+    const [x, y, z] = getSunPositionInTEME(simDate);
+    if (sunLightRef.current) {
+      sunLightRef.current.position.set(x, y, z);
+    }
+    if (fillLightRef.current) {
+      fillLightRef.current.position.set(-x, -y, -z);
+    }
+  });
 
   return (
     <>
@@ -175,17 +295,13 @@ const GlobeScene = () => {
       {/* Ambient Deep Space Light */}
       <ambientLight intensity={0.35} />
 
-      {/* Real-time Astronomical Sun Light Positioned at Subsolar Point */}
-      <directionalLight position={sunPos as [number, number, number]} intensity={2.2} />
+      {/* Real-time Astronomical Sun Light Positioned at Subsolar Point in TEME */}
+      <directionalLight ref={sunLightRef} position={[6, 0, 0]} intensity={2.2} />
 
       {/* Soft fill light from opposite dark side */}
-      <pointLight
-        position={[-sunPos[0], -sunPos[1], -sunPos[2]]}
-        intensity={0.25}
-        color="#38bdf8"
-      />
+      <pointLight ref={fillLightRef} position={[-6, 0, 0]} intensity={0.25} color="#38bdf8" />
 
-      {/* Realistic 3D Earth Globe Mesh (Rotates by GMST) */}
+      {/* Realistic 3D Earth Globe Mesh (Rotates by GMST with Ground Station Beacon) */}
       <Suspense fallback={<EarthFallback />}>
         <RealisticEarthMesh />
       </Suspense>

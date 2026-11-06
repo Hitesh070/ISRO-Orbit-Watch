@@ -1,0 +1,102 @@
+[
+  {
+    "noradId": 25544,
+    "name": "ISS (ZARYA) - APRS / Voice",
+    "band": "VHF / UHF",
+    "downlinkHz": 145825000,
+    "uplinkHz": 145990000,
+    "mode": "1200bps AFSK / FM Voice",
+    "verified": true,
+    "source": "ARISS / IARU Public Frequency Coordination"
+  },
+  {
+    "noradId": 33591,
+    "name": "NOAA-19",
+    "band": "VHF",
+    "downlinkHz": 137100000,
+    "uplinkHz": 0,
+    "mode": "HRPT / APT FM",
+    "verified": true,
+    "source": "NOAA Satellite Information Service"
+  },
+  {
+    "noradId": 40069,
+    "name": "METEOR-M2",
+    "band": "VHF",
+    "downlinkHz": 137900000,
+    "uplinkHz": 0,
+    "mode": "QPSK 72kbps LRPT",
+    "verified": true,
+    "source": "Roscosmos Public Weather Dissemination"
+  },
+  {
+    "noradId": 43015,
+    "name": "AO-91 (RadFxSat)",
+    "band": "UHF / VHF",
+    "downlinkHz": 435250000,
+    "uplinkHz": 145960000,
+    "mode": "FM Voice Repeater / CTCSS 67Hz",
+    "verified": true,
+    "source": "AMSAT-NA Telemetry Coordination"
+  },
+  {
+    "noradId": 25338,
+    "name": "NOAA-15",
+    "band": "VHF",
+    "downlinkHz": 137620000,
+    "uplinkHz": 0,
+    "mode": "APT FM Weather",
+    "verified": true,
+    "source": "NOAA NESDIS Operational Status"
+  },
+  {
+    "noradId": 28654,
+    "name": "NOAA-18",
+    "band": "VHF",
+    "downlinkHz": 137912500,
+    "uplinkHz": 0,
+    "mode": "APT FM Weather",
+    "verified": true,
+    "source": "NOAA NESDIS Operational Status"
+  },
+  {
+    "noradId": 43803,
+    "name": "FOX-1CLIFF (AO-95)",
+    "band": "UHF / VHF",
+    "downlinkHz": 435300000,
+    "uplinkHz": 145920000,
+    "mode": "FM Voice Transponder",
+    "verified": true,
+    "source": "AMSAT"
+  },
+  {
+    "noradId": 20580,
+    "name": "HUBBLE SPACE TELESCOPE",
+    "band": "S-Band",
+    "downlinkHz": 2255500000,
+    "uplinkHz": 2095000000,
+    "mode": "TDRSS Multiple Access S-band",
+    "verified": false,
+    "source": "NASA Space Science Data Coordinated Archive (Unverified - Requires User Confirmation)"
+  },
+  {
+    "noradId": 44387,
+    "name": "CARTOSAT-3 (ISRO)",
+    "band": "X-Band Payload",
+    "downlinkHz": 8125000000,
+    "uplinkHz": 2067000000,
+    "mode": "QPSK / OQPSK Downlink",
+    "verified": false,
+    "source": "Unverified Template - Do not transmit without official ISRO ISTRAC clearance"
+  },
+  {
+    "noradId": 37838,
+    "name": "RESOURCESAT-2 (ISRO)",
+    "band": "S-Band Telemetry",
+    "downlinkHz": 2210000000,
+    "uplinkHz": 2025000000,
+    "mode": "Telemetry / Telecommand TTC",
+    "verified": false,
+    "source": "Unverified Template - Requires User Confirmation"
+  }
+]

@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Radio, MapPin, Compass, Clock, Send, Globe2, Sparkles, Navigation, LocateFixed } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Radio, MapPin, Compass, Clock, Send, Globe2, Sparkles, Navigation, LocateFixed, ArrowRight } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const PassPredictor = () => {
@@ -96,15 +97,26 @@ export const PassPredictor = () => {
           </p>
         </div>
 
-        {/* Live GPS Auto-Detect Button */}
-        <button
-          type="button"
-          onClick={handleDetectLocation}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-semibold transition hover:shadow-glow-emerald"
-        >
-          <LocateFixed className="w-4 h-4 text-emerald-400 animate-pulse" />
-          <span>Use My Real-Time Location</span>
-        </button>
+        {/* Actions: Live GPS & Full RF Suite */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/rf"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-semibold transition shadow-glow-cyan"
+          >
+            <Radio className="w-4 h-4 text-cyan-400" />
+            <span>Open RF Doppler & Link Suite</span>
+            <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleDetectLocation}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-semibold transition hover:shadow-glow-emerald"
+          >
+            <LocateFixed className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <span>Use My GPS</span>
+          </button>
+        </div>
       </div>
 
       {geoStatus && (

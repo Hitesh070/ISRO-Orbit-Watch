@@ -50,9 +50,70 @@ export const useOrbitStore = create((set, get) => ({
     riskLevel: 'ALL',
   },
 
-  // App Theme & Execution Mode
+  // App Theme, Simulation Speed & Mission Clock
   theme: localStorage.getItem('orbitguard_theme') || 'dark',
-  simulationSpeed: 1, // 1x, 10x, 60x fast-forward
+  simulationSpeed: 1, // 1x, 5x, 15x, 60x fast-forward
+  simulatedTimeMs: Date.now(),
+  setSimulatedTimeMs: (ms) => set({ simulatedTimeMs: ms }),
+  setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
+
+  // Observer Ground Station Geolocation Sync
+  observerLocation: JSON.parse(localStorage.getItem('orbitguard_observer') || 'null') || {
+    lat: 12.9716,
+    lon: 77.5946,
+    alt_m: 920,
+    name: 'Bengaluru, India',
+    isLive: false,
+  },
+
+  detectUserLocation: () => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(4));
+          const lon = Number(pos.coords.longitude.toFixed(4));
+          const alt = pos.coords.altitude ? Math.round(pos.coords.altitude) : 100;
+
+          // Attempt timezone name extraction
+          let tzCity = 'My Station';
+          try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            tzCity = tz.split('/')[1]?.replace(/_/g, ' ') || 'My Station';
+          } catch {}
+
+          const loc = {
+            lat,
+            lon,
+            alt_m: alt,
+            name: `${tzCity} (${Math.abs(lat)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon)}°${lon >= 0 ? 'E' : 'W'})`,
+            isLive: true,
+          };
+          localStorage.setItem('orbitguard_observer', JSON.stringify(loc));
+          set({ observerLocation: loc });
+          console.log('[OrbitGuard] Synced observer location:', loc);
+          get().fetchPasses(loc.name, 25544);
+        },
+        (err) => {
+          console.warn('[OrbitGuard] Geolocation notice:', err.message);
+          // Set timezone-inferred location as friendly default
+          try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz.includes('Kolkata') || tz.includes('Calcutta') || tz.includes('India')) {
+              const loc = { lat: 12.9716, lon: 77.5946, alt_m: 920, name: 'Bengaluru, India', isLive: true };
+              set({ observerLocation: loc });
+            }
+          } catch {}
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    }
+  },
+
+  setObserverLocation: (location) => {
+    localStorage.setItem('orbitguard_observer', JSON.stringify(location));
+    set({ observerLocation: location });
+  },
+
   isLoading: false,
   error: null,
   lastUpdated: null,

@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock, Activity } from 'lucide-react';
+import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock, Activity, MapPin } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const Navbar = () => {
@@ -18,19 +18,26 @@ export const Navbar = () => {
   const triggerRefreshTLE = useOrbitStore((state) => state.triggerRefreshTLE);
   const toggleHud = useOrbitStore((state) => state.toggleHud);
   const isHudVisible = useOrbitStore((state) => state.isHudVisible);
+  const observerLocation = useOrbitStore((state) => state.observerLocation);
+  const detectUserLocation = useOrbitStore((state) => state.detectUserLocation);
+  const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
+  const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
 
   const [utcTime, setUtcTime] = useState('');
   const [localTime, setLocalTime] = useState('');
 
-  // Live Dual Clocks (Local User Time + Official Spacecraft UTC Time)
+  // Live Dual Clocks (Synchronized User Local Time + Simulated Spacecraft UTC Time)
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      // UTC time
-      setUtcTime(now.toUTCString().replace('GMT', 'UTC'));
+      const wallNow = new Date();
+      const currentSimMs = useOrbitStore.getState().simulatedTimeMs || Date.now();
+      const simNow = new Date(currentSimMs);
+
+      // Simulated Mission UTC time
+      setUtcTime(simNow.toUTCString().replace('GMT', 'UTC'));
       // Local time with user's timezone abbreviation
       setLocalTime(
-        now.toLocaleTimeString([], {
+        wallNow.toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -40,7 +47,7 @@ export const Navbar = () => {
       );
     };
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(updateTime, 250);
     return () => clearInterval(interval);
   }, []);
 
@@ -63,7 +70,7 @@ export const Navbar = () => {
                   OrbitGuard
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v3.0
+                  v3.2
                 </span>
               </div>
               <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
@@ -145,14 +152,44 @@ export const Navbar = () => {
               <span className="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 animate-pulse" />
             )}
           </NavLink>
+
+          <NavLink
+            to="/rf"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+                isActive
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow-cyan'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+              }`
+            }
+          >
+            <Radio className="w-4 h-4 text-cyan-400" />
+            <span className="hidden md:inline">RF Ground Station</span>
+          </NavLink>
         </nav>
 
-        {/* Dual Live Clocks (User Local Time + UTC Space Time) & Actions */}
+        {/* Dual Live Clocks & Observer Location Sync */}
         <div className="flex items-center gap-3">
+          {/* Ground Station / Observer Location */}
+          <button
+            onClick={detectUserLocation}
+            title="Click to re-sync Ground Station with browser GPS coordinates"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-emerald-400 text-[11px] font-mono text-slate-300 hover:text-emerald-300 transition"
+          >
+            <MapPin className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span className="truncate max-w-[140px]">{observerLocation?.name || 'Observer Station'}</span>
+          </button>
+
+          {/* Clock */}
           <div className="hidden sm:block text-right font-mono">
             <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5">
               <Clock className="w-3.5 h-3.5 text-cyan-400" />
               <span>{localTime || 'Local Time'}</span>
+              <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                simulationSpeed > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-emerald-500/10 text-emerald-400'
+              }`}>
+                {simulationSpeed > 1 ? `${simulationSpeed}x WARP` : '1x LIVE'}
+              </span>
             </div>
             <div className="text-[10px] text-slate-400">
               {utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'}

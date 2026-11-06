@@ -16,6 +16,7 @@ import PerformanceHUD from './components/common/PerformanceHUD';
 // Lazy-load heavier analytics pages to keep initial bundle small
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Conjunctions = lazy(() => import('./pages/Conjunctions'));
+const RFSuite = lazy(() => import('./features/rf/RFSuite'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-full min-h-[60vh]">
@@ -28,6 +29,7 @@ const PageLoader = () => (
 
 export const App = () => {
   const fetchInitialData = useOrbitStore((state) => state.fetchInitialData);
+  const detectUserLocation = useOrbitStore((state) => state.detectUserLocation);
 
   // Initialize data on application startup and enforce dark theme
   useEffect(() => {
@@ -35,6 +37,7 @@ export const App = () => {
     document.documentElement.classList.remove('light');
 
     fetchInitialData();
+    detectUserLocation();
 
     // Periodic telemetry polling every 20 seconds
     const interval = setInterval(() => {
@@ -57,6 +60,7 @@ export const App = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/conjunctions" element={<Conjunctions />} />
+                <Route path="/rf" element={<div className="p-3 md:p-6"><RFSuite /></div>} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

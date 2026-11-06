@@ -47,8 +47,10 @@ export const SatelliteInfo = () => {
   const currentLat = liveTelemetry?.lat ?? data.lat ?? 0;
   const currentLon = liveTelemetry?.lon ?? data.lon ?? 0;
 
+  const observerLocation = useOrbitStore((state) => state.observerLocation);
+
   const handlePredictPasses = () => {
-    fetchPasses('bengaluru', data.norad_id);
+    fetchPasses(observerLocation?.name || 'Observer Station', data.norad_id);
     navigate('/dashboard');
   };
 
