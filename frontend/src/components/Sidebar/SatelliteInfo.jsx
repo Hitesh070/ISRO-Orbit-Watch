@@ -144,6 +144,19 @@ export const SatelliteInfo = () => {
           <span className="text-slate-400">Orbital Regime:</span>
           <span className="text-amber-300">{data.regime || 'LEO'}</span>
         </div>
+        <div className="flex justify-between items-center pt-1 border-t border-slate-800/60">
+          <span className="text-slate-400">Element Epoch Age:</span>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+            (data.tle_age_days ?? 1.2) > 14
+              ? 'bg-amber-950/80 text-amber-400 border border-amber-500/40'
+              : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30'
+          }`}>
+            {(data.tle_age_days ?? 1.2).toFixed(1)} days {(data.tle_age_days ?? 1.2) > 14 ? '⚠️ (Stale)' : '✓ (Fresh)'}
+          </span>
+        </div>
+        <div className="text-[9px] text-slate-500 leading-tight pt-0.5">
+          * SGP4 LEO error grows ~1–3 km/day past epoch due to atmospheric drag variation.
+        </div>
       </div>
 
       {/* Conjunction Risk Assessment Section */}

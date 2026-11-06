@@ -7,10 +7,9 @@ Follows the formula:
   Risk Score = (nearby_debris_count * avg_relative_velocity) / altitude_factor
 """
 
-import math
 import logging
-from typing import Dict, List, Any, Optional
-import numpy as np
+import math
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("orbitguard.risk_engine")
 

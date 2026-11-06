@@ -1,0 +1,42 @@
+name: Refresh Orbital Catalog Data
+
+on:
+  schedule:
+    # Run every 6 hours: at 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install pipeline dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install httpx sgp4 numpy
+
+      - name: Run Orbital Data Pipeline
+        env:
+          SPACETRACK_USER: ${{ secrets.SPACETRACK_USER }}
+          SPACETRACK_PASS: ${{ secrets.SPACETRACK_PASS }}
+        run: |
+          python scripts/pipeline/fetch_catalog.py
+
+      - name: Commit and push updated catalog artifacts
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "OrbitGuard Data Pipeline [bot]"
+          git add frontend/public/data/ backend/data/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(data): automated orbital catalog refresh [skip ci]" && git push)

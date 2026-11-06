@@ -6,10 +6,10 @@ sets from CelesTrak for active orbital satellites and space debris fields.
 Integrates APScheduler for periodic 6-hour updates and provides deterministic offline fallbacks.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Optional
+
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 

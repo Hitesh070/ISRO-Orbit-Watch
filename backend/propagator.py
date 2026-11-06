@@ -6,11 +6,11 @@ and SGP4. Computes subpoints (latitude, longitude, altitude), velocity vectors, 
 and generates 3D trajectory polylines normalized for Three.js rendering.
 """
 
-import math
 import logging
-import time
-from typing import Dict, List, Optional, Any, Tuple
+import math
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 from skyfield.api import EarthSatellite, load, wgs84
 from skyfield.timelib import Time

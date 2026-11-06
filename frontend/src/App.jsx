@@ -11,6 +11,8 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Conjunctions from './pages/Conjunctions';
 import { useOrbitStore } from './store/useOrbitStore';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import StaleDataBanner from './components/common/StaleDataBanner';
 
 export const App = () => {
   const fetchInitialData = useOrbitStore((state) => state.fetchInitialData);
@@ -34,12 +36,15 @@ export const App = () => {
     <Router>
       <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans select-none">
         <Navbar />
+        <StaleDataBanner />
         <main className="flex-1 relative">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/conjunctions" element={<Conjunctions />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/conjunctions" element={<Conjunctions />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
     </Router>

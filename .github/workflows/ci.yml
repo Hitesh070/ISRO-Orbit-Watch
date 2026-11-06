@@ -1,0 +1,65 @@
+name: Continuous Integration & Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-test:
+    name: Backend Lint & Astrodynamic Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio ruff
+
+      - name: Run Ruff Linting
+        run: |
+          ruff check backend/ scripts/ tests/
+
+      - name: Run Pytest SGP4 Verification & Unit Tests
+        run: |
+          pytest tests/ -v
+
+  frontend-test:
+    name: Frontend Typecheck, Vitest & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Run Vitest Unit & SGP4 Verification Tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Verify Production Build
+        working-directory: frontend
+        run: npm run build

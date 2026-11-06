@@ -7,10 +7,10 @@ Includes predefined space hubs (Sriharikota ISRO SDSC, Bengaluru ISTRAC, Cape Ca
 and generates 2D ground track coordinate trajectories.
 """
 
-import math
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
 from skyfield.api import EarthSatellite, load, wgs84
 
 logger = logging.getLogger("orbitguard.pass_predictor")

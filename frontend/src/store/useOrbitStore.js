@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { orbitApi } from '../api/orbitApi';
+import { predictPassesClient } from '../utils/passPredictor';
 
 export const useOrbitStore = create((set, get) => ({
   // Core orbital dataset
@@ -22,6 +23,7 @@ export const useOrbitStore = create((set, get) => ({
   passesData: null,
   analytics: null,
   groundStations: [],
+  metadata: null,
 
   // UI & Layer toggles
   layers: {
@@ -129,12 +131,13 @@ export const useOrbitStore = create((set, get) => ({
   fetchInitialData: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [satsRes, debrisRes, riskRes, conjRes, stationsRes] = await Promise.all([
+      const [satsRes, debrisRes, riskRes, conjRes, stationsRes, metaRes] = await Promise.all([
         orbitApi.getSatellites(),
         orbitApi.getDebris(),
         orbitApi.getRiskOverview(),
         orbitApi.getConjunctions(),
         orbitApi.getGroundStations(),
+        orbitApi.getPipelineMetadata(),
       ]);
 
       set({
@@ -143,12 +146,15 @@ export const useOrbitStore = create((set, get) => ({
         riskOverview: riskRes,
         conjunctions: conjRes.conjunctions || [],
         groundStations: stationsRes || [],
+        metadata: metaRes,
         isLoading: false,
         lastUpdated: new Date().toLocaleTimeString(),
       });
     } catch (err) {
       console.error('OrbitGuard initial fetch error:', err);
-      set({ error: err.message || 'Failed to initialize orbit telemetry data', isLoading: false });
+      // Attempt to load metadata even on error
+      const meta = await orbitApi.getPipelineMetadata();
+      set({ metadata: meta, error: err.message || 'Failed to initialize orbit telemetry data', isLoading: false });
     }
   },
 

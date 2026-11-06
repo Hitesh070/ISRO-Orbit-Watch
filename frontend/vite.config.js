@@ -7,6 +7,10 @@ export default defineConfig({
   build: {
     target: 'esnext',
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+  },
   server: {
     port: 5173,
     proxy: {

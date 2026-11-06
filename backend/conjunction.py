@@ -7,11 +7,11 @@ Computes Time of Closest Approach (TCA), Euclidean miss distances, relative velo
 and collision probability metrics.
 """
 
-import math
 import logging
-import time
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional
+import math
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 from skyfield.api import EarthSatellite, load, wgs84
 
@@ -66,7 +66,7 @@ class ConjunctionDetector:
                 sat_geo = sat.at(times)
                 sat_pos = sat_geo.position.km  # Shape (3, total_steps)
                 sat_vel = sat_geo.velocity.km_per_s  # Shape (3, total_steps)
-            except Exception as e:
+            except Exception:
                 continue
 
             for deb in candidate_debris:
@@ -143,7 +143,7 @@ class ConjunctionDetector:
                             "cartesian_at_tca": cart_tca,
                             "altitude_km": round(float(sub_sat.elevation.km), 1),
                         })
-                except Exception as e:
+                except Exception:
                     continue
 
         # If zero encounters under strict 35km threshold, synthesize realistic real-time predicted

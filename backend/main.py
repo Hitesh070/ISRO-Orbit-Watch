@@ -5,19 +5,21 @@ High-performance REST API delivering real-time satellite orbital propagation,
 space debris risk calculations, conjunction warnings, ground station passes, and analytics.
 """
 
-import os
 import logging
+import os
 from contextlib import asynccontextmanager
-from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Query, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, Optional
 
-from backend.tle_fetcher import tle_fetcher
+from fastapi import FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.conjunction import conjunction_detector
+from backend.pass_predictor import FAMOUS_GROUND_STATIONS, pass_predictor
 from backend.propagator import propagator
 from backend.risk_engine import risk_engine
-from backend.conjunction import conjunction_detector
-from backend.pass_predictor import pass_predictor, FAMOUS_GROUND_STATIONS
+from backend.tle_fetcher import tle_fetcher
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("orbitguard.api")
@@ -50,14 +52,42 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for frontend applications (Vite port 5173, etc.)
+# Enable CORS with configurable allow-list
+cors_origins_env = os.getenv("CORS_ORIGINS", "*")
+allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if "*" not in allowed_origins else ["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/health")
+def health_check():
+    """
+    Service health check endpoint.
+    Reports operational status, current UTC time, catalog metadata provenance, and system diagnostics.
+    """
+    meta_path = Path(__file__).resolve().parent / "data" / "meta.json"
+    pipeline_meta = {}
+    if meta_path.exists():
+        try:
+            import json
+            with open(meta_path, "r", encoding="utf-8") as f:
+                pipeline_meta = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "status": "healthy",
+        "service": "OrbitGuard SSA API",
+        "version": "3.0.0",
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "pipeline_metadata": pipeline_meta,
+    }
 
 
 @app.get("/")
