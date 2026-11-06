@@ -116,6 +116,14 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                   <span className="text-slate-300">Open Help & Reference</span>
                   <kbd className="px-2 py-1 rounded bg-space-950 border border-slate-700 text-cyan-300 text-[11px] font-bold">?</kbd>
                 </div>
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-space-900/80 border border-slate-800">
+                  <span className="text-slate-300">ISRO/HAL Interview Simulator</span>
+                  <kbd className="px-2 py-1 rounded bg-space-950 border border-slate-700 text-amber-300 text-[11px] font-bold">I</kbd>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-space-900/80 border border-slate-800">
+                  <span className="text-slate-300">Open Settings & Units</span>
+                  <kbd className="px-2 py-1 rounded bg-space-950 border border-slate-700 text-cyan-300 text-[11px] font-bold">,</kbd>
+                </div>
               </div>
             </div>
           )}

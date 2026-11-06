@@ -43,9 +43,16 @@ export const RFSuite: React.FC = () => {
   const observerLocation = useOrbitStore((state) => state.observerLocation);
   const detectUserLocation = useOrbitStore((state) => state.detectUserLocation);
   const setObserverLocation = useOrbitStore((state) => state.setObserverLocation);
+  const settings = useOrbitStore((state) => state.settings);
 
   // Elevation mask setting (degrees, 0 to 20)
-  const [elevationMask, setElevationMask] = useState(5.0);
+  const [elevationMask, setElevationMask] = useState(settings?.elevationMaskDeg || 5.0);
+
+  useEffect(() => {
+    if (settings?.elevationMaskDeg !== undefined) {
+      setElevationMask(settings.elevationMaskDeg);
+    }
+  }, [settings?.elevationMaskDeg]);
 
   // Active target satellite NORAD ID
   const [targetNoradId, setTargetNoradId] = useState<number>(

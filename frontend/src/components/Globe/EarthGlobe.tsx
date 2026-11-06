@@ -133,6 +133,7 @@ const RealisticEarthMesh = () => {
   const earthRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
   const layers = useOrbitStore((state) => state.layers);
+  const settings = useOrbitStore((state) => state.settings);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const observerLocation = useOrbitStore((state) => state.observerLocation);
   const setSimulatedTimeMs = useOrbitStore((state) => state.setSimulatedTimeMs);
@@ -161,7 +162,9 @@ const RealisticEarthMesh = () => {
 
     // Dynamic cloud layer atmospheric drift (faster than surface rotation for realistic weather motion)
     if (cloudsRef.current && layers.clouds) {
-      cloudDriftRef.current += delta * (0.012 + 0.004 * Math.min(simulationSpeed, 10));
+      if (!settings?.reducedMotion) {
+        cloudDriftRef.current += delta * (0.012 + 0.004 * Math.min(simulationSpeed, 10));
+      }
       cloudsRef.current.rotation.y = gmst + cloudDriftRef.current;
     }
 

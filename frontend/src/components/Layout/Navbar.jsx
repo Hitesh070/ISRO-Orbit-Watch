@@ -7,8 +7,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock, Activity, MapPin, HelpCircle } from 'lucide-react';
-import { useOrbitStore } from '../../store/useOrbitStore';
+import {
+  Globe,
+  BarChart3,
+  AlertOctagon,
+  RefreshCw,
+  Satellite,
+  Radio,
+  Clock,
+  Activity,
+  MapPin,
+  HelpCircle,
+  Share2,
+  Check,
+  Settings,
+  GraduationCap,
+} from 'lucide-react';
+import { useOrbitStore, getShareableUrl } from '../../store/useOrbitStore';
 
 export const Navbar = () => {
   const satellites = useOrbitStore((state) => state.satellites);
@@ -23,9 +38,23 @@ export const Navbar = () => {
   const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const toggleHelp = useOrbitStore((state) => state.toggleHelp);
+  const toggleSettings = useOrbitStore((state) => state.toggleSettings);
+  const toggleTrainer = useOrbitStore((state) => state.toggleTrainer);
+  const settings = useOrbitStore((state) => state.settings);
 
   const [utcTime, setUtcTime] = useState('');
   const [localTime, setLocalTime] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    const url = getShareableUrl();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      });
+    }
+  };
 
   // Live Dual Clocks (Synchronized User Local Time + Simulated Spacecraft UTC Time)
   useEffect(() => {
@@ -71,7 +100,7 @@ export const Navbar = () => {
                   OrbitGuard
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v4.1
+                  v4.2
                 </span>
               </div>
               <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
@@ -185,17 +214,52 @@ export const Navbar = () => {
           <div className="hidden sm:block text-right font-mono">
             <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5">
               <Clock className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{localTime || 'Local Time'}</span>
-              <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
-                simulationSpeed > 1 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-emerald-500/10 text-emerald-400'
-              }`}>
+              <span>
+                {settings?.timeFormat === 'utc_primary'
+                  ? utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'
+                  : localTime || 'Local Time'}
+              </span>
+              <span
+                className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                  simulationSpeed > 1
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    : 'bg-emerald-500/10 text-emerald-400'
+                }`}
+              >
                 {simulationSpeed > 1 ? `${simulationSpeed}x WARP` : '1x LIVE'}
               </span>
             </div>
             <div className="text-[10px] text-slate-400">
-              {utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'}
+              {settings?.timeFormat === 'utc_primary'
+                ? localTime || 'Local Time'
+                : utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'}
             </div>
           </div>
+
+          {/* Copy Shareable State Link */}
+          <button
+            onClick={handleCopyLink}
+            title={copiedLink ? 'Deep-Link Copied to Clipboard!' : 'Share State: Copy Deep-Link URL to Clipboard'}
+            className={`p-2 rounded-lg border transition shadow-sm ${
+              copiedLink
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-emerald'
+                : 'bg-space-900 border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300'
+            }`}
+          >
+            {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+          </button>
+
+          {/* ISRO & HAL Interview Trainer */}
+          <button
+            onClick={toggleTrainer}
+            title="Launch ISRO & HAL Technical Interview Simulator (I)"
+            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-amber-400 text-amber-300 hover:text-amber-100 transition shadow-sm relative group"
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span className="hidden lg:group-hover:block absolute top-full mt-2 right-0 z-50 bg-space-950 border border-amber-500/40 text-[10px] text-amber-300 font-mono px-2 py-0.5 rounded whitespace-nowrap shadow-2xl">
+              ISRO / HAL Simulator (I)
+            </span>
+          </button>
 
           {/* Performance HUD Toggle */}
           <button
@@ -208,6 +272,15 @@ export const Navbar = () => {
             }`}
           >
             <Activity className="w-4 h-4" />
+          </button>
+
+          {/* System Settings Drawer */}
+          <button
+            onClick={toggleSettings}
+            title="Open System Settings & Units"
+            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition shadow-sm"
+          >
+            <Settings className="w-4 h-4" />
           </button>
 
           {/* Refresh TLE */}

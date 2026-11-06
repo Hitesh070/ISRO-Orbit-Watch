@@ -5,9 +5,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, ShieldAlert, ShieldCheck, AlertTriangle, Compass, Gauge, Clock, Globe, ArrowUpRight, Activity } from 'lucide-react';
+import { X, ShieldAlert, ShieldCheck, AlertTriangle, Compass, Gauge, Clock, Globe, ArrowUpRight, Activity, Star } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 import { propagateSatelliteRealTime } from '../../utils/sgp4Engine';
+import { formatDistance, formatSpeed } from '../../utils/unitConversion';
 import { useNavigate } from 'react-router-dom';
 
 export const SatelliteInfo = () => {
@@ -15,6 +16,9 @@ export const SatelliteInfo = () => {
   const selectedSatelliteDetail = useOrbitStore((state) => state.selectedSatelliteDetail);
   const selectSatellite = useOrbitStore((state) => state.selectSatellite);
   const fetchPasses = useOrbitStore((state) => state.fetchPasses);
+  const favourites = useOrbitStore((state) => state.favourites);
+  const toggleFavourite = useOrbitStore((state) => state.toggleFavourite);
+  const settings = useOrbitStore((state) => state.settings);
   const navigate = useNavigate();
 
   // Real-time sub-second continuous live position state
@@ -82,13 +86,26 @@ export const SatelliteInfo = () => {
             </span>
           </div>
         </div>
-        <button
-          onClick={() => selectSatellite(null)}
-          className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/10 transition"
-          title="Close Panel"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => toggleFavourite(data.norad_id)}
+            className={`p-1 rounded-md transition ${
+              favourites?.includes(Number(data.norad_id))
+                ? 'text-amber-400 bg-amber-400/10'
+                : 'text-slate-500 hover:text-amber-300 hover:bg-white/5'
+            }`}
+            title={favourites?.includes(Number(data.norad_id)) ? 'Starred Satellite' : 'Add to Starred'}
+          >
+            <Star className={`w-4 h-4 ${favourites?.includes(Number(data.norad_id)) ? 'fill-amber-400' : ''}`} />
+          </button>
+          <button
+            onClick={() => selectSatellite(null)}
+            className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/10 transition"
+            title="Close Panel"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Primary Metrics Grid (Continuously Ticking Sub-Second Telemetry) */}
@@ -98,7 +115,7 @@ export const SatelliteInfo = () => {
             <Gauge className="w-3 h-3 text-cyan-400" /> Real-Time Altitude
           </div>
           <div className="text-sm font-mono font-bold text-slate-100 mt-0.5">
-            {typeof currentAlt === 'number' ? currentAlt.toFixed(2) : currentAlt} <span className="text-[10px] font-normal text-slate-400">km</span>
+            {formatDistance(currentAlt, settings?.units, 2)}
           </div>
         </div>
 
@@ -107,7 +124,7 @@ export const SatelliteInfo = () => {
             <Clock className="w-3 h-3 text-cyan-400" /> Velocity Vector
           </div>
           <div className="text-sm font-mono font-bold text-emerald-300 mt-0.5">
-            {typeof currentVel === 'number' ? currentVel.toFixed(3) : currentVel} <span className="text-[10px] font-normal text-slate-400">km/s</span>
+            {formatSpeed(currentVel, settings?.units, 3)}
           </div>
         </div>
 

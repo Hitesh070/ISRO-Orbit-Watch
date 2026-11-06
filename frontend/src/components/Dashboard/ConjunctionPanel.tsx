@@ -25,6 +25,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
+import { formatDistance, formatSpeed } from '../../utils/unitConversion';
 import { useNavigate } from 'react-router-dom';
 import EncounterPlanePlot from './EncounterPlanePlot';
 
@@ -47,6 +48,7 @@ export const ConjunctionPanel = () => {
   const conjunctions = useOrbitStore((state: any) => state.conjunctions);
   const selectConjunction = useOrbitStore((state: any) => state.selectConjunction);
   const selectSatellite = useOrbitStore((state: any) => state.selectSatellite);
+  const settings = useOrbitStore((state: any) => state.settings);
   const navigate = useNavigate();
 
   // State
@@ -321,13 +323,13 @@ export const ConjunctionPanel = () => {
                               : 'text-slate-300'
                           }
                         >
-                          {conj.miss_distance_km} km
+                          {formatDistance(conj.miss_distance_km, settings?.units, 1)}
                         </span>
                       </td>
 
                       {/* Relative Velocity */}
                       <td className="py-2.5 px-3 font-mono text-slate-300">
-                        {conj.relative_speed_kms} km/s
+                        {formatSpeed(conj.relative_speed_kms, settings?.units, 2)}
                       </td>
 
                       {/* Foster-1992 Pc */}

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Search, Layers, SlidersHorizontal, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { Search, Layers, SlidersHorizontal, RotateCcw, Eye, EyeOff, Star } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const FilterPanel = () => {
@@ -13,6 +13,7 @@ export const FilterPanel = () => {
   const layers = useOrbitStore((state) => state.layers);
   const satellites = useOrbitStore((state) => state.satellites);
   const debris = useOrbitStore((state) => state.debris);
+  const favourites = useOrbitStore((state) => state.favourites);
   const setFilter = useOrbitStore((state) => state.setFilter);
   const toggleLayer = useOrbitStore((state) => state.toggleLayer);
   const resetFilters = useOrbitStore((state) => state.resetFilters);
@@ -100,6 +101,24 @@ export const FilterPanel = () => {
           </button>
         </div>
       </div>
+
+      {/* Starred Favourites Only Filter */}
+      <button
+        onClick={() => setFilter('favouritesOnly', !filters.favouritesOnly)}
+        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs font-mono transition mb-3 ${
+          filters.favouritesOnly
+            ? 'bg-amber-950/50 border-amber-500/60 text-amber-300 font-bold shadow-glow-amber'
+            : 'bg-space-950/60 border-slate-800 text-slate-400 hover:text-white'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Star className={`w-3.5 h-3.5 ${filters.favouritesOnly ? 'fill-amber-400 text-amber-400' : 'text-slate-400'}`} />
+          <span>Starred Favourites Only</span>
+        </div>
+        <span className="text-[10px] px-1.5 py-0.2 rounded bg-space-900 border border-slate-700 font-bold">
+          {favourites?.length || 0}
+        </span>
+      </button>
 
       {/* Dropdown Filters */}
       <div className="space-y-2.5 text-xs">

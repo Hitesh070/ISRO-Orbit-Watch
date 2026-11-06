@@ -1,11 +1,12 @@
 # OrbitGuard 🛰️
 ### Real-Time Space Situational Awareness, Conjunction Assessment & Ground Station Toolkit
 
-[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20v4.0-000000.svg?style=flat&logo=vercel)](https://orbit-guard-tan.vercel.app)
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20v4.2-000000.svg?style=flat&logo=vercel)](https://orbit-guard-tan.vercel.app)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Hitesh070%2FOrbit--Guard-181717.svg?style=flat&logo=github)](https://github.com/Hitesh070/Orbit-Guard)
 [![Astrodynamics](https://img.shields.io/badge/Astrodynamics-SGP4%20%7C%20Vallado%20Verified-009688.svg?style=flat)](https://celestrak.org)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-61DAFB.svg?style=flat&logo=react)](https://reactjs.org/)
 [![Three.js](https://img.shields.io/badge/3D%20Graphics-Three.js%20%7C%20GPU%20Shader-black.svg?style=flat&logo=three.js)](https://threejs.org/)
+[![Tests](https://img.shields.io/badge/Tests-35%20Vitest%20%2B%208%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **OrbitGuard** is an advanced, production-grade Space Situational Awareness (SSA) and RF ground-station operations platform. It propagates thousands of active spacecraft and space debris fragments in real time, evaluates bivariate collision probabilities ($P_c$) via 2-D encounter plane integration, estimates RF Doppler shifts with Earth-rotation tangential velocity compensation, computes pass-resolved link budgets, and drives dual-axis antenna rotators.
@@ -17,6 +18,7 @@
 - **Production Application**: [https://orbit-guard-tan.vercel.app](https://orbit-guard-tan.vercel.app)
 - **Source Code**: [https://github.com/Hitesh070/Orbit-Guard](https://github.com/Hitesh070/Orbit-Guard)
 - **Technical Interview Notes**: [`docs/INTERVIEW_NOTES.md`](docs/INTERVIEW_NOTES.md)
+- **90-Second Demo Presentation Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
 ---
 

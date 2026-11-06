@@ -8,6 +8,41 @@ import { create } from 'zustand';
 import { orbitApi } from '../api/orbitApi';
 import { predictPassesClient } from '../utils/passPredictor';
 
+export const DEFAULT_SETTINGS = {
+  units: 'metric', // 'metric' (km, km/s) | 'imperial' (miles, mi/s)
+  timeFormat: 'local_primary', // 'local_primary' | 'utc_primary'
+  quality: 'high', // 'auto' | 'high' | 'medium' | 'low'
+  reducedMotion: false,
+  elevationMaskDeg: 5,
+  covarianceScaleK: 1.0,
+  criticalPcThreshold: 1e-4,
+  warningPcThreshold: 1e-5,
+};
+
+const getInitialSettings = () => {
+  try {
+    const saved = localStorage.getItem('orbitguard_settings_v1');
+    if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+  } catch {}
+  return DEFAULT_SETTINGS;
+};
+
+const getInitialFavourites = () => {
+  try {
+    const saved = localStorage.getItem('orbitguard_favourites');
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return [25544]; // default ISS
+};
+
+const getInitialOnboarding = () => {
+  try {
+    return !localStorage.getItem('orbitguard_onboarded_v1');
+  } catch {
+    return false;
+  }
+};
+
 export const useOrbitStore = create((set, get) => ({
   // Core orbital dataset
   catalog: [],
@@ -32,10 +67,60 @@ export const useOrbitStore = create((set, get) => ({
   toggleHud: () => set((state) => ({ isHudVisible: !state.isHudVisible })),
   setWorkerLatencyMs: (ms) => set({ workerLatencyMs: ms }),
 
-  // Help & Documentation Modal (Phase 6)
+  // Modal dialog states (Phase 6)
   isHelpOpen: false,
   toggleHelp: () => set((state) => ({ isHelpOpen: !state.isHelpOpen })),
   setHelpOpen: (open) => set({ isHelpOpen: open }),
+
+  isSettingsOpen: false,
+  toggleSettings: () => set((state) => ({ isSettingsOpen: !state.isSettingsOpen })),
+  setSettingsOpen: (open) => set({ isSettingsOpen: open }),
+
+  isTrainerOpen: false,
+  toggleTrainer: () => set((state) => ({ isTrainerOpen: !state.isTrainerOpen })),
+  setTrainerOpen: (open) => set({ isTrainerOpen: open }),
+
+  isOnboardingOpen: getInitialOnboarding(),
+  toggleOnboarding: () => set((state) => ({ isOnboardingOpen: !state.isOnboardingOpen })),
+  setOnboardingOpen: (open) => {
+    if (!open) {
+      try {
+        localStorage.setItem('orbitguard_onboarded_v1', 'true');
+      } catch {}
+    }
+    set({ isOnboardingOpen: open });
+  },
+
+  // User Settings & Unit System (Phase 6)
+  settings: getInitialSettings(),
+  updateSettings: (newSettings) => {
+    const merged = { ...get().settings, ...newSettings };
+    try {
+      localStorage.setItem('orbitguard_settings_v1', JSON.stringify(merged));
+    } catch {}
+    set({ settings: merged });
+  },
+  resetSettings: () => {
+    try {
+      localStorage.setItem('orbitguard_settings_v1', JSON.stringify(DEFAULT_SETTINGS));
+    } catch {}
+    set({ settings: DEFAULT_SETTINGS });
+  },
+
+  // Favourites / Bookmarks
+  favourites: getInitialFavourites(),
+  toggleFavourite: (noradId) => {
+    const numId = Number(noradId);
+    const current = get().favourites;
+    const next = current.includes(numId)
+      ? current.filter((id) => id !== numId)
+      : [...current, numId];
+    try {
+      localStorage.setItem('orbitguard_favourites', JSON.stringify(next));
+    } catch {}
+    set({ favourites: next });
+  },
+  isFavourite: (noradId) => get().favourites.includes(Number(noradId)),
 
   // UI & Layer toggles
   layers: {
@@ -53,6 +138,7 @@ export const useOrbitStore = create((set, get) => ({
     country: 'ALL',
     objectType: 'ALL',
     riskLevel: 'ALL',
+    favouritesOnly: false,
   },
 
   // App Theme, Simulation Speed & Mission Clock
@@ -167,6 +253,7 @@ export const useOrbitStore = create((set, get) => ({
         country: 'ALL',
         objectType: 'ALL',
         riskLevel: 'ALL',
+        favouritesOnly: false,
       },
       highlightedNoradIds: [],
     });
@@ -179,16 +266,17 @@ export const useOrbitStore = create((set, get) => ({
       return;
     }
 
+    const targetStr = String(noradId).trim();
     const { catalog, satellites, debris } = get();
     const found =
-      catalog.find((c) => c.norad_id === noradId) ||
-      satellites.find((s) => s.norad_id === noradId) ||
-      debris.find((d) => d.norad_id === noradId);
+      catalog.find((c) => String(c.norad_id) === targetStr) ||
+      satellites.find((s) => String(s.norad_id) === targetStr) ||
+      debris.find((d) => String(d.norad_id) === targetStr);
 
-    set({ selectedSatellite: found || { norad_id: noradId, name: `OBJECT ${noradId}` } });
+    set({ selectedSatellite: found || { norad_id: Number(noradId) || noradId, name: `OBJECT ${noradId}` } });
 
     try {
-      const detail = await orbitApi.getSatelliteDetail(noradId);
+      const detail = await orbitApi.getSatelliteDetail(Number(noradId) || noradId);
       set({ selectedSatelliteDetail: detail });
     } catch (err) {
       console.warn(`Failed fetching detail for satellite ${noradId}:`, err);
@@ -302,3 +390,27 @@ export const useOrbitStore = create((set, get) => ({
     }
   },
 }));
+
+/**
+ * Returns current deep-linkable URL encoding active norad selection and simulation speed.
+ */
+export const getShareableUrl = () => {
+  if (typeof window === 'undefined') return '';
+  const state = useOrbitStore.getState();
+  const url = new URL(window.location.href);
+
+  if (state.selectedSatellite?.norad_id) {
+    url.searchParams.set('norad', String(state.selectedSatellite.norad_id));
+  } else {
+    url.searchParams.delete('norad');
+  }
+
+  if (state.simulationSpeed && state.simulationSpeed > 1) {
+    url.searchParams.set('speed', String(state.simulationSpeed));
+  } else {
+    url.searchParams.delete('speed');
+  }
+
+  return url.toString();
+};
+

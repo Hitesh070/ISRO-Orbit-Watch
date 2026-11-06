@@ -85,6 +85,7 @@ export const PointCloud = ({
   const highlightedNoradIds = useOrbitStore((state) => state.highlightedNoradIds);
   const layers = useOrbitStore((state) => state.layers);
   const filters = useOrbitStore((state) => state.filters);
+  const favourites = useOrbitStore((state) => state.favourites);
 
   const count = catalog.length;
 
@@ -191,6 +192,7 @@ export const PointCloud = ({
 
       // Filters
       if (visible > 0.5) {
+        if (filters.favouritesOnly && !favourites.includes(item.norad_id)) visible = 0.0;
         if (filters.regime !== 'ALL' && item.regime !== filters.regime) visible = 0.0;
         if (filters.objectType === 'Satellite' && isDebris) visible = 0.0;
         if (filters.objectType === 'Debris' && !isDebris) visible = 0.0;

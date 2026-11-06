@@ -13,6 +13,7 @@
 import React, { useState, useMemo } from 'react';
 import { ShieldAlert, ArrowUpDown, ExternalLink, Info, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
+import { formatDistance, formatSpeed } from '../../utils/unitConversion';
 import { useNavigate } from 'react-router-dom';
 
 function formatCountdown(targetTimestampMs: number): string {
@@ -35,6 +36,7 @@ export const RiskTable = () => {
   const conjunctions = useOrbitStore((state: any) => state.conjunctions);
   const selectSatellite = useOrbitStore((state: any) => state.selectSatellite);
   const selectConjunction = useOrbitStore((state: any) => state.selectConjunction);
+  const settings = useOrbitStore((state: any) => state.settings);
   const navigate = useNavigate();
 
   const [sortField, setSortField] = useState('pc_foster');
@@ -193,17 +195,17 @@ export const RiskTable = () => {
                     </div>
                   </td>
 
-                  <td className="py-3 px-3 text-slate-300">{sat.altitude_km} km</td>
+                  <td className="py-3 px-3 text-slate-300">{formatDistance(sat.altitude_km, settings?.units, 0)}</td>
 
                   {/* Miss Distance */}
                   <td className="py-3 px-3 font-bold text-slate-200">
                     <span className={sat.miss_distance_km < 5.0 ? 'text-amber-400' : 'text-slate-300'}>
-                      {sat.miss_distance_km} km
+                      {formatDistance(sat.miss_distance_km, settings?.units, 1)}
                     </span>
                   </td>
 
                   {/* Relative Velocity */}
-                  <td className="py-3 px-3 text-slate-300">{sat.relative_speed_kms} km/s</td>
+                  <td className="py-3 px-3 text-slate-300">{formatSpeed(sat.relative_speed_kms, settings?.units, 2)}</td>
 
                   {/* Foster Pc */}
                   <td className="py-3 px-3 font-bold">
