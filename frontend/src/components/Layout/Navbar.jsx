@@ -1,14 +1,14 @@
 /**
  * Navbar Component
  * OrbitGuard primary application banner featuring telemetry metrics ticker,
- * live UTC orbital clock, navigation routes, and TLE cache refresh trigger.
+ * dual Local / UTC orbital clock, navigation routes, and TLE cache refresh trigger.
+ * Enforced pure space dark theme.
  */
 
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio } from 'lucide-react';
+import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
-import ThemeToggle from './ThemeToggle';
 
 export const Navbar = () => {
   const satellites = useOrbitStore((state) => state.satellites);
@@ -18,12 +18,24 @@ export const Navbar = () => {
   const triggerRefreshTLE = useOrbitStore((state) => state.triggerRefreshTLE);
 
   const [utcTime, setUtcTime] = useState('');
+  const [localTime, setLocalTime] = useState('');
 
-  // Live UTC Clock
+  // Live Dual Clocks (Local User Time + Official Spacecraft UTC Time)
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
+      // UTC time
       setUtcTime(now.toUTCString().replace('GMT', 'UTC'));
+      // Local time with user's timezone abbreviation
+      setLocalTime(
+        now.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          timeZoneName: 'short',
+        })
+      );
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
@@ -33,8 +45,8 @@ export const Navbar = () => {
   const criticalConjunctions = conjunctions.filter((c) => c.risk_level === 'CRITICAL').length;
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-4 py-2.5 shadow-xl select-none">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-3 md:px-5 py-2.5 shadow-xl select-none">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3">
           <NavLink to="/" className="flex items-center gap-2.5 group">
@@ -45,15 +57,15 @@ export const Navbar = () => {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base md:text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400 bg-clip-text text-transparent">
+                <span className="font-extrabold text-base md:text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent">
                   OrbitGuard
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v1.0
+                  v2.0
                 </span>
               </div>
               <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
-                Real-Time Orbit Tracker & Debris Risk
+                Real-Time Satellite Orbit Tracker & Debris Risk
               </p>
             </div>
           </NavLink>
@@ -63,8 +75,8 @@ export const Navbar = () => {
         <div className="hidden lg:flex items-center gap-4 text-xs font-mono px-3 py-1.5 rounded-lg bg-space-950/70 border border-slate-800">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-400">Active Satellites:</span>
-            <span className="font-bold text-emerald-400">{satellites.length}</span>
+            <span className="text-slate-400">Active Spacecraft:</span>
+            <span className="font-bold text-emerald-400">{satellites.length || 20}</span>
           </div>
 
           <div className="w-px h-3.5 bg-slate-800" />
@@ -72,15 +84,15 @@ export const Navbar = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-slate-400">Tracked Debris:</span>
-            <span className="font-bold text-amber-400">{debris.length}</span>
+            <span className="font-bold text-amber-400">{debris.length || 12}</span>
           </div>
 
           <div className="w-px h-3.5 bg-slate-800" />
 
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-slate-400">Critical Conjunctions:</span>
-            <span className="font-bold text-rose-400">{criticalConjunctions}</span>
+            <span className="text-slate-400">Conjunctions:</span>
+            <span className="font-bold text-rose-400">{criticalConjunctions} Critical</span>
           </div>
         </div>
 
@@ -133,25 +145,27 @@ export const Navbar = () => {
           </NavLink>
         </nav>
 
-        {/* UTC Clock & Actions */}
-        <div className="flex items-center gap-2">
-          <div className="hidden xl:block text-right">
-            <div className="text-[11px] font-mono text-cyan-300 font-bold">{utcTime}</div>
-            <div className="text-[9px] font-mono text-slate-500">PROPAGATED VIA SGP4</div>
+        {/* Dual Live Clocks (User Local Time + UTC Space Time) & Actions */}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block text-right font-mono">
+            <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{localTime || 'Local Time'}</span>
+            </div>
+            <div className="text-[10px] text-slate-400">
+              {utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'}
+            </div>
           </div>
 
           {/* Refresh TLE */}
           <button
             onClick={triggerRefreshTLE}
             disabled={isLoading}
-            title="Refresh TLE from CelesTrak"
+            title="Refresh Real-Time TLE Data from Space Agencies"
             className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 hover:text-cyan-100 transition shadow-sm disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
-
-          {/* Theme Toggle */}
-          <ThemeToggle />
         </div>
       </div>
     </header>

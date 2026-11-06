@@ -1,6 +1,7 @@
 /**
  * OrbitGuard App Root Component
  * Sets up client-side routing, initial telemetry polling, and application layout.
+ * Permanent Space Dark Theme applied.
  */
 
 import React, { useEffect } from 'react';
@@ -13,34 +14,25 @@ import { useOrbitStore } from './store/useOrbitStore';
 
 export const App = () => {
   const fetchInitialData = useOrbitStore((state) => state.fetchInitialData);
-  const theme = useOrbitStore((state) => state.theme);
 
-  // Initialize data on application startup
+  // Initialize data on application startup and enforce dark theme
   useEffect(() => {
+    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
+
     fetchInitialData();
 
-    // Periodic telemetry polling every 30 seconds
+    // Periodic telemetry polling every 20 seconds
     const interval = setInterval(() => {
       fetchInitialData();
-    }, 30000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, [fetchInitialData]);
 
-  // Apply theme class to document element
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    }
-  }, [theme]);
-
   return (
     <Router>
-      <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans select-none">
         <Navbar />
         <main className="flex-1 relative">
           <Routes>

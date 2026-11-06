@@ -2,6 +2,7 @@
  * SatelliteMarker Component
  * Interactive 3D spacecraft / space debris marker with dynamic risk-based color-coding,
  * pulsing halos, and click-to-inspect interactivity.
+ * Fixed: eliminated full-screen covering modal bug on click.
  */
 
 import React, { useRef, useState } from 'react';
@@ -39,12 +40,12 @@ export const SatelliteMarker = ({ item, isSelected, isHighlighted, onSelect }) =
   }
 
   const [x, y, z] = item.cartesian || [0, 1.1, 0];
-  const size = isSelected ? 0.035 : isHighlighted ? 0.03 : isDebris ? 0.016 : 0.024;
+  const size = isSelected ? 0.032 : isHighlighted ? 0.028 : isDebris ? 0.015 : 0.022;
 
   // Gentle pulse animation for selected or highlighted items
   useFrame(({ clock }) => {
     if (ringRef.current && (isSelected || isHighlighted)) {
-      const t = clock.getElapsedTime() * 3;
+      const t = clock.getElapsedTime() * 3.5;
       const s = 1.0 + Math.sin(t) * 0.35;
       ringRef.current.scale.set(s, s, s);
     }
@@ -73,38 +74,29 @@ export const SatelliteMarker = ({ item, isSelected, isHighlighted, onSelect }) =
         <meshBasicMaterial color={markerColor} />
       </mesh>
 
-      {/* Pulsing Selection Ring */}
-      {(isSelected || isHighlighted || hovered) && (
+      {/* Pulsing Selection Ring / Halo on the 3D globe */}
+      {(isSelected || isHighlighted) && (
         <mesh ref={ringRef}>
-          <ringGeometry args={[size * 1.5, size * 2.1, 32]} />
+          <ringGeometry args={[size * 1.4, size * 2.2, 32]} />
           <meshBasicMaterial
             color={isHighlighted ? '#f43f5e' : markerColor}
             side={THREE.DoubleSide}
             transparent
-            opacity={0.8}
+            opacity={0.85}
           />
         </mesh>
       )}
 
-      {/* Tooltip on Hover or Selection */}
-      {(hovered || isSelected) && (
-        <Html distanceFactor={12} position={[0, size * 2.2, 0]} center>
-          <div className="pointer-events-none whitespace-nowrap rounded-md bg-space-900/95 px-2.5 py-1 text-xs font-mono text-cyan-300 shadow-xl border border-cyan-500/40 backdrop-blur-md">
-            <div className="font-bold flex items-center gap-1.5">
-              <span
-                className="w-2 h-2 rounded-full inline-block"
-                style={{ backgroundColor: markerColor }}
-              />
-              {item.name}
-            </div>
-            <div className="text-[10px] text-slate-300">
-              NORAD: {item.norad_id} | Alt: {item.alt_km} km | Vel: {item.velocity_km_s} km/s
-            </div>
-            {item.risk_score !== undefined && !isDebris && (
-              <div className="text-[10px] text-amber-400 font-semibold">
-                Risk: {item.risk_score} ({item.risk_level})
-              </div>
-            )}
+      {/* Compact, fixed-size hover chip only when hovering (NEVER covers screen on click) */}
+      {hovered && !isSelected && (
+        <Html position={[0, size * 1.8, 0]} center style={{ pointerEvents: 'none' }}>
+          <div className="whitespace-nowrap rounded-md bg-space-950/90 px-2 py-0.5 text-[10px] font-mono text-cyan-300 shadow-lg border border-cyan-500/50 backdrop-blur-sm flex items-center gap-1.5 animate-in fade-in duration-150">
+            <span
+              className="w-1.5 h-1.5 rounded-full inline-block"
+              style={{ backgroundColor: markerColor }}
+            />
+            <span className="font-bold">{item.name}</span>
+            <span className="text-slate-400">({item.alt_km?.toFixed(0)} km)</span>
           </div>
         </Html>
       )}

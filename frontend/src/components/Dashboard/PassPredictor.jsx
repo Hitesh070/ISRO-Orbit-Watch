@@ -1,11 +1,11 @@
 /**
  * PassPredictor Component
  * High-precision ground station pass prediction engine using Skyfield's find_events.
- * Computes AOS, LOS, maximum elevation, trajectory azimuths, and 2D ground track coordinate vectors.
+ * Features automated browser GPS geolocation auto-detection.
  */
 
 import React, { useState, useEffect } from 'react';
-import { Radio, MapPin, Compass, Clock, Send, Globe2, Sparkles, Navigation } from 'lucide-react';
+import { Radio, MapPin, Compass, Clock, Send, Globe2, Sparkles, Navigation, LocateFixed } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const PassPredictor = () => {
@@ -19,10 +19,54 @@ export const PassPredictor = () => {
   const [customLat, setCustomLat] = useState('');
   const [customLon, setCustomLon] = useState('');
   const [isCustom, setIsCustom] = useState(false);
+  const [geoStatus, setGeoStatus] = useState('');
 
+  // Auto-detect user's real location on load
   useEffect(() => {
-    fetchPasses(selectedCity, selectedNorad);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = Number(position.coords.latitude.toFixed(4));
+          const lon = Number(position.coords.longitude.toFixed(4));
+          setCustomLat(String(lat));
+          setCustomLon(String(lon));
+          setIsCustom(true);
+          setGeoStatus(`Auto-detected: ${lat}°, ${lon}°`);
+          fetchPasses(`${lat},${lon}`, selectedNorad);
+        },
+        () => {
+          // Fallback to Bengaluru (ISRO Headquarters)
+          fetchPasses('bengaluru', selectedNorad);
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      fetchPasses('bengaluru', selectedNorad);
+    }
   }, []);
+
+  const handleDetectLocation = () => {
+    if (!('geolocation' in navigator)) {
+      setGeoStatus('Geolocation not supported by this browser.');
+      return;
+    }
+    setGeoStatus('Acquiring GPS coordinates...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude.toFixed(4));
+        const lon = Number(position.coords.longitude.toFixed(4));
+        setCustomLat(String(lat));
+        setCustomLon(String(lon));
+        setIsCustom(true);
+        setGeoStatus(`Acquired: ${lat}° N, ${lon}° E`);
+        fetchPasses(`${lat},${lon}`, selectedNorad);
+      },
+      (err) => {
+        setGeoStatus(`Location access denied or timed out (${err.message}).`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handlePredict = (e) => {
     e.preventDefault();
@@ -51,14 +95,31 @@ export const PassPredictor = () => {
             SGP4 topocentric line-of-sight tracking for satellite communication and optical observation
           </p>
         </div>
+
+        {/* Live GPS Auto-Detect Button */}
+        <button
+          type="button"
+          onClick={handleDetectLocation}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-semibold transition hover:shadow-glow-emerald"
+        >
+          <LocateFixed className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <span>Use My Real-Time Location</span>
+        </button>
       </div>
+
+      {geoStatus && (
+        <div className="text-[11px] font-mono text-cyan-300 bg-cyan-950/40 px-3 py-1.5 rounded-lg border border-cyan-500/30 mb-3 flex items-center gap-2">
+          <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{geoStatus}</span>
+        </div>
+      )}
 
       {/* Control Form */}
       <form onSubmit={handlePredict} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5 text-xs font-mono">
         {/* Ground Station Selection */}
         <div className="md:col-span-2">
           <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-            Ground Station / City
+            Ground Station / Location
           </label>
           <div className="flex gap-2">
             <select
@@ -73,12 +134,12 @@ export const PassPredictor = () => {
               }}
               className="w-full px-3 py-2 rounded-lg bg-space-950/80 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-400"
             >
+              <option value="custom">📍 Custom / Browser GPS Coordinates</option>
               {groundStations.map((gs) => (
                 <option key={gs.city.toLowerCase()} value={gs.city.toLowerCase()}>
                   {gs.city} — {gs.name} ({gs.country})
                 </option>
               ))}
-              <option value="custom">Custom Coordinates (Lat / Lon)</option>
             </select>
           </div>
         </div>
@@ -86,7 +147,7 @@ export const PassPredictor = () => {
         {/* Target Spacecraft Selection */}
         <div>
           <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-            Target Satellite
+            Target Spacecraft
           </label>
           <select
             value={selectedNorad}
@@ -127,7 +188,7 @@ export const PassPredictor = () => {
               step="0.0001"
               value={customLat}
               onChange={(e) => setCustomLat(e.target.value)}
-              placeholder="Latitude (e.g. 13.7199)"
+              placeholder="Latitude (e.g. 13.0827)"
               className="px-3 py-2 rounded-lg bg-space-950 border border-slate-700 text-slate-200"
             />
             <input
@@ -135,7 +196,7 @@ export const PassPredictor = () => {
               step="0.0001"
               value={customLon}
               onChange={(e) => setCustomLon(e.target.value)}
-              placeholder="Longitude (e.g. 80.2304)"
+              placeholder="Longitude (e.g. 80.2707)"
               className="px-3 py-2 rounded-lg bg-space-950 border border-slate-700 text-slate-200"
             />
           </div>
@@ -147,13 +208,13 @@ export const PassPredictor = () => {
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-cyan-400" />
           <span>
-            Station: <strong className="text-cyan-200">{stationInfo.name || 'Bengaluru'}</strong> ({stationInfo.lat?.toFixed(2)}°, {stationInfo.lon?.toFixed(2)}°)
+            Target Location: <strong className="text-cyan-200">{stationInfo.name || 'Selected Ground Station'}</strong> ({stationInfo.lat?.toFixed(2)}°, {stationInfo.lon?.toFixed(2)}°)
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-emerald-400" />
           <span>
-            Spacecraft: <strong className="text-emerald-300">{satInfo.name || 'ISS'}</strong> (NORAD: {satInfo.norad_id || 25544})
+            Spacecraft: <strong className="text-emerald-300">{satInfo.name || 'ISS (ZARYA)'}</strong> (NORAD: {satInfo.norad_id || 25544})
           </span>
         </div>
       </div>
@@ -222,7 +283,7 @@ export const PassPredictor = () => {
             ) : (
               <tr>
                 <td colSpan={7} className="py-6 text-center text-slate-400 font-mono">
-                  No upcoming passes above 10° horizon found over the selected window.
+                  Evaluating upcoming pass geometry over your location...
                 </td>
               </tr>
             )}
@@ -235,16 +296,16 @@ export const PassPredictor = () => {
         <div className="pt-4 border-t border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-cyan-400 font-mono flex items-center gap-1.5 uppercase tracking-wider">
-              <Navigation className="w-3.5 h-3.5" /> Orbit Ground Track Coordinates (-45m to +45m)
+              <Navigation className="w-3.5 h-3.5" /> Orbit Ground Track Subpoint Coordinates
             </h3>
-            <span className="text-[10px] font-mono text-slate-400">Sub-satellite track</span>
+            <span className="text-[10px] font-mono text-slate-400">Past 45m → Future 45m</span>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 font-mono text-[10px]">
             {groundTrack.map((pt, i) => (
               <div
                 key={i}
-                className={`p-2 rounded-lg border whitespace-nowrap min-w-[125px] flex-shrink-0 ${
+                className={`p-2 rounded-lg border whitespace-nowrap min-w-[120px] flex-shrink-0 ${
                   pt.is_current
                     ? 'bg-emerald-950/40 border-emerald-500 text-emerald-300 font-bold shadow-glow-emerald'
                     : 'bg-space-950/60 border-slate-800 text-slate-400'
@@ -252,7 +313,7 @@ export const PassPredictor = () => {
               >
                 <div className="text-[9px] uppercase tracking-wider text-slate-500 flex justify-between">
                   <span>{pt.timestamp}</span>
-                  {pt.is_current && <span className="text-emerald-400">NOW</span>}
+                  {pt.is_current && <span className="text-emerald-400">LIVE</span>}
                 </div>
                 <div className="text-slate-200 mt-1">
                   {pt.lat}°, {pt.lon}°
