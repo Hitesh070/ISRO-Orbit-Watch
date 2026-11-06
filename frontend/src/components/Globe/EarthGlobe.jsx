@@ -1,21 +1,44 @@
 /**
- * EarthGlobe Component
- * Renders high-fidelity 3D Earth using NASA Blue Marble textures, city lights nightmap,
- * cloud layer rotation, atmospheric Rayleigh scattering glow, and orbital entity layers.
+ * EarthGlobe Component (v2.0 High-Fidelity & Real-Time SGP4 Engine)
+ * Renders high-quality 3D Earth with astronomical Sun-aligned day/night terminator,
+ * dynamic cloud layer drift, atmospheric Rayleigh scattering glow,
+ * and continuous sub-second SGP4 orbital propagation loop on every frame.
  */
 
-import React, { useRef, useMemo, Suspense } from 'react';
+import React, { useRef, useMemo, useState, Suspense } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import { useOrbitStore } from '../../store/useOrbitStore';
+import { propagateCatalogRealTime, computeOrbitPathClient } from '../../utils/sgp4Engine';
 import SatelliteMarker from './SatelliteMarker';
 import OrbitPath from './OrbitPath';
 
 /**
- * 3D Earth Core Sphere Mesh
+ * Calculates current real-time solar sub-point direction in Three.js coordinates
+ * based on current UTC date and time.
  */
-const EarthMesh = () => {
+function getSunDirection(now = new Date()) {
+  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+  // Subsolar longitude in degrees
+  const sunLon = -(utcHours - 12) * 15;
+  const sunLonRad = (sunLon * Math.PI) / 180;
+
+  // Approximate solar declination for Earth's axial tilt (23.44°)
+  const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+  const declinationRad = (-23.44 * (Math.PI / 180)) * Math.cos(((2 * Math.PI) / 365.25) * (dayOfYear + 10));
+
+  const x = Math.cos(declinationRad) * Math.sin(sunLonRad) * 6;
+  const y = Math.sin(declinationRad) * 6;
+  const z = Math.cos(declinationRad) * Math.cos(sunLonRad) * 6;
+  return [x, y, z];
+}
+
+/**
+ * 3D Earth Core Sphere Mesh with Day/Night Lighting and Realistic Clouds
+ */
+const RealisticEarthMesh = () => {
   const earthRef = useRef();
   const cloudsRef = useRef();
   const layers = useOrbitStore((state) => state.layers);
@@ -28,9 +51,9 @@ const EarthMesh = () => {
   ]);
 
   useFrame((_, delta) => {
-    // Gentle axial rotation of clouds
+    // Realistic cloud layer atmospheric drift (faster than Earth rotation)
     if (cloudsRef.current && layers.clouds) {
-      cloudsRef.current.rotation.y += delta * 0.015;
+      cloudsRef.current.rotation.y += delta * 0.02;
     }
   });
 
@@ -42,35 +65,35 @@ const EarthMesh = () => {
         <meshStandardMaterial
           map={dayTexture}
           emissiveMap={nightTexture}
-          emissive={new THREE.Color(0x332211)}
+          emissive={new THREE.Color(0x3a2512)}
           emissiveIntensity={0.65}
-          roughness={0.7}
-          metalness={0.1}
+          roughness={0.65}
+          metalness={0.12}
         />
       </mesh>
 
-      {/* Cloud Layer Sphere (Radius = 1.012) */}
+      {/* Realistic Rotating Cloud Layer (Radius = 1.015) */}
       {layers.clouds && (
         <mesh ref={cloudsRef}>
-          <sphereGeometry args={[1.012, 64, 64]} />
+          <sphereGeometry args={[1.015, 64, 64]} />
           <meshStandardMaterial
             map={cloudsTexture}
             transparent
-            opacity={0.35}
+            opacity={0.38}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
           />
         </mesh>
       )}
 
-      {/* Atmospheric Glow Rim Shell (Radius = 1.035) */}
+      {/* Atmospheric Rayleigh Scattering Glow (Radius = 1.035) */}
       {layers.atmosphere && (
         <mesh>
           <sphereGeometry args={[1.035, 64, 64]} />
           <meshBasicMaterial
-            color={new THREE.Color(0x38bdf8)}
+            color={new THREE.Color(0x22d3ee)}
             transparent
-            opacity={0.12}
+            opacity={0.14}
             side={THREE.BackSide}
             blending={THREE.AdditiveBlending}
           />
@@ -81,7 +104,7 @@ const EarthMesh = () => {
 };
 
 /**
- * Fallback procedural Earth when textures are loading
+ * Fallback procedural Earth
  */
 const EarthFallback = () => (
   <mesh>
@@ -91,38 +114,53 @@ const EarthFallback = () => (
 );
 
 /**
- * Main Earth Globe Canvas Container
+ * Main Interactive Canvas Viewport
  */
 export const EarthGlobe = () => {
-  const satellites = useOrbitStore((state) => state.satellites);
-  const debris = useOrbitStore((state) => state.debris);
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
-  const selectedSatelliteDetail = useOrbitStore((state) => state.selectedSatelliteDetail);
   const highlightedNoradIds = useOrbitStore((state) => state.highlightedNoradIds);
   const layers = useOrbitStore((state) => state.layers);
   const filters = useOrbitStore((state) => state.filters);
+  const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const selectSatellite = useOrbitStore((state) => state.selectSatellite);
 
-  // Apply search and regime filters
-  const filteredSatellites = useMemo(() => {
-    return satellites.filter((sat) => {
+  // Live real-time SGP4 positions updated every single frame
+  const [liveObjects, setLiveObjects] = useState({ activeSats: [], debrisList: [] });
+  const simulatedTimeRef = useRef(Date.now());
+
+  // Sun direction based on current time
+  const sunPos = useMemo(() => getSunDirection(new Date()), []);
+
+  // Compute live continuous positions every frame
+  useFrame((_, delta) => {
+    // Advance simulated time based on speed multiplier (1x, 5x, 15x, 60x)
+    simulatedTimeRef.current += delta * 1000 * simulationSpeed;
+    const currentSimDate = new Date(simulatedTimeRef.current);
+
+    const propagated = propagateCatalogRealTime(currentSimDate);
+    setLiveObjects(propagated);
+  });
+
+  // Filter real-time active satellites
+  const visibleSatellites = useMemo(() => {
+    if (!layers.satellites) return [];
+    return liveObjects.activeSats.filter((sat) => {
       if (filters.regime !== 'ALL' && sat.regime !== filters.regime) return false;
       if (filters.country !== 'ALL' && !sat.country?.toLowerCase().includes(filters.country.toLowerCase())) return false;
       if (filters.riskLevel !== 'ALL' && sat.risk_level !== filters.riskLevel) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase().trim();
-        const matchesName = sat.name.toLowerCase().includes(q);
-        const matchesId = String(sat.norad_id).includes(q);
-        if (!matchesName && !matchesId) return false;
+        return sat.name.toLowerCase().includes(q) || String(sat.norad_id).includes(q);
       }
       return true;
     });
-  }, [satellites, filters]);
+  }, [liveObjects.activeSats, layers.satellites, filters]);
 
-  const filteredDebris = useMemo(() => {
+  // Filter real-time debris
+  const visibleDebris = useMemo(() => {
     if (!layers.debris) return [];
     if (filters.objectType === 'Satellite') return [];
-    return debris.filter((deb) => {
+    return liveObjects.debrisList.filter((deb) => {
       if (filters.regime !== 'ALL' && deb.regime !== filters.regime) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase().trim();
@@ -130,10 +168,13 @@ export const EarthGlobe = () => {
       }
       return true;
     });
-  }, [debris, layers.debris, filters]);
+  }, [liveObjects.debrisList, layers.debris, filters]);
 
-  // Selected orbit path points from detailed telemetry
-  const activeOrbitPath = selectedSatelliteDetail?.orbit_path || [];
+  // Orbit path of currently selected satellite (sampled client-side or from API)
+  const activeOrbitPath = useMemo(() => {
+    if (!selectedSatellite?.norad_id) return [];
+    return computeOrbitPathClient(selectedSatellite.norad_id, 180);
+  }, [selectedSatellite?.norad_id]);
 
   return (
     <div className="relative w-full h-full bg-space-950 select-none">
@@ -142,19 +183,23 @@ export const EarthGlobe = () => {
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       >
         {/* Deep Space Starfield */}
-        <Stars radius={100} depth={50} count={3500} factor={4} saturation={0.5} fade speed={1} />
+        <Stars radius={100} depth={50} count={4000} factor={4} saturation={0.5} fade speed={0.8} />
 
-        {/* Lighting Setup: Directional Sun + Ambient Spacefill */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[5, 3, 5]} intensity={1.8} castShadow={false} />
-        <pointLight position={[-8, -4, -6]} intensity={0.3} color="#38bdf8" />
+        {/* Ambient Deep Space Light */}
+        <ambientLight intensity={0.35} />
 
-        {/* 3D Earth Globe with Textures */}
+        {/* Real-time Astronomical Sun Light Positioned at Subsolar Point */}
+        <directionalLight position={sunPos} intensity={2.2} />
+
+        {/* Soft fill light from opposite dark side */}
+        <pointLight position={[-sunPos[0], -sunPos[1], -sunPos[2]]} intensity={0.25} color="#38bdf8" />
+
+        {/* Realistic 3D Earth Globe Mesh */}
         <Suspense fallback={<EarthFallback />}>
-          <EarthMesh />
+          <RealisticEarthMesh />
         </Suspense>
 
-        {/* Orbit Path of Selected Satellite */}
+        {/* Selected Satellite Glowing Orbit Path */}
         {layers.orbits && activeOrbitPath.length > 0 && (
           <OrbitPath
             points={activeOrbitPath}
@@ -169,29 +214,27 @@ export const EarthGlobe = () => {
           />
         )}
 
-        {/* Active Satellite Markers */}
-        {layers.satellites &&
-          filteredSatellites.map((sat) => (
-            <SatelliteMarker
-              key={sat.norad_id}
-              item={sat}
-              isSelected={selectedSatellite?.norad_id === sat.norad_id}
-              isHighlighted={highlightedNoradIds.includes(sat.norad_id)}
-              onSelect={selectSatellite}
-            />
-          ))}
+        {/* Real-Time Active Satellite Markers (Continuously Moving in Space) */}
+        {visibleSatellites.map((sat) => (
+          <SatelliteMarker
+            key={sat.norad_id}
+            item={sat}
+            isSelected={selectedSatellite?.norad_id === sat.norad_id}
+            isHighlighted={highlightedNoradIds.includes(sat.norad_id)}
+            onSelect={selectSatellite}
+          />
+        ))}
 
-        {/* Space Debris Markers */}
-        {layers.debris &&
-          filteredDebris.map((deb) => (
-            <SatelliteMarker
-              key={deb.norad_id}
-              item={deb}
-              isSelected={selectedSatellite?.norad_id === deb.norad_id}
-              isHighlighted={highlightedNoradIds.includes(deb.norad_id)}
-              onSelect={selectSatellite}
-            />
-          ))}
+        {/* Real-Time Space Debris Markers */}
+        {visibleDebris.map((deb) => (
+          <SatelliteMarker
+            key={deb.norad_id}
+            item={deb}
+            isSelected={selectedSatellite?.norad_id === deb.norad_id}
+            isHighlighted={highlightedNoradIds.includes(deb.norad_id)}
+            onSelect={selectSatellite}
+          />
+        ))}
 
         {/* Camera Orbit Controls */}
         <OrbitControls
