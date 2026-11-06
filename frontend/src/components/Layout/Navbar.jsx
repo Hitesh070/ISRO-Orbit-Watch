@@ -59,8 +59,9 @@ export const Navbar = () => {
   // Live Dual Clocks (Synchronized User Local Time + Simulated Spacecraft UTC Time)
   useEffect(() => {
     const updateTime = () => {
+      const state = useOrbitStore.getState();
       const wallNow = new Date();
-      const currentSimMs = useOrbitStore.getState().simulatedTimeMs || Date.now();
+      const currentSimMs = state.simulationSpeed > 1 ? (state.simulatedTimeMs || Date.now()) : Date.now();
       const simNow = new Date(currentSimMs);
 
       // Simulated Mission UTC time

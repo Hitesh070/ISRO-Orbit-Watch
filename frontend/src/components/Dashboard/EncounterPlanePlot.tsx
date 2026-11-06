@@ -19,9 +19,11 @@ interface EncounterPlanePlotProps {
   onVisualizeOnGlobe: (conj: any) => void;
 }
 
-function formatPc(val?: number | null, digits = 4): string {
-  if (val === undefined || val === null || isNaN(val) || val <= 0) return '< 1e-9';
-  return val.toExponential(digits);
+function formatPc(val?: any, digits = 4): string {
+  if (val === undefined || val === null) return '< 1e-9';
+  const num = Number(val);
+  if (isNaN(num) || num <= 0) return '< 1e-9';
+  return num.toExponential(digits);
 }
 
 export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({

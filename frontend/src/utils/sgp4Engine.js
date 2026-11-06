@@ -341,8 +341,17 @@ export function geodeticToCartesian(latDeg, lonDeg, altKm) {
 /**
  * Propagate a single satellite to the exact timestamp `date`
  */
-export function propagateSatelliteRealTime(noradId, date = new Date()) {
-  const satrec = SATREC_CACHE.get(noradId);
+export function propagateSatelliteRealTime(noradId, date = new Date(), line1 = null, line2 = null) {
+  const numId = Number(noradId);
+  let satrec = SATREC_CACHE.get(numId);
+  if (!satrec && line1 && line2) {
+    try {
+      satrec = satellite.twoline2satrec(line1, line2);
+      if (satrec) {
+        SATREC_CACHE.set(numId, satrec);
+      }
+    } catch (e) {}
+  }
   if (!satrec) return null;
 
   try {

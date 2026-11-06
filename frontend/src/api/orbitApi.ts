@@ -108,7 +108,7 @@ export const orbitApi = {
       }
     }
     try {
-      const res = await axios.get<CatalogMetadata>('/data/meta.json', { timeout: 6000 });
+      const res = await axios.get<CatalogMetadata>('./data/meta.json', { timeout: 6000 });
       return res.data;
     } catch {
       return null;
@@ -126,10 +126,10 @@ export const orbitApi = {
       }
     }
     try {
-      const res = await axios.get<SatelliteItem[]>('/data/catalog.json', { timeout: 10000 });
+      const res = await axios.get<SatelliteItem[]>('./data/catalog.json', { timeout: 10000 });
       return res.data || [];
     } catch (err) {
-      console.warn('Could not load static catalog from /data/catalog.json:', err);
+      console.warn('Could not load static catalog from ./data/catalog.json:', err);
       return [];
     }
   },
@@ -203,7 +203,7 @@ export const orbitApi = {
     } catch (err) {
       console.warn('API /api/conjunctions unavailable. Falling back to /data/conjunctions.json');
       try {
-        const res = await axios.get('/data/conjunctions.json', { timeout: 8000 });
+        const res = await axios.get('./data/conjunctions.json', { timeout: 8000 });
         return res.data;
       } catch {
         return { total_conjunctions: 0, conjunctions: [] };

@@ -39,9 +39,11 @@ function formatCountdown(targetTimestampMs: number): string {
   return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
-function formatPc(val?: number | null, digits = 3): string {
-  if (val === undefined || val === null || isNaN(val) || val <= 0) return '< 1e-9';
-  return val.toExponential(digits);
+function formatPc(val?: any, digits = 3): string {
+  if (val === undefined || val === null) return '< 1e-9';
+  const num = Number(val);
+  if (isNaN(num) || num <= 0) return '< 1e-9';
+  return num.toExponential(digits);
 }
 
 export const ConjunctionPanel = () => {

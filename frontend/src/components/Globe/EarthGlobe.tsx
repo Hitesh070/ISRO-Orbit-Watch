@@ -144,9 +144,9 @@ const RealisticEarthMesh = () => {
 
   // Load NASA Blue Marble daymap, night lights, and cloud layer textures
   const [dayTexture, nightTexture, cloudsTexture] = useLoader(THREE.TextureLoader, [
-    '/textures/earth_daymap.jpg',
-    '/textures/earth_nightmap.jpg',
-    '/textures/earth_clouds.jpg',
+    './textures/earth_daymap.jpg',
+    './textures/earth_nightmap.jpg',
+    './textures/earth_clouds.jpg',
   ]);
 
   useFrame((_, delta) => {
@@ -251,6 +251,7 @@ const GlobeScene = () => {
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const layers = useOrbitStore((state) => state.layers);
   const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
+  const settings = useOrbitStore((state) => state.settings);
 
   const sunLightRef = useRef<THREE.DirectionalLight>(null);
   const fillLightRef = useRef<THREE.PointLight>(null);
@@ -342,6 +343,8 @@ const GlobeScene = () => {
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
+        autoRotate={!settings?.reducedMotion}
+        autoRotateSpeed={0.35}
         minDistance={1.25}
         maxDistance={8.5}
         rotateSpeed={0.5}

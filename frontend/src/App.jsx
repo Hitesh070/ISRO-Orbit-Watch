@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Layout/Navbar';
 import Home from './pages/Home';
 import { useOrbitStore } from './store/useOrbitStore';
@@ -16,6 +16,14 @@ import HelpModal from './components/common/HelpModal';
 import SettingsDrawer from './components/common/SettingsDrawer';
 import InterviewTrainer from './features/interview/InterviewTrainer';
 import OnboardingModal from './components/common/OnboardingModal';
+import { platform } from './platform';
+
+// In desktop Electron (file:// protocol), HashRouter guarantees reliable navigation;
+// on web (https:// Vercel), BrowserRouter provides standard HTML5 history paths.
+const Router =
+  typeof window !== 'undefined' && (window.location.protocol === 'file:' || platform.isDesktop)
+    ? HashRouter
+    : BrowserRouter;
 
 // Lazy-load heavier analytics pages to keep initial bundle small
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -68,6 +76,23 @@ export const App = () => {
 
     return () => clearInterval(interval);
   }, [fetchInitialData]);
+
+  // Master simulation clock ticker: advances simulatedTimeMs continuously based on simulationSpeed
+  useEffect(() => {
+    let lastWall = performance.now();
+    const timer = setInterval(() => {
+      const nowWall = performance.now();
+      const dt = (nowWall - lastWall) / 1000;
+      lastWall = nowWall;
+
+      const state = useOrbitStore.getState();
+      const speed = state.simulationSpeed || 1;
+      const currentSim = state.simulatedTimeMs || Date.now();
+      state.setSimulatedTimeMs(currentSim + dt * 1000 * speed);
+    }, 250);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Read URL query parameters on initial load (?norad=... & ?speed=...)
   useEffect(() => {

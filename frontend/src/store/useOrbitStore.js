@@ -188,11 +188,28 @@ export const useOrbitStore = create((set, get) => ({
           console.warn('[OrbitGuard] Geolocation notice:', err.message);
           // Set timezone-inferred location as friendly default
           try {
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            if (tz.includes('Kolkata') || tz.includes('Calcutta') || tz.includes('India')) {
-              const loc = { lat: 12.9716, lon: 77.5946, alt_m: 920, name: 'Bengaluru, India', isLive: true };
-              set({ observerLocation: loc });
-            }
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+            const parts = tz.split('/');
+            const city = parts[parts.length - 1]?.replace(/_/g, ' ') || 'Bengaluru';
+            let lat = 12.9716;
+            let lon = 77.5946;
+            let alt_m = 920;
+
+            if (tz.includes('New_York') || tz.includes('America/Eastern')) { lat = 40.7128; lon = -74.0060; alt_m = 10; }
+            else if (tz.includes('Chicago') || tz.includes('Central')) { lat = 41.8781; lon = -87.6298; alt_m = 180; }
+            else if (tz.includes('Los_Angeles') || tz.includes('Pacific')) { lat = 34.0522; lon = -118.2437; alt_m = 71; }
+            else if (tz.includes('London') || tz.includes('Europe/London')) { lat = 51.5074; lon = -0.1278; alt_m = 25; }
+            else if (tz.includes('Paris') || tz.includes('Berlin')) { lat = 48.8566; lon = 2.3522; alt_m = 35; }
+            else if (tz.includes('Tokyo')) { lat = 35.6762; lon = 139.6503; alt_m = 40; }
+            else if (tz.includes('Sydney')) { lat = -33.8688; lon = 151.2093; alt_m = 19; }
+            else if (tz.includes('Dubai')) { lat = 25.2048; lon = 55.2708; alt_m = 16; }
+            else if (tz.includes('Singapore')) { lat = 1.3521; lon = 103.8198; alt_m = 15; }
+            else { lat = 12.9716; lon = 77.5946; alt_m = 920; } // Default: ISRO HQ Bengaluru
+
+            const loc = { lat, lon, alt_m, name: `${city} (Inferred GPS)`, isLive: true };
+            localStorage.setItem('orbitguard_observer', JSON.stringify(loc));
+            set({ observerLocation: loc });
+            get().fetchPasses(loc.name, 25544);
           } catch {}
         },
         { timeout: 8000, enableHighAccuracy: true }

@@ -30,7 +30,13 @@ export const SatelliteInfo = () => {
     // High frequency 100ms update loop for live sub-second propagation
     const interval = setInterval(() => {
       const now = new Date();
-      const realTimeData = propagateSatelliteRealTime(selectedSatellite.norad_id, now);
+      const currentTarget = useOrbitStore.getState().selectedSatellite;
+      const realTimeData = propagateSatelliteRealTime(
+        selectedSatellite.norad_id,
+        now,
+        currentTarget?.line1,
+        currentTarget?.line2
+      );
       if (realTimeData) {
         setLiveTelemetry(realTimeData);
       }
