@@ -6,6 +6,16 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'esnext',
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
+          'vendor-recharts': ['recharts'],
+          'vendor-astrodynamics': ['satellite.js'],
+        },
+      },
+    },
   },
   test: {
     globals: true,

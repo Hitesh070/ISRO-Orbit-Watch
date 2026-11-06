@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock } from 'lucide-react';
+import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock, Activity } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const Navbar = () => {
@@ -16,6 +16,8 @@ export const Navbar = () => {
   const conjunctions = useOrbitStore((state) => state.conjunctions);
   const isLoading = useOrbitStore((state) => state.isLoading);
   const triggerRefreshTLE = useOrbitStore((state) => state.triggerRefreshTLE);
+  const toggleHud = useOrbitStore((state) => state.toggleHud);
+  const isHudVisible = useOrbitStore((state) => state.isHudVisible);
 
   const [utcTime, setUtcTime] = useState('');
   const [localTime, setLocalTime] = useState('');
@@ -61,7 +63,7 @@ export const Navbar = () => {
                   OrbitGuard
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v2.0
+                  v3.0
                 </span>
               </div>
               <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
@@ -156,6 +158,19 @@ export const Navbar = () => {
               {utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'}
             </div>
           </div>
+
+          {/* Performance HUD Toggle */}
+          <button
+            onClick={toggleHud}
+            title="Toggle Performance & Astrodynamic HUD (~)"
+            className={`p-2 rounded-lg border transition shadow-sm ${
+              isHudVisible
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-emerald'
+                : 'bg-space-900 border-slate-700 hover:border-emerald-400 text-slate-300 hover:text-emerald-300'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+          </button>
 
           {/* Refresh TLE */}
           <button

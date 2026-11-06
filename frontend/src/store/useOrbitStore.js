@@ -10,6 +10,7 @@ import { predictPassesClient } from '../utils/passPredictor';
 
 export const useOrbitStore = create((set, get) => ({
   // Core orbital dataset
+  catalog: [],
   satellites: [],
   debris: [],
   selectedSatellite: null,
@@ -24,6 +25,12 @@ export const useOrbitStore = create((set, get) => ({
   analytics: null,
   groundStations: [],
   metadata: null,
+
+  // Performance & Astrodynamic HUD (Phase 2)
+  isHudVisible: false,
+  workerLatencyMs: 0,
+  toggleHud: () => set((state) => ({ isHudVisible: !state.isHudVisible })),
+  setWorkerLatencyMs: (ms) => set({ workerLatencyMs: ms }),
 
   // UI & Layer toggles
   layers: {
@@ -106,8 +113,12 @@ export const useOrbitStore = create((set, get) => ({
       return;
     }
 
-    const { satellites, debris } = get();
-    const found = satellites.find((s) => s.norad_id === noradId) || debris.find((d) => d.norad_id === noradId);
+    const { catalog, satellites, debris } = get();
+    const found =
+      catalog.find((c) => c.norad_id === noradId) ||
+      satellites.find((s) => s.norad_id === noradId) ||
+      debris.find((d) => d.norad_id === noradId);
+
     set({ selectedSatellite: found || { norad_id: noradId, name: `OBJECT ${noradId}` } });
 
     try {
@@ -131,18 +142,35 @@ export const useOrbitStore = create((set, get) => ({
   fetchInitialData: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [satsRes, debrisRes, riskRes, conjRes, stationsRes, metaRes] = await Promise.all([
+      const [satsRes, debrisRes, riskRes, conjRes, stationsRes, metaRes, staticCatalog] = await Promise.all([
         orbitApi.getSatellites(),
         orbitApi.getDebris(),
         orbitApi.getRiskOverview(),
         orbitApi.getConjunctions(),
         orbitApi.getGroundStations(),
         orbitApi.getPipelineMetadata(),
+        orbitApi.getStaticCatalog(),
       ]);
 
+      const activeCatalog =
+        staticCatalog && staticCatalog.length > 0
+          ? staticCatalog
+          : [...(satsRes.satellites || []), ...(debrisRes.debris || [])];
+
+      const activeSats =
+        satsRes.satellites && satsRes.satellites.length > 0
+          ? satsRes.satellites
+          : activeCatalog.filter((s) => s.object_type === 'Satellite');
+
+      const activeDebris =
+        debrisRes.debris && debrisRes.debris.length > 0
+          ? debrisRes.debris
+          : activeCatalog.filter((d) => d.object_type !== 'Satellite');
+
       set({
-        satellites: satsRes.satellites || [],
-        debris: debrisRes.debris || [],
+        catalog: activeCatalog,
+        satellites: activeSats,
+        debris: activeDebris,
         riskOverview: riskRes,
         conjunctions: conjRes.conjunctions || [],
         groundStations: stationsRes || [],
@@ -154,7 +182,15 @@ export const useOrbitStore = create((set, get) => ({
       console.error('OrbitGuard initial fetch error:', err);
       // Attempt to load metadata even on error
       const meta = await orbitApi.getPipelineMetadata();
-      set({ metadata: meta, error: err.message || 'Failed to initialize orbit telemetry data', isLoading: false });
+      const staticCatalog = await orbitApi.getStaticCatalog();
+      set({
+        catalog: staticCatalog || [],
+        satellites: (staticCatalog || []).filter((s) => s.object_type === 'Satellite'),
+        debris: (staticCatalog || []).filter((d) => d.object_type !== 'Satellite'),
+        metadata: meta,
+        error: err.message || 'Failed to initialize orbit telemetry data',
+        isLoading: false,
+      });
     }
   },
 
