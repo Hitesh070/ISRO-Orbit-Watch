@@ -32,6 +32,11 @@ export const useOrbitStore = create((set, get) => ({
   toggleHud: () => set((state) => ({ isHudVisible: !state.isHudVisible })),
   setWorkerLatencyMs: (ms) => set({ workerLatencyMs: ms }),
 
+  // Help & Documentation Modal (Phase 6)
+  isHelpOpen: false,
+  toggleHelp: () => set((state) => ({ isHelpOpen: !state.isHelpOpen })),
+  setHelpOpen: (open) => set({ isHelpOpen: open }),
+
   // UI & Layer toggles
   layers: {
     satellites: true,

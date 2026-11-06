@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock, Activity, MapPin } from 'lucide-react';
+import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio, Clock, Activity, MapPin, HelpCircle } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const Navbar = () => {
@@ -22,6 +22,7 @@ export const Navbar = () => {
   const detectUserLocation = useOrbitStore((state) => state.detectUserLocation);
   const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
+  const toggleHelp = useOrbitStore((state) => state.toggleHelp);
 
   const [utcTime, setUtcTime] = useState('');
   const [localTime, setLocalTime] = useState('');
@@ -70,7 +71,7 @@ export const Navbar = () => {
                   OrbitGuard
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v4.0
+                  v4.1
                 </span>
               </div>
               <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
@@ -217,6 +218,15 @@ export const Navbar = () => {
             className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 hover:text-cyan-100 transition shadow-sm disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
+
+          {/* Reference & Help Modal Toggle */}
+          <button
+            onClick={toggleHelp}
+            title="Open Documentation & Keyboard Shortcuts (?)"
+            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition shadow-sm"
+          >
+            <HelpCircle className="w-4 h-4" />
           </button>
         </div>
       </div>
