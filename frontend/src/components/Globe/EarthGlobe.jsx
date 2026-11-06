@@ -114,9 +114,9 @@ const EarthFallback = () => (
 );
 
 /**
- * Main Interactive Canvas Viewport
+ * Main Interactive Canvas Viewport Scene (Runs within Canvas Context)
  */
-export const EarthGlobe = () => {
+const GlobeScene = () => {
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
   const highlightedNoradIds = useOrbitStore((state) => state.highlightedNoradIds);
   const layers = useOrbitStore((state) => state.layers);
@@ -124,14 +124,14 @@ export const EarthGlobe = () => {
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const selectSatellite = useOrbitStore((state) => state.selectSatellite);
 
-  // Live real-time SGP4 positions updated every single frame
+  // Live real-time SGP4 positions updated every single frame inside Canvas
   const [liveObjects, setLiveObjects] = useState({ activeSats: [], debrisList: [] });
   const simulatedTimeRef = useRef(Date.now());
 
   // Sun direction based on current time
   const sunPos = useMemo(() => getSunDirection(new Date()), []);
 
-  // Compute live continuous positions every frame
+  // Compute live continuous positions every frame inside Canvas
   useFrame((_, delta) => {
     // Advance simulated time based on speed multiplier (1x, 5x, 15x, 60x)
     simulatedTimeRef.current += delta * 1000 * simulationSpeed;
@@ -177,76 +177,84 @@ export const EarthGlobe = () => {
   }, [selectedSatellite?.norad_id]);
 
   return (
+    <>
+      {/* Deep Space Starfield */}
+      <Stars radius={100} depth={50} count={4000} factor={4} saturation={0.5} fade speed={0.8} />
+
+      {/* Ambient Deep Space Light */}
+      <ambientLight intensity={0.35} />
+
+      {/* Real-time Astronomical Sun Light Positioned at Subsolar Point */}
+      <directionalLight position={sunPos} intensity={2.2} />
+
+      {/* Soft fill light from opposite dark side */}
+      <pointLight position={[-sunPos[0], -sunPos[1], -sunPos[2]]} intensity={0.25} color="#38bdf8" />
+
+      {/* Realistic 3D Earth Globe Mesh */}
+      <Suspense fallback={<EarthFallback />}>
+        <RealisticEarthMesh />
+      </Suspense>
+
+      {/* Selected Satellite Glowing Orbit Path */}
+      {layers.orbits && activeOrbitPath.length > 0 && (
+        <OrbitPath
+          points={activeOrbitPath}
+          color={
+            selectedSatellite?.status_color === 'red'
+              ? '#ef4444'
+              : selectedSatellite?.status_color === 'yellow'
+              ? '#f59e0b'
+              : '#22d3ee'
+          }
+          isSelected={true}
+        />
+      )}
+
+      {/* Real-Time Active Satellite Markers (Continuously Moving in Space) */}
+      {visibleSatellites.map((sat) => (
+        <SatelliteMarker
+          key={sat.norad_id}
+          item={sat}
+          isSelected={selectedSatellite?.norad_id === sat.norad_id}
+          isHighlighted={highlightedNoradIds.includes(sat.norad_id)}
+          onSelect={selectSatellite}
+        />
+      ))}
+
+      {/* Real-Time Space Debris Markers */}
+      {visibleDebris.map((deb) => (
+        <SatelliteMarker
+          key={deb.norad_id}
+          item={deb}
+          isSelected={selectedSatellite?.norad_id === deb.norad_id}
+          isHighlighted={highlightedNoradIds.includes(deb.norad_id)}
+          onSelect={selectSatellite}
+        />
+      ))}
+
+      {/* Camera Orbit Controls */}
+      <OrbitControls
+        enablePan={true}
+        enableZoom={true}
+        enableRotate={true}
+        minDistance={1.25}
+        maxDistance={8.5}
+        rotateSpeed={0.5}
+        zoomSpeed={0.8}
+        dampingFactor={0.08}
+      />
+    </>
+  );
+};
+
+export const EarthGlobe = () => {
+  return (
     <div className="relative w-full h-full bg-space-950 select-none">
       <Canvas
         camera={{ position: [0, 1.8, 2.8], fov: 45 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       >
-        {/* Deep Space Starfield */}
-        <Stars radius={100} depth={50} count={4000} factor={4} saturation={0.5} fade speed={0.8} />
-
-        {/* Ambient Deep Space Light */}
-        <ambientLight intensity={0.35} />
-
-        {/* Real-time Astronomical Sun Light Positioned at Subsolar Point */}
-        <directionalLight position={sunPos} intensity={2.2} />
-
-        {/* Soft fill light from opposite dark side */}
-        <pointLight position={[-sunPos[0], -sunPos[1], -sunPos[2]]} intensity={0.25} color="#38bdf8" />
-
-        {/* Realistic 3D Earth Globe Mesh */}
-        <Suspense fallback={<EarthFallback />}>
-          <RealisticEarthMesh />
-        </Suspense>
-
-        {/* Selected Satellite Glowing Orbit Path */}
-        {layers.orbits && activeOrbitPath.length > 0 && (
-          <OrbitPath
-            points={activeOrbitPath}
-            color={
-              selectedSatellite?.status_color === 'red'
-                ? '#ef4444'
-                : selectedSatellite?.status_color === 'yellow'
-                ? '#f59e0b'
-                : '#22d3ee'
-            }
-            isSelected={true}
-          />
-        )}
-
-        {/* Real-Time Active Satellite Markers (Continuously Moving in Space) */}
-        {visibleSatellites.map((sat) => (
-          <SatelliteMarker
-            key={sat.norad_id}
-            item={sat}
-            isSelected={selectedSatellite?.norad_id === sat.norad_id}
-            isHighlighted={highlightedNoradIds.includes(sat.norad_id)}
-            onSelect={selectSatellite}
-          />
-        ))}
-
-        {/* Real-Time Space Debris Markers */}
-        {visibleDebris.map((deb) => (
-          <SatelliteMarker
-            key={deb.norad_id}
-            item={deb}
-            isSelected={selectedSatellite?.norad_id === deb.norad_id}
-            isHighlighted={highlightedNoradIds.includes(deb.norad_id)}
-            onSelect={selectSatellite}
-          />
-        ))}
-
-        {/* Camera Orbit Controls */}
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={1.25}
-          maxDistance={8.5}
-          rotateSpeed={0.5}
-          zoomSpeed={0.8}
-          dampingFactor={0.08}
-        />
+        <GlobeScene />
       </Canvas>
     </div>
   );
