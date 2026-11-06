@@ -20,7 +20,7 @@ export const Home = () => {
   const debris = useOrbitStore((state) => state.debris);
 
   return (
-    <div className="relative w-full h-[calc(100vh-60px)] overflow-hidden bg-space-950">
+    <div className="relative w-full h-[calc(100vh-60px)] overflow-hidden bg-space-950 select-none">
       {/* 3D Earth Globe Canvas Viewport */}
       <EarthGlobe />
 

@@ -49,7 +49,7 @@ export const App = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans select-none">
+      <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans">
         <Navbar />
         <StaleDataBanner />
         <PerformanceHUD />

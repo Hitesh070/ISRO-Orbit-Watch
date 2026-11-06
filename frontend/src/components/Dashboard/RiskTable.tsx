@@ -25,6 +25,11 @@ function formatCountdown(targetTimestampMs: number): string {
   return `${hours}h ${minutes}m`;
 }
 
+function formatPc(val?: number | null, digits = 3): string {
+  if (val === undefined || val === null || isNaN(val) || val <= 0) return '< 1e-9';
+  return val.toExponential(digits);
+}
+
 export const RiskTable = () => {
   const riskOverview = useOrbitStore((state: any) => state.riskOverview);
   const conjunctions = useOrbitStore((state: any) => state.conjunctions);
@@ -54,8 +59,8 @@ export const RiskTable = () => {
         nearby_debris_count: sat.nearby_debris_count || 12,
         miss_distance_km: match ? match.miss_distance_km : (sat.closest_debris_distance_km || 14.2),
         relative_speed_kms: match ? match.relative_speed_kms : (sat.avg_relative_velocity_km_s || 9.8),
-        pc_foster: match ? match.pc_foster : 1.2e-6,
-        pc_max: match ? match.pc_max : 4.8e-6,
+        pc_foster: typeof match?.pc_foster === 'number' ? match.pc_foster : (typeof sat.pc_foster === 'number' ? sat.pc_foster : 1.2e-6),
+        pc_max: typeof match?.pc_max === 'number' ? match.pc_max : (typeof sat.pc_max === 'number' ? sat.pc_max : 4.8e-6),
         tca_timestamp_ms: match ? match.tca_timestamp_ms : Date.now() + 18 * 3600 * 1000,
         tle_age_days: match?.object1?.tle_age_days || 1.2,
         conjunction: match,
@@ -207,13 +212,13 @@ export const RiskTable = () => {
                         isCriticalPc ? 'text-rose-400 font-extrabold' : isWarningPc ? 'text-amber-400' : 'text-slate-400'
                       }
                     >
-                      {pc.toExponential(3)}
+                      {formatPc(pc, 3)}
                     </span>
                   </td>
 
                   {/* Pc Max */}
                   <td className="py-3 px-3 text-cyan-300 font-bold">
-                    {sat.pc_max.toExponential(3)}
+                    {formatPc(sat.pc_max, 3)}
                   </td>
 
                   {/* TCA Countdown */}

@@ -16,7 +16,7 @@ export const Conjunctions = () => {
   const highCount = conjunctions.filter((c) => c.risk_level === 'HIGH').length;
 
   return (
-    <div className="min-h-[calc(100vh-60px)] bg-space-950 p-4 md:p-6 text-slate-100 overflow-y-auto space-y-6">
+    <div className="w-full bg-space-950 p-4 md:p-6 text-slate-100 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-rose-500/20 gap-3">
         <div>

@@ -38,6 +38,11 @@ function formatCountdown(targetTimestampMs: number): string {
   return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
 }
 
+function formatPc(val?: number | null, digits = 3): string {
+  if (val === undefined || val === null || isNaN(val) || val <= 0) return '< 1e-9';
+  return val.toExponential(digits);
+}
+
 export const ConjunctionPanel = () => {
   const conjunctions = useOrbitStore((state: any) => state.conjunctions);
   const selectConjunction = useOrbitStore((state: any) => state.selectConjunction);
@@ -329,20 +334,20 @@ export const ConjunctionPanel = () => {
                       <td className="py-2.5 px-3 font-mono font-bold">
                         <span
                           className={
-                            conj.pc_foster >= 1e-4
+                            (conj.pc_foster || 0) >= 1e-4
                               ? 'text-rose-400'
-                              : conj.pc_foster >= 1e-7
+                              : (conj.pc_foster || 0) >= 1e-7
                               ? 'text-amber-400'
                               : 'text-slate-400'
                           }
                         >
-                          {conj.pc_foster > 0 ? conj.pc_foster.toExponential(3) : '< 1e-9'}
+                          {formatPc(conj.pc_foster, 3)}
                         </span>
                       </td>
 
                       {/* Akella Pc_max */}
                       <td className="py-2.5 px-3 font-mono font-bold text-cyan-300">
-                        {conj.pc_max > 0 ? conj.pc_max.toExponential(3) : '< 1e-9'}
+                        {formatPc(conj.pc_max, 3)}
                       </td>
 
                       {/* TCA & Countdown */}

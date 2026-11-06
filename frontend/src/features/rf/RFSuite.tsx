@@ -19,6 +19,7 @@ import {
 import PolarSkyPlot from './PolarSkyPlot';
 import DopplerCurveChart from './DopplerCurveChart';
 import LinkBudgetPanel from './LinkBudgetPanel';
+import RotatorPanel from '../tracking/RotatorPanel';
 import {
   Radio,
   MapPin,
@@ -61,8 +62,8 @@ export const RFSuite: React.FC = () => {
     }
   });
 
-  // Active RF analysis subtab: 'DOPPLER' | 'LINK_BUDGET'
-  const [activeSubTab, setActiveSubTab] = useState<'DOPPLER' | 'LINK_BUDGET'>('DOPPLER');
+  // Active RF analysis subtab: 'DOPPLER' | 'LINK_BUDGET' | 'ROTATOR'
+  const [activeSubTab, setActiveSubTab] = useState<'DOPPLER' | 'LINK_BUDGET' | 'ROTATOR'>('DOPPLER');
 
   // Currently inspected pass
   const [selectedPass, setSelectedPass] = useState<DetailedPass | null>(null);
@@ -319,6 +320,16 @@ export const RFSuite: React.FC = () => {
                 >
                   <Radio className="w-3.5 h-3.5" /> Dynamic Link Budget (FSPL)
                 </button>
+                <button
+                  onClick={() => setActiveSubTab('ROTATOR')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                    activeSubTab === 'ROTATOR'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-glow-emerald'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" /> Antenna Rotator Control
+                </button>
               </div>
 
               {selectedPass && (
@@ -335,11 +346,13 @@ export const RFSuite: React.FC = () => {
                 carrierFreqHz={targetFreq.downlinkHz}
                 onHoverSample={setHoveredSample}
               />
-            ) : (
+            ) : activeSubTab === 'LINK_BUDGET' ? (
               <LinkBudgetPanel
                 pass={selectedPass}
                 carrierFreqHz={targetFreq.downlinkHz}
               />
+            ) : (
+              <RotatorPanel pass={selectedPass} />
             )}
           </div>
 

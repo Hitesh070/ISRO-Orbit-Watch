@@ -19,6 +19,11 @@ interface EncounterPlanePlotProps {
   onVisualizeOnGlobe: (conj: any) => void;
 }
 
+function formatPc(val?: number | null, digits = 4): string {
+  if (val === undefined || val === null || isNaN(val) || val <= 0) return '< 1e-9';
+  return val.toExponential(digits);
+}
+
 export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
   conjunction,
   onClose,
@@ -40,8 +45,8 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
   const missY = enc.miss_y_km;
   const missDist = conjunction.miss_distance_km;
   const hbrKm = (conjunction.hbr_m || 12.0) / 1000.0;
-  const pcFoster = conjunction.pc_foster;
-  const pcMax = conjunction.pc_max;
+  const pcFoster = typeof conjunction.pc_foster === 'number' ? conjunction.pc_foster : 0;
+  const pcMax = typeof conjunction.pc_max === 'number' ? conjunction.pc_max : 0;
   const kOpt = conjunction.k_at_pc_max || 1.0;
 
   // Compute 2x2 covariance eigenvalues and tilt angle for ellipse rendering
@@ -365,8 +370,8 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                   })}
                 </div>
                 <div className="flex justify-between text-[11px] text-slate-400 pt-2">
-                  <span>Nominal Covariance (1.0x): {pcFoster.toExponential(3)}</span>
-                  <span className="text-rose-400 font-bold">Pc_max ({kOpt}x): {pcMax.toExponential(3)}</span>
+                  <span>Nominal Covariance (1.0x): {formatPc(pcFoster, 3)}</span>
+                  <span className="text-rose-400 font-bold">Pc_max ({kOpt}x): {formatPc(pcMax, 3)}</span>
                 </div>
               </div>
             )}
@@ -380,11 +385,11 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Foster-1992 Pc:</span>
-                <span className="font-bold text-rose-400">{pcFoster.toExponential(4)}</span>
+                <span className="font-bold text-rose-400">{formatPc(pcFoster, 4)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Akella-Alfriend Pc_max:</span>
-                <span className="font-bold text-amber-400">{pcMax.toExponential(4)}</span>
+                <span className="font-bold text-amber-400">{formatPc(pcMax, 4)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Optimal Scale Factor (k*):</span>
