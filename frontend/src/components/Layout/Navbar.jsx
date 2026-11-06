@@ -1,0 +1,161 @@
+/**
+ * Navbar Component
+ * OrbitGuard primary application banner featuring telemetry metrics ticker,
+ * live UTC orbital clock, navigation routes, and TLE cache refresh trigger.
+ */
+
+import React, { useState, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import { Globe, BarChart3, AlertOctagon, RefreshCw, Satellite, Radio } from 'lucide-react';
+import { useOrbitStore } from '../../store/useOrbitStore';
+import ThemeToggle from './ThemeToggle';
+
+export const Navbar = () => {
+  const satellites = useOrbitStore((state) => state.satellites);
+  const debris = useOrbitStore((state) => state.debris);
+  const conjunctions = useOrbitStore((state) => state.conjunctions);
+  const isLoading = useOrbitStore((state) => state.isLoading);
+  const triggerRefreshTLE = useOrbitStore((state) => state.triggerRefreshTLE);
+
+  const [utcTime, setUtcTime] = useState('');
+
+  // Live UTC Clock
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setUtcTime(now.toUTCString().replace('GMT', 'UTC'));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const criticalConjunctions = conjunctions.filter((c) => c.risk_level === 'CRITICAL').length;
+
+  return (
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-4 py-2.5 shadow-xl select-none">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        {/* Logo and Brand */}
+        <div className="flex items-center gap-3">
+          <NavLink to="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 p-0.5 shadow-glow-cyan flex items-center justify-center">
+              <div className="w-full h-full bg-space-950 rounded-[10px] flex items-center justify-center">
+                <Satellite className="w-5 h-5 text-cyan-400 group-hover:rotate-12 transition-transform duration-300" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-base md:text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400 bg-clip-text text-transparent">
+                  OrbitGuard
+                </span>
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                  v1.0
+                </span>
+              </div>
+              <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
+                Real-Time Orbit Tracker & Debris Risk
+              </p>
+            </div>
+          </NavLink>
+        </div>
+
+        {/* Live Telemetry Ticker */}
+        <div className="hidden lg:flex items-center gap-4 text-xs font-mono px-3 py-1.5 rounded-lg bg-space-950/70 border border-slate-800">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-slate-400">Active Satellites:</span>
+            <span className="font-bold text-emerald-400">{satellites.length}</span>
+          </div>
+
+          <div className="w-px h-3.5 bg-slate-800" />
+
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            <span className="text-slate-400">Tracked Debris:</span>
+            <span className="font-bold text-amber-400">{debris.length}</span>
+          </div>
+
+          <div className="w-px h-3.5 bg-slate-800" />
+
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            <span className="text-slate-400">Critical Conjunctions:</span>
+            <span className="font-bold text-rose-400">{criticalConjunctions}</span>
+          </div>
+        </div>
+
+        {/* Navigation Routes */}
+        <nav className="flex items-center gap-1 md:gap-2">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+                isActive
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow-cyan'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+              }`
+            }
+          >
+            <Globe className="w-4 h-4 text-cyan-400" />
+            <span className="hidden md:inline">3D Globe</span>
+          </NavLink>
+
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+                isActive
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow-cyan'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+              }`
+            }
+          >
+            <BarChart3 className="w-4 h-4 text-emerald-400" />
+            <span className="hidden md:inline">Analytics & Risk</span>
+          </NavLink>
+
+          <NavLink
+            to="/conjunctions"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition relative ${
+                isActive
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-glow-rose'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+              }`
+            }
+          >
+            <AlertOctagon className="w-4 h-4 text-rose-400" />
+            <span className="hidden md:inline">Conjunctions</span>
+            {criticalConjunctions > 0 && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 animate-pulse" />
+            )}
+          </NavLink>
+        </nav>
+
+        {/* UTC Clock & Actions */}
+        <div className="flex items-center gap-2">
+          <div className="hidden xl:block text-right">
+            <div className="text-[11px] font-mono text-cyan-300 font-bold">{utcTime}</div>
+            <div className="text-[9px] font-mono text-slate-500">PROPAGATED VIA SGP4</div>
+          </div>
+
+          {/* Refresh TLE */}
+          <button
+            onClick={triggerRefreshTLE}
+            disabled={isLoading}
+            title="Refresh TLE from CelesTrak"
+            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 hover:text-cyan-100 transition shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;
