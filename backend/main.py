@@ -258,8 +258,22 @@ def get_satellite_risk(norad_id: int):
 def get_conjunction_alerts():
     """
     Returns close-approach conjunction alerts predicted over the next 24 hours
-    between operational spacecraft and debris objects.
+    between operational spacecraft and debris objects using Foster-1992 Pc integration.
     """
+    conj_file = os.path.join(os.path.dirname(__file__), "data", "conjunctions.json")
+    if os.path.exists(conj_file):
+        try:
+            with open(conj_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return {
+                    "count": data.get("total_conjunctions", len(data.get("conjunctions", []))),
+                    "critical_count": data.get("critical_conjunctions", 0),
+                    "warning_count": data.get("warning_conjunctions", 0),
+                    "conjunctions": data.get("conjunctions", []),
+                }
+        except Exception as e:
+            logger.warning(f"Failed loading {conj_file}: {e}")
+
     active_sats = propagator.parse_tle_file(tle_fetcher.active_file)
     debris_sats = propagator.parse_tle_file(tle_fetcher.debris_file)
 

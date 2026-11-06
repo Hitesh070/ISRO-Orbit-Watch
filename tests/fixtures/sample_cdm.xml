@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cdm xmlns="urn:ccsds:schema:cdmxml:1.0" id="CCSDS_CDM_VERS_1.0">
+  <header>
+    <COMMENT>Sample CCSDS Conjunction Data Message (CDM) for OrbitGuard Testing</COMMENT>
+    <CREATION_DATE>2026-11-06T12:00:00.000</CREATION_DATE>
+    <ORIGINATOR>JSpOC</ORIGINATOR>
+    <MESSAGE_ID>20261106-OG-001</MESSAGE_ID>
+  </header>
+  <body>
+    <relativeMetadata>
+      <TCA>2026-11-07T08:32:15.420</TCA>
+      <MISS_DISTANCE units="m">482.5</MISS_DISTANCE>
+      <RELATIVE_SPEED units="m/s">14250.0</RELATIVE_SPEED>
+      <RELATIVE_POSITION_R units="m">120.4</RELATIVE_POSITION_R>
+      <RELATIVE_POSITION_T units="m">-340.2</RELATIVE_POSITION_T>
+      <RELATIVE_POSITION_N units="m">321.1</RELATIVE_POSITION_N>
+      <COLLISION_PROBABILITY>4.28e-4</COLLISION_PROBABILITY>
+      <COLLISION_PROBABILITY_METHOD>FOSTER_1992</COLLISION_PROBABILITY_METHOD>
+    </relativeMetadata>
+    <segment>
+      <metadata>
+        <OBJECT>OBJECT1</OBJECT>
+        <OBJECT_DESIGNATOR>36795</OBJECT_DESIGNATOR>
+        <OBJECT_NAME>CARTOSAT-2B</OBJECT_NAME>
+        <INTERNATIONAL_DESIGNATOR>2010-035A</INTERNATIONAL_DESIGNATOR>
+        <OBJECT_TYPE>PAYLOAD</OBJECT_TYPE>
+        <OPERATOR>ISRO</OPERATOR>
+        <REF_FRAME>EME2000</REF_FRAME>
+      </metadata>
+      <data>
+        <covarianceMatrix>
+          <C_R_R units="m**2">400.0</C_R_R>
+          <C_T_R units="m**2">120.0</C_T_R>
+          <C_T_T units="m**2">160000.0</C_T_T>
+          <C_N_R units="m**2">15.0</C_N_R>
+          <C_N_T units="m**2">35.0</C_N_T>
+          <C_N_N units="m**2">900.0</C_N_N>
+        </covarianceMatrix>
+      </data>
+    </segment>
+    <segment>
+      <metadata>
+        <OBJECT>OBJECT2</OBJECT>
+        <OBJECT_DESIGNATOR>29742</OBJECT_DESIGNATOR>
+        <OBJECT_NAME>FENGYUN 1C DEB</OBJECT_NAME>
+        <INTERNATIONAL_DESIGNATOR>1999-025BJ</INTERNATIONAL_DESIGNATOR>
+        <OBJECT_TYPE>DEBRIS</OBJECT_TYPE>
+        <REF_FRAME>EME2000</REF_FRAME>
+      </metadata>
+      <data>
+        <covarianceMatrix>
+          <C_R_R units="m**2">250.0</C_R_R>
+          <C_T_R units="m**2">95.0</C_T_R>
+          <C_T_T units="m**2">250000.0</C_T_T>
+          <C_N_R units="m**2">10.0</C_N_R>
+          <C_N_T units="m**2">20.0</C_N_T>
+          <C_N_N units="m**2">625.0</C_N_N>
+        </covarianceMatrix>
+      </data>
+    </segment>
+  </body>
+</cdm>

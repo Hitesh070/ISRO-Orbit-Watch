@@ -165,10 +165,20 @@ export const orbitApi = {
   },
 
   /**
-   * Fetch 24-hour predicted conjunction alerts
+   * Fetch 24-hour predicted conjunction alerts with static fallback to /data/conjunctions.json
    */
   getConjunctions: async (): Promise<any> => {
-    return fetchWithRetry({ url: '/api/conjunctions', method: 'GET' });
+    try {
+      return await fetchWithRetry({ url: '/api/conjunctions', method: 'GET' });
+    } catch (err) {
+      console.warn('API /api/conjunctions unavailable. Falling back to /data/conjunctions.json');
+      try {
+        const res = await axios.get('/data/conjunctions.json', { timeout: 8000 });
+        return res.data;
+      } catch {
+        return { total_conjunctions: 0, conjunctions: [] };
+      }
+    }
   },
 
   /**

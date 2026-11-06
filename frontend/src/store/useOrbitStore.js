@@ -180,13 +180,17 @@ export const useOrbitStore = create((set, get) => ({
       });
     } catch (err) {
       console.error('OrbitGuard initial fetch error:', err);
-      // Attempt to load metadata even on error
-      const meta = await orbitApi.getPipelineMetadata();
-      const staticCatalog = await orbitApi.getStaticCatalog();
+      // Attempt to load metadata and static artifacts even on error
+      const [meta, staticCatalog, conjRes] = await Promise.all([
+        orbitApi.getPipelineMetadata(),
+        orbitApi.getStaticCatalog(),
+        orbitApi.getConjunctions(),
+      ]);
       set({
         catalog: staticCatalog || [],
         satellites: (staticCatalog || []).filter((s) => s.object_type === 'Satellite'),
         debris: (staticCatalog || []).filter((d) => d.object_type !== 'Satellite'),
+        conjunctions: conjRes?.conjunctions || [],
         metadata: meta,
         error: err.message || 'Failed to initialize orbit telemetry data',
         isLoading: false,
