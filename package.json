@@ -10,7 +10,7 @@
     "build:web": "npm run build --prefix frontend",
     "dev:desktop": "cross-env NODE_ENV=development ELECTRON=true node scripts/dev-desktop.js",
     "build:desktop": "cross-env ELECTRON=true npm run build --prefix frontend && npm run build:electron",
-    "build:electron": "tsup desktop/main/index.ts --out-dir desktop/dist/main --format cjs --target node20 --clean && tsup desktop/preload/index.ts --out-dir desktop/dist/preload --format cjs --target node20 --clean",
+    "build:electron": "tsup desktop/main/index.ts --out-dir desktop/dist/main --format cjs --target node20 --clean --external electron --external serialport && tsup desktop/preload/index.ts --out-dir desktop/dist/preload --format cjs --target node20 --clean --external electron",
     "dist:win": "npm run build:desktop && electron-builder --win --x64",
     "test": "npm test --prefix frontend && npm run test:desktop",
     "test:desktop": "vitest run desktop/tests",

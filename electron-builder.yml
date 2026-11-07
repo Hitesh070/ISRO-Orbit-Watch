@@ -2,7 +2,7 @@ appId: com.orbitguard.app
 productName: OrbitGuard
 copyright: Copyright © 2026 OrbitGuard
 directories:
-  output: dist-electron
+  output: dist-desktop
   buildResources: resources
 
 files:

@@ -23,6 +23,7 @@ dist/
 
 # Electron
 dist-electron/
+dist-desktop/
 desktop/dist/
 
 # System / OS
