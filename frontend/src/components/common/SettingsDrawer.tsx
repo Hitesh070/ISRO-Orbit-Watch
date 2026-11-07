@@ -280,12 +280,24 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
 
         {/* Footer Actions */}
         <div className="pt-4 border-t border-cyan-500/20 flex items-center justify-between gap-3">
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-mono transition"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> Reset Defaults
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-mono transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset Defaults
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                useOrbitStore.getState().triggerStartupCalibration();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-500/30 hover:border-cyan-400 bg-cyan-950/20 text-cyan-300 hover:text-cyan-100 text-xs font-mono transition"
+              title="Re-run startup initialization sequence to calibrate sensors, location, time, and agency feeds"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> Recalibrate System
+            </button>
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-space-950 font-bold text-xs shadow-glow-cyan transition"

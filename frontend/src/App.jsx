@@ -15,6 +15,7 @@ import HelpModal from './components/common/HelpModal';
 import SettingsDrawer from './components/common/SettingsDrawer';
 import InterviewTrainer from './features/interview/InterviewTrainer';
 import OnboardingModal from './components/common/OnboardingModal';
+import StartupCalibrationModal from './components/common/StartupCalibrationModal';
 import { platform } from './platform';
 
 // In desktop Electron (file:// protocol), HashRouter guarantees reliable navigation;
@@ -56,6 +57,8 @@ const AppContent = () => {
   const toggleTrainer = useOrbitStore((state) => state.toggleTrainer);
   const isOnboardingOpen = useOrbitStore((state) => state.isOnboardingOpen);
   const setOnboardingOpen = useOrbitStore((state) => state.setOnboardingOpen);
+  const isStartupCalibrationOpen = useOrbitStore((state) => state.isStartupCalibrationOpen);
+  const setStartupCalibrationOpen = useOrbitStore((state) => state.setStartupCalibrationOpen);
 
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
   const selectSatellite = useOrbitStore((state) => state.selectSatellite);
@@ -189,6 +192,7 @@ const AppContent = () => {
       <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       <InterviewTrainer isOpen={isTrainerOpen} onClose={() => setTrainerOpen(false)} />
       <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      <StartupCalibrationModal isOpen={isStartupCalibrationOpen} onClose={() => setStartupCalibrationOpen(false)} />
       <main className={`flex-1 relative ${isHomePage ? 'overflow-hidden h-full min-h-0' : ''}`}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
