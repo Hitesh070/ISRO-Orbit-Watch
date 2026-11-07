@@ -66,7 +66,7 @@ export const SatelliteInfo = () => {
   };
 
   return (
-    <div className="absolute top-16 right-4 w-80 md:w-88 glass-panel-glow rounded-xl p-4 shadow-2xl z-30 text-slate-100 max-h-[calc(100vh-100px)] overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-200">
+    <div className="absolute top-16 right-4 w-80 md:w-88 glass-panel-glow rounded-xl p-4 shadow-2xl z-30 text-slate-100 max-h-[calc(100vh-100px)] overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-right-4 duration-200">
       {/* Header */}
       <div className="flex items-start justify-between border-b border-cyan-500/20 pb-2.5">
         <div>

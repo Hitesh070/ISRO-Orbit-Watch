@@ -19,7 +19,7 @@ export const FilterPanel = () => {
   const resetFilters = useOrbitStore((state) => state.resetFilters);
 
   return (
-    <div className="absolute top-20 left-5 w-80 md:w-84 glass-panel rounded-xl p-4 shadow-2xl z-20 text-slate-100 max-h-[calc(100vh-120px)] overflow-y-auto">
+    <div className="absolute top-20 left-5 w-80 md:w-84 glass-panel rounded-xl p-4 shadow-2xl z-20 text-slate-100 max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2.5 mb-3">
         <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm tracking-wide">

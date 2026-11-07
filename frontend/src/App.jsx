@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Layout/Navbar';
 import Home from './pages/Home';
 import { useOrbitStore } from './store/useOrbitStore';
@@ -38,7 +38,10 @@ const PageLoader = () => (
   </div>
 );
 
-export const App = () => {
+const AppContent = () => {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/' || location.pathname === '';
+
   const fetchInitialData = useOrbitStore((state) => state.fetchInitialData);
   const detectUserLocation = useOrbitStore((state) => state.detectUserLocation);
   const isHelpOpen = useOrbitStore((state) => state.isHelpOpen);
@@ -74,78 +77,62 @@ export const App = () => {
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [fetchInitialData]);
+  }, [fetchInitialData, detectUserLocation]);
+
+  // Enforce zero window scrollbars when on the Home 3D viewport
+  useEffect(() => {
+    if (isHomePage) {
+      document.documentElement.classList.add('overflow-hidden');
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.documentElement.classList.remove('overflow-hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+    return () => {
+      document.documentElement.classList.remove('overflow-hidden');
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [isHomePage]);
 
   // Master simulation clock ticker: advances simulatedTimeMs continuously based on simulationSpeed
   useEffect(() => {
-    let lastWall = performance.now();
-    const timer = setInterval(() => {
-      const nowWall = performance.now();
-      const dt = (nowWall - lastWall) / 1000;
-      lastWall = nowWall;
+    if (simulationSpeed === 0) return;
 
-      const state = useOrbitStore.getState();
-      const speed = state.simulationSpeed || 1;
-      const currentSim = state.simulatedTimeMs || Date.now();
-      state.setSimulatedTimeMs(currentSim + dt * 1000 * speed);
-    }, 250);
+    let lastTick = performance.now();
+    const interval = setInterval(() => {
+      const now = performance.now();
+      const deltaWallMs = now - lastTick;
+      lastTick = now;
 
-    return () => clearInterval(timer);
-  }, []);
+      const deltaSimMs = deltaWallMs * simulationSpeed;
+      useOrbitStore.setState((state) => ({
+        simulatedTimeMs: state.simulatedTimeMs + deltaSimMs,
+      }));
+    }, 100);
 
-  // Read URL query parameters on initial load (?norad=... & ?speed=...)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const noradParam = params.get('norad');
-    const speedParam = params.get('speed');
+    return () => clearInterval(interval);
+  }, [simulationSpeed]);
 
-    if (speedParam) {
-      const parsedSpeed = parseInt(speedParam, 10);
-      if ([1, 5, 15, 60].includes(parsedSpeed)) {
-        setSimulationSpeed(parsedSpeed);
-      }
-    }
-
-    if (noradParam) {
-      const pollAndSelect = (attempts = 0) => {
-        const state = useOrbitStore.getState();
-        if (state.catalog.length > 0 || state.satellites.length > 0) {
-          state.selectSatellite(noradParam);
-        } else if (attempts < 20) {
-          setTimeout(() => pollAndSelect(attempts + 1), 250);
-        }
-      };
-      pollAndSelect();
-    }
-  }, [setSimulationSpeed]);
-
-  // Synchronize state changes back to URL search params (Deep-linking)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-
-    if (selectedSatellite?.norad_id) {
-      params.set('norad', String(selectedSatellite.norad_id));
-    } else {
-      params.delete('norad');
-    }
-
-    if (simulationSpeed > 1) {
-      params.set('speed', String(simulationSpeed));
-    } else {
-      params.delete('speed');
-    }
-
-    const queryStr = params.toString() ? `?${params.toString()}` : '';
-    const newUrl = `${window.location.pathname}${queryStr}${window.location.hash}`;
-    window.history.replaceState(null, '', newUrl);
-  }, [selectedSatellite?.norad_id, simulationSpeed]);
-
-  // Global Keyboard Shortcuts (Phase 6)
+  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const sats = catalog.filter((s) => s.object_type !== 'Debris');
+        if (!sats.length) return;
+        const currIdx = sats.findIndex((s) => s.norad_id === selectedSatellite?.norad_id);
+        const nextIdx =
+          e.key === 'ArrowRight'
+            ? (currIdx + 1) % sats.length
+            : (currIdx - 1 + sats.length) % sats.length;
+        selectSatellite(sats[nextIdx]);
+        return;
+      }
+
+      if (e.key === ' ') {
+        e.preventDefault();
+        setSimulationSpeed(simulationSpeed === 0 ? 1 : 0);
         return;
       }
 
@@ -185,30 +172,43 @@ export const App = () => {
     setTrainerOpen,
     setOnboardingOpen,
     setSimulationSpeed,
+    catalog,
+    selectedSatellite,
+    simulationSpeed,
   ]);
 
   return (
+    <div
+      className={`bg-space-950 text-slate-100 flex flex-col font-sans ${
+        isHomePage ? 'h-screen w-screen overflow-hidden' : 'min-h-screen overflow-y-auto'
+      }`}
+    >
+      <Navbar />
+      <PerformanceHUD />
+      <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
+      <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+      <InterviewTrainer isOpen={isTrainerOpen} onClose={() => setTrainerOpen(false)} />
+      <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      <main className={`flex-1 relative ${isHomePage ? 'overflow-hidden h-full min-h-0' : ''}`}>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/conjunctions" element={<Conjunctions />} />
+              <Route path="/rf" element={<div className="p-3 md:p-6"><RFSuite /></div>} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </main>
+    </div>
+  );
+};
+
+export const App = () => {
+  return (
     <Router>
-      <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans">
-        <Navbar />
-        <PerformanceHUD />
-        <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
-        <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
-        <InterviewTrainer isOpen={isTrainerOpen} onClose={() => setTrainerOpen(false)} />
-        <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setOnboardingOpen(false)} />
-        <main className="flex-1 relative">
-          <ErrorBoundary>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/conjunctions" element={<Conjunctions />} />
-                <Route path="/rf" element={<div className="p-3 md:p-6"><RFSuite /></div>} />
-              </Routes>
-            </Suspense>
-          </ErrorBoundary>
-        </main>
-      </div>
+      <AppContent />
     </Router>
   );
 };
