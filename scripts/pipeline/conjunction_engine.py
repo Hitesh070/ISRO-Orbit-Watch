@@ -22,11 +22,13 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 from numpy.polynomial.legendre import leggauss
 import yaml
+
+DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "config", "covariance.yaml")
 
 
 @dataclass
@@ -302,6 +304,8 @@ class SyntheticRTNCovariance(CovarianceProvider):
         self.rate_n = 0.060         # km / day
         self.t_exponent = 1.25
 
+        if config_path is None:
+            config_path = DEFAULT_CONFIG_PATH  # previously config/covariance.yaml was never actually loaded
         if config_path and os.path.exists(config_path):
             try:
                 with open(config_path, "r", encoding="utf-8") as f:

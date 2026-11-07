@@ -11,7 +11,6 @@ Documents methodology differences and generates docs/VALIDATION.md.
 import datetime
 import json
 import os
-import sys
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -45,7 +44,9 @@ def run_cross_validation(conjunctions_path: str, validation_doc_path: str):
         og_data = json.load(f)
 
     events: List[Dict[str, Any]] = og_data.get("conjunctions", [])
-    socrates_raw = fetch_socrates_data()
+    socrates_reachable = fetch_socrates_data() is not None
+    print(f"SOCRATES endpoint reachable: {socrates_reachable}. NOTE: this report documents methodology "
+          "differences; it does not diff OrbitGuard events against SOCRATES rows.")
 
     doc_content = f"""# OrbitGuard Conjunction Cross-Validation Report (Phase 3)
 

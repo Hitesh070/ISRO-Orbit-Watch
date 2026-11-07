@@ -51,10 +51,12 @@ class PassPredictor:
         if key in FAMOUS_GROUND_STATIONS:
             return FAMOUS_GROUND_STATIONS[key]
 
-        # Partial match
-        for k, station in FAMOUS_GROUND_STATIONS.items():
-            if k in key or key in station["city"].lower() or key in station["name"].lower():
-                return station
+        # Partial match (only for a non-empty query: "" is a substring of everything and
+        # used to silently return the first station, ignoring explicit lat/lon)
+        if key:
+            for k, station in FAMOUS_GROUND_STATIONS.items():
+                if k in key or key in station["city"].lower() or key in station["name"].lower():
+                    return station
 
         # Use explicit coordinates or default to Bengaluru (ISRO HQ)
         final_lat = lat if lat is not None else 12.9716
@@ -112,7 +114,7 @@ class PassPredictor:
             elif event == 2 and current_pass:  # LOS (Loss of Signal - sets)
                 current_pass["los_time"] = dt_iso
                 current_pass["los_azimuth"] = round(float(az.degrees), 1)
-                current_pass["los_direction"] = compass_direction(float(az.degrees)),
+                current_pass["los_direction"] = compass_direction(float(az.degrees))
 
                 # Compute pass duration in seconds
                 try:

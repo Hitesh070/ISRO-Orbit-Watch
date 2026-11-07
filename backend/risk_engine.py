@@ -105,15 +105,15 @@ class DebrisRiskEngine:
         if risk_score >= 70.0:
             risk_level = "HIGH RISK"
             status_color = "red"
-            maneuver_rec = "Urgent: Collision Avoidance Maneuver (CAM) evaluation required. Plan +0.8 m/s delta-v orbital trim."
+            maneuver_rec = "High congestion index: prioritise conjunction screening with official CDMs. This index is not a collision probability."
         elif risk_score >= 35.0:
             risk_level = "CAUTION"
             status_color = "yellow"
-            maneuver_rec = "Elevated tracking frequency: Schedule laser radar ranging and conjunction refinement."
+            maneuver_rec = "Elevated congestion index: monitor conjunction events for this object."
         else:
             risk_level = "SAFE"
             status_color = "green"
-            maneuver_rec = "Nominal orbital trajectory. No delta-v adjustments required."
+            maneuver_rec = "Low congestion index."
 
         collision_prob = round(min(1.0, (risk_score / 100.0) * 0.012), 6)
 
@@ -128,7 +128,9 @@ class DebrisRiskEngine:
             "closest_debris_distance_km": round(closest_distance, 2) if closest_distance < float("inf") else 248.5,
             "closest_debris_name": closest_debris_name,
             "closest_debris_norad": closest_debris_norad,
-            "collision_probability": collision_prob,
+            "collision_probability": collision_prob,  # legacy key: heuristic proxy, NOT a Foster Pc
+            "collision_probability_is_heuristic": True,
+            "metric": "congestion_index",
             "recommended_maneuver": maneuver_rec,
             "regime": satellite.get("regime", "LEO"),
             "altitude_km": sat_alt,

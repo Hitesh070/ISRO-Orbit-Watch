@@ -138,7 +138,7 @@ export const DebrisStats = () => {
                   className={`p-2 rounded-lg border text-xs transition hover:scale-[1.02] flex flex-col justify-between min-h-[58px] ${bg}`}
                 >
                   <div className="text-[10px] font-mono text-slate-400 truncate">
-                    {cell.altitude_bin.split(' ')[0]}
+                    {cell.altitude_bin ? cell.altitude_bin.split(' ')[0] : (cell.bin || '---')}
                   </div>
                   <div className="font-mono text-xs">{cell.object_count} obj</div>
                   <div className="text-[9px] uppercase tracking-wider">{level}</div>

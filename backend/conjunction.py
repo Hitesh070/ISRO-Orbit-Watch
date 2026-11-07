@@ -9,6 +9,7 @@ and collision probability metrics.
 
 import logging
 import math
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -34,7 +35,7 @@ class ConjunctionDetector:
         active_sats: List[EarthSatellite],
         debris_sats: List[EarthSatellite],
         hours_ahead: int = 24,
-        step_minutes: int = 15,
+        step_minutes: float = 1.0 / 6.0,
         miss_threshold_km: float = 35.0,
     ) -> List[Dict[str, Any]]:
         """
@@ -81,6 +82,14 @@ class ConjunctionDetector:
 
                     min_idx = int(np.argmin(distances))
                     min_dist = float(distances[min_idx])
+                    if 0 < min_idx < len(distances) - 1:
+                        d2 = distances.astype(float) ** 2
+                        denom = d2[min_idx - 1] - 2.0 * d2[min_idx] + d2[min_idx + 1]
+                        if denom > 1e-12:
+                            delta = 0.5 * (d2[min_idx - 1] - d2[min_idx + 1]) / denom
+                            delta = max(-1.0, min(1.0, delta))
+                            min_d2 = d2[min_idx] - 0.25 * (d2[min_idx - 1] - d2[min_idx + 1]) * delta
+                            min_dist = float(math.sqrt(max(0.0, min_d2)))
 
                     if min_dist <= miss_threshold_km:
                         # Refined TCA
@@ -146,9 +155,9 @@ class ConjunctionDetector:
                 except Exception:
                     continue
 
-        # If zero encounters under strict 35km threshold, synthesize realistic real-time predicted
-        # close approach events based on existing active satellites to ensure rich user experience
-        if not conjunctions and candidate_active:
+        # Synthetic demo events are NEVER shown unless explicitly enabled; presenting invented
+        # conjunctions as real predictions would contradict the project's scientific-honesty policy.
+        if not conjunctions and candidate_active and os.getenv("ALLOW_DEMO_CONJUNCTIONS") == "1":
             conjunctions = self._generate_scenario_conjunctions(candidate_active, candidate_debris, now)
 
         # Sort by miss distance ascending (most critical first)
@@ -261,6 +270,8 @@ class ConjunctionDetector:
                 "collision_probability": sc["prob"],
                 "cartesian_at_tca": sc["cart"],
                 "altitude_km": sc["alt"],
+                "synthetic": True,
+                "disclaimer": "DEMO DATA - not a real prediction.",
             })
 
         return results

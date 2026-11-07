@@ -356,7 +356,7 @@ export function propagateSatelliteRealTime(noradId, date = new Date(), line1 = n
 
   try {
     const pv = satellite.propagate(satrec, date);
-    if (!pv.position) return null;
+    if (!pv.position || typeof pv.position === 'boolean' || !pv.velocity || typeof pv.velocity === 'boolean') return null;
 
     const gmst = satellite.gstime(date);
     const gd = satellite.eciToGeodetic(pv.position, gmst);

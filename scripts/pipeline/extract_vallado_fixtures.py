@@ -36,6 +36,7 @@ with open(out_path, "r", encoding="utf-8") as f:
 valid_cases = []
 error_cases = []
 current_sat = None
+seen = set()
 
 for line in out_lines:
     parts = line.strip().split()
@@ -65,6 +66,9 @@ for line in out_lines:
                 "expected_error": e,
             }
 
+            if (current_sat, tsince) in seen:  # reference output repeats some epochs
+                continue
+            seen.add((current_sat, tsince))
             if e == 0:
                 valid_cases.append(case_data)
             else:

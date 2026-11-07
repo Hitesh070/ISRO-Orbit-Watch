@@ -112,11 +112,13 @@ export const RFSuite: React.FC = () => {
 
   // Compute upcoming detailed passes
   const passes: DetailedPass[] = useMemo(() => {
-    if (!targetSat?.tle_line1 || !targetSat?.tle_line2) return [];
+    const l1 = targetSat?.line1 || targetSat?.tle_line1;
+    const l2 = targetSat?.line2 || targetSat?.tle_line2;
+    if (!l1 || !l2) return [];
 
     return predictDetailedPasses(
-      targetSat.tle_line1,
-      targetSat.tle_line2,
+      l1,
+      l2,
       targetSat.name,
       targetSat.norad_id,
       observerSite,

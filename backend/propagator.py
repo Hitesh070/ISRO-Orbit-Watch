@@ -9,7 +9,7 @@ and generates 3D trajectory polylines normalized for Three.js rendering.
 import logging
 import math
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from skyfield.api import EarthSatellite, load, wgs84
@@ -18,6 +18,7 @@ from skyfield.timelib import Time
 logger = logging.getLogger("orbitguard.propagator")
 
 EARTH_RADIUS_KM = 6378.137  # WGS84 equatorial radius
+MU_EARTH = 398600.4418  # km^3/s^2
 
 
 def classify_country(name: str, norad_id: int) -> str:
@@ -79,8 +80,23 @@ class SatellitePropagator:
         self._active_cache: Dict[str, Any] = {}
         self._debris_cache: Dict[str, Any] = {}
         self._last_prop_time = 0.0
+        self._tle_cache: Dict[str, Tuple[float, List[EarthSatellite]]] = {}
 
     def parse_tle_file(self, file_path: Path) -> List[EarthSatellite]:
+        """Cached (by mtime) wrapper: avoids re-parsing the TLE file on every API request."""
+        try:
+            mtime = Path(file_path).stat().st_mtime
+        except OSError:
+            return []
+        key = str(file_path)
+        cached = self._tle_cache.get(key)
+        if cached and cached[0] == mtime:
+            return list(cached[1])
+        sats = self._parse_tle_file_uncached(Path(file_path))
+        self._tle_cache[key] = (mtime, sats)
+        return list(sats)
+
+    def _parse_tle_file_uncached(self, file_path: Path) -> List[EarthSatellite]:
         """Parse 3-line or 2-line TLE file into Skyfield EarthSatellite objects."""
         if not file_path.exists():
             return []
@@ -142,11 +158,15 @@ class SatellitePropagator:
             inclination = round(float(math.degrees(model.inclo)), 2)
             eccentricity = round(float(model.ecco), 5)
 
-            # Approximate apogee / perigee
-            # semi_major_axis a = (mu / n^2)^(1/3)
-            # Or simplified from altitude and eccentricity:
-            perigee_km = round(alt * (1.0 - eccentricity), 1)
-            apogee_km = round(alt * (1.0 + eccentricity), 1)
+            # Perigee / apogee altitude from the element set: a = (mu / n^2)^(1/3)
+            n_rad_s = float(model.no_kozai) / 60.0  # no_kozai is rad/min
+            if n_rad_s > 0:
+                sma_km = (MU_EARTH / (n_rad_s * n_rad_s)) ** (1.0 / 3.0)
+                perigee_km = round(sma_km * (1.0 - eccentricity) - EARTH_RADIUS_KM, 1)
+                apogee_km = round(sma_km * (1.0 + eccentricity) - EARTH_RADIUS_KM, 1)
+            else:
+                perigee_km = apogee_km = round(alt, 1)
+            mean_alt = 0.5 * (perigee_km + apogee_km)
 
             norad_id = int(model.satnum)
             name = sat.name or f"OBJECT {norad_id}"
@@ -154,11 +174,13 @@ class SatellitePropagator:
             country = classify_country(name, norad_id)
 
             # Orbital regime classification
-            if alt < 2000.0:
+            if eccentricity >= 0.25 and apogee_km > 2000.0:
+                regime = "HEO"
+            elif mean_alt < 2000.0:
                 regime = "LEO"
-            elif alt < 35786.0 - 500.0:
+            elif mean_alt < 35786.0 - 500.0:
                 regime = "MEO"
-            elif alt <= 35786.0 + 1000.0 and eccentricity < 0.05:
+            elif abs(mean_alt - 35786.0) <= 1000.0 and eccentricity < 0.05:
                 regime = "GEO"
             else:
                 regime = "HEO"

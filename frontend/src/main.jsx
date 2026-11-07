@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// Register PWA service worker for offline catalog caching (Phase 6)
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+// Register PWA service worker for offline catalog caching (Phase 6, web only)
+if ('serviceWorker' in navigator && import.meta.env.PROD && window.location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')

@@ -303,7 +303,7 @@ export const useOrbitStore = create((set, get) => ({
   selectConjunction: (conj) => {
     set({
       selectedConjunction: conj,
-      highlightedNoradIds: conj ? [conj.object1.norad_id, conj.object2.norad_id] : [],
+      highlightedNoradIds: conj ? [conj.object1?.norad_id, conj.object2?.norad_id].filter(Boolean) : [],
     });
   },
 

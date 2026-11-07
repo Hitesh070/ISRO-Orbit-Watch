@@ -7,7 +7,7 @@
 [![Astrodynamics](https://img.shields.io/badge/Astrodynamics-SGP4%20%7C%20Vallado%20Verified-009688.svg?style=flat)](https://celestrak.org)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-61DAFB.svg?style=flat&logo=react)](https://reactjs.org/)
 [![Three.js](https://img.shields.io/badge/3D%20Graphics-Three.js%20%7C%20GPU%20Shader-black.svg?style=flat&logo=three.js)](https://threejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-66%20Vitest%20%2B%208%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
+[![Tests](https://img.shields.io/badge/Tests-66%20Vitest%20%2B%2010%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **OrbitGuard** is an advanced, production-grade Space Situational Awareness (SSA) and RF ground-station operations platform. It propagates thousands of active spacecraft and space debris fragments in real time, evaluates bivariate collision probabilities ($P_c$) via 2-D encounter plane integration, estimates RF Doppler shifts with Earth-rotation tangential velocity compensation, computes pass-resolved link budgets, and drives dual-axis antenna rotators.
@@ -33,7 +33,7 @@
 ```mermaid
 flowchart TD
     subgraph Data_Pipeline ["Data Pipeline (GitHub Actions Cron / CelesTrak)"]
-        CT["CelesTrak CCSDS OMM/GP API"] -->|"GP JSON (Active + Debris)"| Pipe["scripts/pipeline/fetch_data.py"]
+        CT["CelesTrak CCSDS OMM/GP API"] -->|"GP JSON (Active + Debris)"| Pipe["scripts/pipeline/fetch_catalog.py"]
         Pipe -->|"cKDTree (40km Ball)"| Screen["scripts/pipeline/screen_conjunctions.py"]
         Screen -->|"Foster-1992 Pc + Akella Pc_max"| Conj["conjunction_engine.py"]
         Conj -->|"Compressed Output"| Artifacts["data/catalog.json.gz<br/>data/conjunctions.json"]
@@ -67,7 +67,7 @@ flowchart TD
 - **TEME Celestial Reference Frame**: Satellites propagate natively in the True Equator, Mean Equinox (TEME) inertial frame. Earth's surface rotates by Greenwich Mean Sidereal Time (GMST) with subsolar astronomical lighting.
 
 ### 2. Industry-Grade Conjunction Assessment Engine ($P_c$)
-- **Spatial Indexing**: 7-day screening window evaluated via `scipy.spatial.cKDTree` across 1,440 time steps, detecting close encounters in $< 12$ seconds.
+- **Spatial Indexing**: 24-hour screening window on a 30 s grid. A `scipy.spatial.cKDTree` ball query (radius sized to the distance travelled in half a step) is followed by a linearised time-of-closest-approach prefilter, then true-SGP4 TCA refinement. (A fixed 40 km ball on a coarse grid misses nearly all LEO encounters.)
 - **Foster-1992 2-D Collision Probability ($P_c$)**: Evaluates collision probability by integrating bivariate Gaussian uncertainty over the hard-body circle on the encounter plane perpendicular to relative velocity:
   $$P_c = \frac{1}{2\pi \sqrt{\det \mathbf{C}_{2D}}} \iint_{\text{Disk}(R_{\text{HBR}})} \exp\left(-\frac{1}{2}(\mathbf{r} - \mathbf{m})^T \mathbf{C}_{2D}^{-1} (\mathbf{r} - \mathbf{m})\right) d^2\mathbf{r}$$
   using 64-point Gauss-Legendre quadrature in polar coordinates.
@@ -89,7 +89,7 @@ flowchart TD
   - Cable wrap avoidance for $450^\circ$ rotators.
   - Zenith keyhole singularity handler ($>85^\circ$ elevation flip-mode or rate clamp).
   - 15-second communications loss watchdog timer and emergency stop (E-Stop).
-- **Embedded ESP32 Reference Design**: Complete PlatformIO firmware (`firmware/rotator-esp32/`) with FreeRTOS, AccelStepper trapezoidal velocity profiling, TMC2209 silent stepper drivers, and AS5600 12-bit magnetic feedback.
+- **Embedded ESP32 Reference Design**: PlatformIO firmware (`firmware/rotator-esp32/`, Arduino framework) with AccelStepper trapezoidal velocity profiling, TMC2209 step/dir drivers, home-switch referencing and a comms watchdog. The AS5600 encoder is part of the hardware design but closed-loop feedback is not implemented yet.
 
 ---
 
@@ -138,7 +138,7 @@ npm run dist:win
 # Full Test Suite (66 Vitest unit tests: 35 frontend + 31 desktop)
 npm test
 
-# Backend Math & Conjunction Tests (Pytest - 8 tests)
+# Backend Math & Conjunction Tests (Pytest - 10 tests)
 pytest tests/
 ```
 

@@ -10,11 +10,17 @@ import gzip
 import json
 import logging
 import math
-from datetime import datetime, timezone
+import re
+import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:  # lets `python scripts/pipeline/fetch_catalog.py` import backend.*
+    sys.path.insert(0, str(REPO_ROOT))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("orbitguard.pipeline")
@@ -100,7 +106,9 @@ def derive_orbital_metrics(mean_motion_rev_day: float, eccentricity: float) -> T
     apogee_km = round(sma_km * (1.0 + eccentricity) - EARTH_RADIUS_KM, 1)
     mean_alt_km = (perigee_km + apogee_km) / 2.0
 
-    if mean_alt_km < 2000.0:
+    if eccentricity >= 0.25 and apogee_km > 2000.0:
+        regime = "HEO"  # Molniya / GTO-type orbits (mean altitude alone misclassifies them)
+    elif mean_alt_km < 2000.0:
         regime = "LEO"
     elif mean_alt_km < 35786.0 - 500.0:
         regime = "MEO"
@@ -190,14 +198,39 @@ def parse_omm_to_catalog_item(omm: Dict[str, Any], default_type: Optional[str] =
         return None
 
 
+def _tle_intl_designator(object_id: str) -> str:
+    """OMM uses '1998-067A'; a TLE needs the 8-char '98067A  ' form."""
+    m = re.fullmatch(r"(\d{4})-(\d{3})([A-Z]{0,3})", object_id.strip())
+    if m:
+        return f"{m.group(1)[2:]}{m.group(2)}{m.group(3)}".ljust(8)
+    return " " * 8
+
+
+def _tle_epoch(line1: str) -> datetime:
+    yy = int(line1[18:20])
+    year = 2000 + yy if yy < 57 else 1900 + yy
+    return datetime(year, 1, 1, tzinfo=timezone.utc) + timedelta(days=float(line1[20:32]) - 1.0)
+
+
+def _tle_bstar(line1: str) -> float:
+    field = line1[53:61]
+    try:
+        sign = -1.0 if field[0] == "-" else 1.0
+        return sign * (int(field[1:6]) / 1e5) * 10 ** int(field[6:8])
+    except ValueError:
+        return 0.0
+
+
 def omm_to_tle_strings(omm: Dict[str, Any]) -> Tuple[str, str]:
     """
     Generate standard 69-character TLE Line 1 and Line 2 strings from OMM parameters.
     """
     try:
         satnum = int(omm["NORAD_CAT_ID"])
+        if satnum > 99999:
+            raise ValueError("NORAD id exceeds the 5-digit TLE range; use OMM-based propagation")
         class_char = str(omm.get("CLASSIFICATION_TYPE", "U"))[0]
-        intldesg = str(omm.get("OBJECT_ID", "98067A")).strip()[:8].ljust(8)
+        intldesg = _tle_intl_designator(str(omm.get("OBJECT_ID", "")))
 
         epoch_str = str(omm.get("EPOCH", "2026-01-01T00:00:00")).replace("Z", "")
         dt = datetime.fromisoformat(epoch_str)
@@ -206,7 +239,8 @@ def omm_to_tle_strings(omm: Dict[str, Any]) -> Tuple[str, str]:
         epoch_field = f"{epochyr:02d}{day_of_year:012.8f}"
 
         mm_dot = float(omm.get("MEAN_MOTION_DOT", 0.0))
-        mm_dot_field = f"{mm_dot: 10.8f}"[:10].replace("0.", " .")
+        mm_dot_str = f"{min(abs(mm_dot), 0.99999999):.8f}"  # "0.00014285"
+        mm_dot_field = ("-" if mm_dot < 0 else " ") + mm_dot_str[1:]  # 10 chars: sign + ".00014285"
 
         # BSTAR formatting
         bstar = float(omm.get("BSTAR", 0.0))
@@ -215,6 +249,9 @@ def omm_to_tle_strings(omm: Dict[str, Any]) -> Tuple[str, str]:
         else:
             exp = int(math.floor(math.log10(abs(bstar)))) + 1
             mantissa = int(round((bstar / (10 ** exp)) * 100000))
+            if mantissa >= 100000:
+                mantissa //= 10
+                exp += 1
             sign = "-" if bstar < 0 else " "
             exp_sign = "+" if exp >= 0 else "-"
             bstar_field = f"{sign}{abs(mantissa):05d}{exp_sign}{abs(exp)}"
@@ -238,12 +275,10 @@ def omm_to_tle_strings(omm: Dict[str, Any]) -> Tuple[str, str]:
         c2 = tle_checksum(line2_raw[:68])
         line2 = f"{line2_raw[:68]}{c2}"
         return line1, line2
-    except Exception:
-        # Fallback dummy line with valid checksum
-        return (
-            f"1 {omm.get('NORAD_CAT_ID', 99999):05d}U 98067A   26001.00000000  .00000000  00000-0  00000-0 0  9990",
-            f"2 {omm.get('NORAD_CAT_ID', 99999):05d}  51.6400   0.0000 0001000   0.0000   0.0000 15.00000000    10",
-        )
+    except Exception as exc:
+        # Never fabricate an orbit (the old fallback emitted an ISS-like dummy TLE for failed objects).
+        logger.debug(f"Could not build TLE for {omm.get('NORAD_CAT_ID')}: {exc}")
+        return "", ""
 
 
 def tle_checksum(line: str) -> int:
@@ -347,6 +382,10 @@ class CatalogPipeline:
 
         # Fallback to high-fidelity seed catalog if network was blocked
         if total_fetched == 0:
+            if (self.output_dir / "catalog.json").exists():
+                # Do NOT overwrite a good catalog with illustrative seed data.
+                logger.error("Live sources unavailable; keeping existing catalog artifacts.")
+                raise SystemExit(1)
             logger.warning("Live sources unavailable. Compiling pipeline from baseline seed catalog.")
             active_list, debris_list = self._compile_fallback_seed()
 
@@ -439,6 +478,8 @@ class CatalogPipeline:
                 mm = float(l2[52:63])
                 ecc = float("0." + l2[26:33].strip())
                 inc = float(l2[8:16].strip())
+                epoch_dt = _tle_epoch(l1)
+                age_days = round(max(0.0, (datetime.now(timezone.utc) - epoch_dt).total_seconds() / 86400.0), 2)
                 sma_km, perigee_km, apogee_km, period_min, regime = derive_orbital_metrics(mm, ecc)
                 country = classify_country(name, nid)
                 group.append({
@@ -448,9 +489,9 @@ class CatalogPipeline:
                     "object_type": t_label,
                     "country": country,
                     "is_isro": "ISRO" in country or "India" in country,
-                    "epoch": "2026-11-05T00:00:00Z",
-                    "tle_age_days": 1.0,
-                    "is_stale": False,
+                    "epoch": epoch_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "tle_age_days": age_days,
+                    "is_stale": age_days > 14.0,
                     "status": "operational",
                     "mean_motion": mm,
                     "eccentricity": ecc,
@@ -458,7 +499,7 @@ class CatalogPipeline:
                     "raan": float(l2[17:25].strip()),
                     "arg_perigee": float(l2[34:42].strip()),
                     "mean_anomaly": float(l2[43:51].strip()),
-                    "bstar": 0.0001,
+                    "bstar": _tle_bstar(l1),
                     "semi_major_axis_km": sma_km,
                     "perigee_km": perigee_km,
                     "apogee_km": apogee_km,

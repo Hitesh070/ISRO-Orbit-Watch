@@ -2,8 +2,11 @@
 node_modules/
 backend/venv/
 venv/
+
+# Secrets (real env files are ignored, the template is kept)
 .env
-.env.local
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -11,6 +14,7 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+.ruff_cache/
 
 # Vite / Build
 frontend/dist/
@@ -25,7 +29,5 @@ desktop/dist/
 .DS_Store
 Thumbs.db
 *.log
+*.zip
 .vercel
-
-.vercel
-.env*

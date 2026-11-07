@@ -107,4 +107,4 @@ flowchart TD
 | **TEME** | **ECEF** | Rotation by Greenwich Mean Sidereal Time $\mathbf{R}_z(\theta_{\text{GMST}})$ | Ground subpoints (lat/lon/alt) |
 | **ECEF** | **Topocentric SEZ** | Coordinate transformation via observer geodetic position $(\phi, \lambda, h)$ | Look angles (Azimuth, Elevation, Slant Range) |
 | **ECI** | **Encounter Plane (B-Plane)** | Projection perpendicular to relative velocity vector $\mathbf{v}_{\text{rel}}$ | 2-D Conjunction Assessment & Foster $P_c$ |
-| **ECI** | **RTN** | Coordinate basis: $\mathbf{r}_{\text{hat}}, \mathbf{v}_{\text{hat}} \times \mathbf{r}_{\text{hat}}$ | Orbital uncertainty & covariance propagation |
+| **ECI** | **RTN** | Basis: $\hat{\mathbf{r}}=\mathbf{r}/\|\mathbf{r}\|$, $\hat{\mathbf{n}}=(\mathbf{r}\times\mathbf{v})/\|\mathbf{r}\times\mathbf{v}\|$, $\hat{\mathbf{t}}=\hat{\mathbf{n}}\times\hat{\mathbf{r}}$ | Orbital uncertainty & covariance propagation |

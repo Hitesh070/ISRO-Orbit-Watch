@@ -66,9 +66,9 @@ $$\text{Steps per Degree} = \frac{192,000}{360} = 533.3333 \text{ steps/degree}$
 | **Azimuth Stepper Motor** | 24V DC | 1.8 A | 1.2 A | 43.2 W |
 | **Elevation Stepper Motor** | 24V DC | 1.8 A | 1.2 A | 43.2 W |
 | **ESP32 MCU + Logic** | 5V DC (Buck) | 250 mA | 120 mA | 1.25 W |
-| **Total System Load** | **24V DC** | **3.85 A** | **2.52 A** | **92.4 W** |
+| **Total System Load** | **24V DC** | **~3.7 A** | **~2.5 A** | **~88 W** |
 
-**Recommended Power Supply**: 24V DC, 5.0A (120W) Mean Well LRS-150-24 enclosed switching supply.
+**Recommended Power Supply**: 24V DC, 6.5A (150W) Mean Well LRS-150-24 enclosed switching supply.
 
 ---
 

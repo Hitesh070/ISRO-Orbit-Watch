@@ -5,15 +5,24 @@ High-performance REST API delivering real-time satellite orbital propagation,
 space debris risk calculations, conjunction warnings, ground station passes, and analytics.
 """
 
+import json
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+
+try:  # load .env for local development (optional dependency on Vercel)
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover
+    pass
 
 from backend.conjunction import conjunction_detector
 from backend.pass_predictor import FAMOUS_GROUND_STATIONS, pass_predictor
@@ -31,8 +40,10 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing OrbitGuard backend service...")
     try:
         # Start background TLE refresh every 6 hours
-        refresh_hours = int(os.getenv("DATA_REFRESH_HOURS", "6"))
-        tle_fetcher.start_scheduler(interval_hours=refresh_hours)
+        # Background threads cannot survive on serverless; data refresh runs in GitHub Actions there.
+        if not os.getenv("VERCEL"):
+            refresh_hours = int(os.getenv("DATA_REFRESH_HOURS", "6"))
+            tle_fetcher.start_scheduler(interval_hours=refresh_hours)
     except Exception as exc:
         logger.warning(f"Could not start TLE scheduler: {exc}")
 
@@ -48,7 +59,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="OrbitGuard API",
     description="Real-Time Satellite Orbit Tracker & Space Debris Risk Dashboard REST API",
-    version="1.0.0",
+    version="4.2.0",
     lifespan=lifespan,
 )
 
@@ -59,7 +70,7 @@ allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins if "*" not in allowed_origins else ["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # wildcard origins + credentials is invalid/unsafe
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -75,7 +86,6 @@ def health_check():
     pipeline_meta = {}
     if meta_path.exists():
         try:
-            import json
             with open(meta_path, "r", encoding="utf-8") as f:
                 pipeline_meta = json.load(f)
         except Exception:
@@ -84,7 +94,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "OrbitGuard SSA API",
-        "version": "3.0.0",
+        "version": "4.2.0",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "pipeline_metadata": pipeline_meta,
     }
@@ -96,7 +106,7 @@ def root():
     return {
         "service": "OrbitGuard API",
         "status": "OPERATIONAL",
-        "version": "1.0.0",
+        "version": "4.2.0",
         "description": "Real-Time Satellite Orbit Tracker & Space Debris Risk Dashboard",
         "endpoints": [
             "/api/satellites",
@@ -281,7 +291,7 @@ def get_conjunction_alerts():
         active_sats,
         debris_sats,
         hours_ahead=24,
-        step_minutes=15,
+        step_minutes=1.0 / 6.0,  # 10 s grid: at ~15 km/s a 15-minute grid misses almost every encounter
         miss_threshold_km=30.0,
     )
 
@@ -446,8 +456,11 @@ def get_analytics():
 
 
 @app.post("/api/refresh")
-def trigger_refresh():
-    """Force an immediate TLE refresh from CelesTrak."""
+def trigger_refresh(x_refresh_token: Optional[str] = Header(default=None)):
+    """Force an immediate TLE refresh from CelesTrak. Requires the REFRESH_TOKEN env var + matching header."""
+    expected = os.getenv("REFRESH_TOKEN")
+    if not expected or not x_refresh_token or not secrets.compare_digest(x_refresh_token, expected):
+        raise HTTPException(status_code=403, detail="Refresh disabled or invalid token.")
     success_active = tle_fetcher.refresh_active_satellites()
     success_debris = tle_fetcher.refresh_debris()
     return {
