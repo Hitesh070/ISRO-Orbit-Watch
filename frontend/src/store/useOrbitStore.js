@@ -295,23 +295,64 @@ export const useOrbitStore = create((set, get) => ({
   },
 
   // Selection actions
-  selectSatellite: async (noradId) => {
-    if (!noradId) {
+  selectSatellite: async (input) => {
+    if (!input) {
       set({ selectedSatellite: null, selectedSatelliteDetail: null });
       return;
     }
 
-    const targetStr = String(noradId).trim();
-    const { catalog, satellites, debris } = get();
-    const found =
-      catalog.find((c) => String(c.norad_id) === targetStr) ||
-      satellites.find((s) => String(s.norad_id) === targetStr) ||
-      debris.find((d) => String(d.norad_id) === targetStr);
+    let satObj = null;
+    let noradId = null;
 
-    set({ selectedSatellite: found || { norad_id: Number(noradId) || noradId, name: `OBJECT ${noradId}` } });
+    if (typeof input === 'object' && input !== null) {
+      satObj = input;
+      noradId = input.norad_id || input.alt_alias_id;
+    } else {
+      noradId = input;
+    }
+
+    const targetStr = String(noradId).trim();
+    const targetNum = Number(noradId);
+    const { catalog, satellites, debris } = get();
+
+    const matches = (item) => {
+      if (!item) return false;
+      if (item.norad_id === targetNum || String(item.norad_id) === targetStr) return true;
+      if (item.alt_alias_id && (item.alt_alias_id === targetNum || String(item.alt_alias_id) === targetStr)) return true;
+      if (Array.isArray(item.alt_alias_ids)) {
+        if (item.alt_alias_ids.includes(targetNum) || item.alt_alias_ids.map(String).includes(targetStr)) return true;
+      }
+      return false;
+    };
+
+    const foundInCatalog =
+      catalog.find(matches) ||
+      satellites.find(matches) ||
+      debris.find(matches);
+
+    const merged = {
+      ...(foundInCatalog || {}),
+      ...(satObj || {}),
+      norad_id: foundInCatalog?.norad_id || (satObj ? satObj.norad_id : targetNum || noradId),
+      name: satObj?.name || foundInCatalog?.name || `OBJECT #${noradId}`,
+      alt_alias_id: satObj?.alt_alias_id || foundInCatalog?.alt_alias_id || (Array.isArray(foundInCatalog?.alt_alias_ids) ? foundInCatalog.alt_alias_ids[0] : undefined),
+      line1: satObj?.line1 || foundInCatalog?.line1,
+      line2: satObj?.line2 || foundInCatalog?.line2,
+      regime: satObj?.regime || foundInCatalog?.regime || 'LEO',
+      alt_km: satObj?.alt_km || foundInCatalog?.alt_km || satObj?.apogee_km || foundInCatalog?.apogee_km,
+      apogee_km: satObj?.apogee_km || foundInCatalog?.apogee_km,
+      perigee_km: satObj?.perigee_km || foundInCatalog?.perigee_km,
+    };
+
+    // Automatically enable orbits layer so trajectory line renders immediately
+    set((state) => ({
+      selectedSatellite: merged,
+      layers: { ...state.layers, orbits: true },
+    }));
 
     try {
-      const detail = await orbitApi.getSatelliteDetail(Number(noradId) || noradId);
+      const lookupId = merged.norad_id || targetNum || noradId;
+      const detail = await orbitApi.getSatelliteDetail(lookupId);
       set({ selectedSatelliteDetail: detail });
     } catch (err) {
       console.warn(`Failed fetching detail for satellite ${noradId}:`, err);

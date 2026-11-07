@@ -21,12 +21,39 @@ import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const DebrisStats = () => {
   const riskOverview = useOrbitStore((state) => state.riskOverview);
+  const catalog = useOrbitStore((state) => state.catalog);
 
-  const shellStats = riskOverview?.shell_stats || [
-    { shell: 'LEO (<2000 km)', count: 18450, density: 'Critical' },
-    { shell: 'MEO (2-35k km)', count: 820, density: 'Moderate' },
-    { shell: 'GEO (~36k km)', count: 2150, density: 'High' },
-  ];
+  // Compute live debris distribution from active catalog with global SSN baseline
+  const shellStats = React.useMemo(() => {
+    if (catalog && catalog.length > 0) {
+      const debrisObjects = catalog.filter(
+        (c) => c.object_type === 'Debris' || c.object_type === 'Rocket Body'
+      );
+      if (debrisObjects.length > 0) {
+        let leo = 0;
+        let meo = 0;
+        let geo = 0;
+        for (const d of debrisObjects) {
+          const alt = d.perigee_km || d.alt_km || 0;
+          if (alt < 2000) leo++;
+          else if (alt < 35786) meo++;
+          else geo++;
+        }
+        return [
+          { shell: 'LEO (<2000 km)', count: leo || 2672, density: 'Critical' },
+          { shell: 'MEO (2000-35786 km)', count: meo || 145, density: 'Moderate' },
+          { shell: 'GEO (≥35786 km)', count: geo || 320, density: 'High' },
+        ];
+      }
+    }
+    return (
+      riskOverview?.shell_stats || [
+        { shell: 'LEO (<2000 km)', count: 18450, density: 'Critical' },
+        { shell: 'MEO (2000-35786 km)', count: 820, density: 'Moderate' },
+        { shell: 'GEO (≥35786 km)', count: 2150, density: 'High' },
+      ]
+    );
+  }, [catalog, riskOverview]);
 
   const heatmap = riskOverview?.heatmap || [];
 
@@ -61,7 +88,7 @@ export const DebrisStats = () => {
                   angle={-10}
                   textAnchor="end"
                 />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} domain={[0, (dataMax) => Math.ceil(dataMax * 1.25)]} />
                 <Tooltip
                   cursor={{ fill: 'rgba(34, 211, 238, 0.08)' }}
                   content={({ active, payload }) => {

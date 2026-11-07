@@ -291,14 +291,16 @@ export const Navbar = () => {
             <Settings className="w-4 h-4" />
           </button>
 
-          {/* Refresh TLE */}
+          {/* Space Agency Auto-Sync IRT (1s) Button */}
           <button
             onClick={triggerRefreshTLE}
             disabled={isLoading}
-            title="Refresh Real-Time TLE Data from Space Agencies"
-            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 hover:text-cyan-100 transition shadow-sm disabled:opacity-50"
+            title="Auto-Syncing Space Agencies IRT every second (CelesTrak / US Space Command / ISRO). Click to force immediate refresh."
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 transition shadow-sm text-xs font-mono font-semibold shrink-0"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-300' : 'text-emerald-400'}`} />
+            <span className="hidden xl:inline">Sync Space Agencies (IRT)</span>
           </button>
 
           {/* Reference & Help Modal Toggle */}

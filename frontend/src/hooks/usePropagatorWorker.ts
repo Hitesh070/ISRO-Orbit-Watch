@@ -22,7 +22,7 @@ export interface UsePropagatorWorkerResult {
   validCount: number;
   allocCount: number;
   orbitPoints: [number, number, number][];
-  requestOrbitPath: (noradId: number, timeMs?: number) => void;
+  requestOrbitPath: (noradId: number, timeMs?: number, line1?: string, line2?: string) => void;
 }
 
 interface BufferSet {
@@ -248,11 +248,11 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
   }, [isReady, catalog.length, simulationSpeed]);
 
   // Request orbit path calculation for a satellite
-  const requestOrbitPath = useCallback((noradId: number, timeMs = Date.now()) => {
+  const requestOrbitPath = useCallback((noradId: number, timeMs = Date.now(), line1?: string, line2?: string) => {
     if (!workerRef.current) return;
     workerRef.current.postMessage({
       type: 'COMPUTE_ORBIT_PATH',
-      payload: { noradId, numPoints: 180, timeMs },
+      payload: { noradId, numPoints: 180, timeMs, line1, line2 },
     });
   }, []);
 

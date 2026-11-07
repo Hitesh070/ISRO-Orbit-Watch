@@ -158,18 +158,36 @@ self.onmessage = (event: MessageEvent) => {
     }
 
     case 'COMPUTE_ORBIT_PATH': {
-      const { noradId, numPoints = 180, timeMs = Date.now() } = payload;
-      const idx = state.catalog.findIndex((c) => c.norad_id === noradId);
+      const { noradId, numPoints = 180, timeMs = Date.now(), line1, line2 } = payload;
+      const targetStr = String(noradId);
+      const targetNum = Number(noradId);
 
-      if (idx === -1 || !state.satrecs[idx]) {
+      let satrec: satellite.SatRec | null = null;
+      const idx = state.catalog.findIndex((c) => {
+        if (c.norad_id === targetNum || String(c.norad_id) === targetStr) return true;
+        if ((c as any).alt_alias_id && (c as any).alt_alias_id === targetNum) return true;
+        if (Array.isArray((c as any).alt_alias_ids) && (c as any).alt_alias_ids.includes(targetNum)) return true;
+        return false;
+      });
+
+      if (idx !== -1 && state.satrecs[idx]) {
+        satrec = state.satrecs[idx];
+      } else if (line1 && line2) {
+        try {
+          const s = satellite.twoline2satrec(line1, line2);
+          if (!s.error) satrec = s;
+        } catch {
+          satrec = null;
+        }
+      }
+
+      if (!satrec) {
         self.postMessage({
           type: 'ORBIT_PATH_RESULT',
           payload: { noradId, points: [] },
         });
         return;
       }
-
-      const satrec = state.satrecs[idx]!;
       const meanMotionRevDay = (satrec.no * 1440.0) / (2.0 * Math.PI);
       const periodMinutes = meanMotionRevDay > 0 ? 1440.0 / meanMotionRevDay : 96.0;
 

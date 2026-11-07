@@ -13,6 +13,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import * as satelliteJs from 'satellite.js';
 
 interface SelectedSatelliteReticleProps {
   satellite: any;
@@ -37,11 +38,28 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
   const nadirLineRef = useRef<THREE.Line>(null);
   const groundCircleRef = useRef<THREE.Mesh>(null);
 
-  // Find satellite index in the catalog
+  // Find satellite index in the catalog (supporting 5-digit NORAD, aliases, and string IDs)
   const satIndex = useMemo(() => {
     if (!satellite?.norad_id || !catalog) return -1;
-    return catalog.findIndex((item: any) => item.norad_id === satellite.norad_id);
-  }, [satellite?.norad_id, catalog]);
+    const targetStr = String(satellite.norad_id).trim();
+    const targetNum = Number(satellite.norad_id);
+    const aliasStr = satellite.alt_alias_id ? String(satellite.alt_alias_id).trim() : null;
+    const aliasNum = satellite.alt_alias_id ? Number(satellite.alt_alias_id) : null;
+
+    return catalog.findIndex((item: any) => {
+      if (!item) return false;
+      const itemStr = String(item.norad_id).trim();
+      const itemNum = Number(item.norad_id);
+      if (itemNum === targetNum || itemStr === targetStr) return true;
+      if (aliasNum !== null && (itemNum === aliasNum || itemStr === aliasStr)) return true;
+      if (item.alt_alias_id && (item.alt_alias_id === targetNum || String(item.alt_alias_id) === targetStr)) return true;
+      if (Array.isArray(item.alt_alias_ids)) {
+        if (item.alt_alias_ids.includes(targetNum) || item.alt_alias_ids.map(String).includes(targetStr)) return true;
+        if (aliasNum !== null && (item.alt_alias_ids.includes(aliasNum) || item.alt_alias_ids.map(String).includes(aliasStr!))) return true;
+      }
+      return false;
+    });
+  }, [satellite?.norad_id, satellite?.alt_alias_id, catalog]);
 
   const lineGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
@@ -55,29 +73,68 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
   const accentColor = isISRO ? '#f59e0b' : isDebris ? '#f43f5e' : '#00f0ff';
 
   useFrame(({ clock, camera }) => {
-    if (satIndex === -1 || !posBuffer || !groupRef.current) return;
+    if (!groupRef.current) return;
 
-    const positions = new Float32Array(posBuffer);
-    const velocities = velBuffer ? new Float32Array(velBuffer) : null;
-    const idx3 = satIndex * 3;
+    let currentX = 0;
+    let currentY = 0;
+    let currentZ = 0;
+    let hasPos = false;
 
-    const px = positions[idx3];
-    const py = positions[idx3 + 1];
-    const pz = positions[idx3 + 2];
+    // Primary: Read from worker buffer
+    if (satIndex !== -1 && posBuffer) {
+      const positions = new Float32Array(posBuffer);
+      const velocities = velBuffer ? new Float32Array(velBuffer) : null;
+      const idx3 = satIndex * 3;
 
-    if (isNaN(px)) return;
+      const px = positions[idx3];
+      const py = positions[idx3 + 1];
+      const pz = positions[idx3 + 2];
 
-    // Extrapolate with linear velocity
-    const elapsedSeconds = (Date.now() - workerTickTimeMs) / 1000.0;
-    const uDt = elapsedSeconds * simulationSpeed;
+      if (!isNaN(px) && (px !== 0 || py !== 0 || pz !== 0)) {
+        const elapsedSeconds = (Date.now() - workerTickTimeMs) / 1000.0;
+        const uDt = elapsedSeconds * simulationSpeed;
+        const vx = velocities ? velocities[idx3] * uDt : 0;
+        const vy = velocities ? velocities[idx3 + 1] * uDt : 0;
+        const vz = velocities ? velocities[idx3 + 2] * uDt : 0;
 
-    const vx = velocities ? velocities[idx3] * uDt : 0;
-    const vy = velocities ? velocities[idx3 + 1] * uDt : 0;
-    const vz = velocities ? velocities[idx3 + 2] * uDt : 0;
+        currentX = px + vx;
+        currentY = py + vy;
+        currentZ = pz + vz;
+        hasPos = true;
+      }
+    }
 
-    const currentX = px + vx;
-    const currentY = py + vy;
-    const currentZ = pz + vz;
+    // Secondary / Fallback: Real-time SGP4 propagation directly from TLE lines
+    if (!hasPos && satellite?.line1 && satellite?.line2) {
+      try {
+        const satrec = satelliteJs.twoline2satrec(satellite.line1, satellite.line2);
+        if (satrec && !satrec.error) {
+          const pv = satelliteJs.propagate(satrec, new Date());
+          if (pv.position && typeof pv.position !== 'boolean') {
+            const p = pv.position as { x: number; y: number; z: number };
+            const KM_TO_SCENE = 1.0 / 6378.137;
+            currentX = p.x * KM_TO_SCENE;
+            currentY = p.z * KM_TO_SCENE;
+            currentZ = -p.y * KM_TO_SCENE;
+            hasPos = true;
+          }
+        }
+      } catch {
+        hasPos = false;
+      }
+    }
+
+    // Never render at (0, 0, 0) inside Earth
+    if (!hasPos || (currentX === 0 && currentY === 0 && currentZ === 0)) {
+      groupRef.current.visible = false;
+      if (nadirLineRef.current) nadirLineRef.current.visible = false;
+      if (groundCircleRef.current) groundCircleRef.current.visible = false;
+      return;
+    }
+
+    groupRef.current.visible = true;
+    if (nadirLineRef.current) nadirLineRef.current.visible = true;
+    if (groundCircleRef.current) groundCircleRef.current.visible = true;
 
     groupRef.current.position.set(currentX, currentY, currentZ);
     groupRef.current.quaternion.copy(camera.quaternion);
@@ -120,11 +177,15 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
     }
   });
 
-  if (satIndex === -1) return null;
+  const displayAlt = satellite.alt_km
+    ? `${Math.round(satellite.alt_km).toLocaleString()} km`
+    : satellite.apogee_km
+    ? `${Math.round(satellite.apogee_km).toLocaleString()} km`
+    : null;
 
   return (
     <>
-      {/* 3D Target Reticle at Satellite Position */}
+      {/* 3D Target Reticle at Satellite Position in Deep Space */}
       <group ref={groupRef}>
         {/* Core bright point */}
         <mesh>
@@ -145,18 +206,28 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
         </mesh>
 
         {/* Floating 3D Nameplate Tag */}
-        <Html position={[0, 0.11, 0]} center style={{ pointerEvents: 'none' }}>
-          <div className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-space-950/90 border border-cyan-400/80 shadow-2xl backdrop-blur-md flex items-center gap-2">
+        <Html position={[0, 0.14, 0]} center style={{ pointerEvents: 'none' }}>
+          <div className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-space-950/95 border border-cyan-400/90 shadow-2xl backdrop-blur-md flex items-center gap-2">
             <span
-              className="w-2 h-2 rounded-full animate-ping"
+              className="w-2.5 h-2.5 rounded-full animate-ping"
               style={{ backgroundColor: accentColor }}
             />
-            <span className="font-mono text-[11px] font-bold text-cyan-200">
+            <span className="font-mono text-xs font-bold text-cyan-200">
               {satellite.name}
             </span>
-            <span className="font-mono text-[10px] text-amber-300 font-semibold px-1 py-0.2 rounded bg-amber-500/10 border border-amber-500/30">
-              {satellite.alt_km ? `${Math.round(satellite.alt_km)} km` : `NORAD ${satellite.norad_id}`}
+            {displayAlt && (
+              <span className="font-mono text-[10px] text-amber-300 font-bold px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
+                {displayAlt}
+              </span>
+            )}
+            <span className="font-mono text-[9px] text-slate-300 px-1 py-0.2 rounded bg-slate-800/80 border border-slate-700">
+              NORAD #{satellite.norad_id}
             </span>
+            {satellite.regime && (
+              <span className="font-mono text-[9px] text-cyan-300 font-bold px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-500/30">
+                {satellite.regime}
+              </span>
+            )}
           </div>
         </Html>
       </group>
@@ -169,7 +240,7 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
             new THREE.LineBasicMaterial({
               color: new THREE.Color(accentColor),
               transparent: true,
-              opacity: 0.45,
+              opacity: 0.55,
             })
           )
         }
@@ -179,7 +250,7 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
       {/* Sub-satellite ground footprint circle on Earth */}
       <mesh ref={groundCircleRef}>
         <ringGeometry args={[0.015, 0.028, 32]} />
-        <meshBasicMaterial color={accentColor} side={THREE.DoubleSide} transparent opacity={0.65} />
+        <meshBasicMaterial color={accentColor} side={THREE.DoubleSide} transparent opacity={0.75} />
       </mesh>
     </>
   );
