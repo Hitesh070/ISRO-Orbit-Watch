@@ -25,6 +25,7 @@ import { useOrbitStore } from '../../store/useOrbitStore';
 import { usePropagatorWorker } from '../../hooks/usePropagatorWorker';
 import PointCloud from './PointCloud';
 import OrbitPath from './OrbitPath';
+import SelectedSatelliteReticle from './SelectedSatelliteReticle';
 
 /**
  * Calculates current astronomical solar position in Three.js TEME coordinates.
@@ -355,6 +356,18 @@ const GlobeScene = () => {
               : '#22d3ee'
           }
           isSelected={true}
+        />
+      )}
+
+      {/* Selected Satellite 3D Target Reticle & Nadir Ground Projection */}
+      {selectedSatellite && (
+        <SelectedSatelliteReticle
+          satellite={selectedSatellite}
+          catalog={catalog}
+          posBuffer={posBuffer}
+          velBuffer={velBuffer}
+          workerTickTimeMs={workerTickTimeMs}
+          simulationSpeed={simulationSpeed}
         />
       )}
 

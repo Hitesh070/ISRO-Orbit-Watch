@@ -177,6 +177,7 @@ export const PointCloud = ({
 
     const vis = visibleAttr.array;
     const sizes = sizeAttr.array;
+    const colors = colorAttr.array;
     const selNorad = selectedSatellite?.norad_id;
 
     for (let i = 0; i < count; i++) {
@@ -221,21 +222,40 @@ export const PointCloud = ({
       // Highlight selected or conjunction-involved assets
       const isSelected = item.norad_id === selNorad;
       const isHighlighted = highlightedNoradIds.includes(item.norad_id);
+      const idx3 = i * 3;
 
       if (isSelected) {
-        sizes[i] = 7.5;
+        sizes[i] = 12.0; // Extra large high-visibility point
+        colors[idx3] = 0.1;
+        colors[idx3 + 1] = 1.0;
+        colors[idx3 + 2] = 1.0; // Blazing Electric Cyan
       } else if (isHighlighted) {
-        sizes[i] = 6.0;
+        sizes[i] = 7.5;
+        colors[idx3] = 1.0;
+        colors[idx3 + 1] = 0.2;
+        colors[idx3 + 2] = 0.5; // Warning Pink
       } else if (item.is_isro) {
         sizes[i] = 4.5;
+        colors[idx3] = 1.0;
+        colors[idx3 + 1] = 0.6;
+        colors[idx3 + 2] = 0.2; // ISRO Saffron
+      } else if (isDebris) {
+        sizes[i] = 1.8;
+        colors[idx3] = 0.96;
+        colors[idx3 + 1] = 0.35;
+        colors[idx3 + 2] = 0.42; // Debris Rose
       } else {
-        sizes[i] = isDebris ? 1.8 : 2.8;
+        sizes[i] = 2.8;
+        colors[idx3] = 0.0;
+        colors[idx3 + 1] = 0.94;
+        colors[idx3 + 2] = 1.0; // Normal Cyan
       }
     }
 
     visibleAttr.needsUpdate = true;
     sizeAttr.needsUpdate = true;
-  }, [catalog, layers, filters, selectedSatellite, highlightedNoradIds, geometry, count, visibleAttr, sizeAttr]);
+    colorAttr.needsUpdate = true;
+  }, [catalog, layers, filters, selectedSatellite, highlightedNoradIds, geometry, count, visibleAttr, sizeAttr, colorAttr]);
 
   // Frame tick: update shader uDt for seamless velocity extrapolation
   useFrame((state) => {
