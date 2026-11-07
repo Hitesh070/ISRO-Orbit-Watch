@@ -37,9 +37,13 @@ export class DataManager {
     this.conjunctionsPath = path.join(this.dataDir, 'conjunctions.json');
 
     // Bundled fallback snapshot in extraResources or project resources
+    const devFallback = (app?.getAppPath && fs.existsSync(path.join(app.getAppPath(), 'resources/catalog-snapshot')))
+      ? path.join(app.getAppPath(), 'resources/catalog-snapshot')
+      : path.join(__dirname, '../../../resources/catalog-snapshot');
+
     this.bundledSnapshotDir = customBundledDir || (app?.isPackaged
       ? path.join(process.resourcesPath, 'catalog-snapshot')
-      : path.join(__dirname, '../../resources/catalog-snapshot'));
+      : devFallback);
 
     this.ensureDirectories();
   }

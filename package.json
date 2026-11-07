@@ -12,7 +12,7 @@
     "dev:desktop": "cross-env NODE_ENV=development ELECTRON=true node scripts/dev-desktop.js",
     "build:desktop": "cross-env ELECTRON=true npm run build --prefix frontend && npm run build:electron",
     "build:electron": "tsup desktop/main/index.ts --out-dir desktop/dist/main --format cjs --target node20 --clean --external electron --external serialport && tsup desktop/preload/index.ts --out-dir desktop/dist/preload --format cjs --target node20 --clean --external electron",
-    "package:desktop": "electron-builder --win --x64 -c electron-builder.yml",
+    "package:desktop": "npm run build:desktop && electron-builder --win --x64 -c electron-builder.yml",
     "dist:win": "npm run build:desktop && electron-builder --win --x64 -c electron-builder.yml",
     "test": "npm test --prefix frontend && npm run test:desktop",
     "test:frontend": "npm test --prefix frontend",

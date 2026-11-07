@@ -6,8 +6,8 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import {
-  IPC_CHANNELS,
+import { IPC_CHANNELS } from '../../frontend/src/shared/ipcChannels';
+import type {
   SerialOpenOptions,
   RotctldConnectOptions,
   PassReminder,

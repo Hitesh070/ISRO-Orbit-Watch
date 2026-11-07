@@ -99,6 +99,16 @@ function saveWindowState(win: BrowserWindow) {
   } catch (e) {}
 }
 
+function getAppFilePath(...relativeParts: string[]): string {
+  const candidatePaths = [
+    path.join(app.getAppPath(), ...relativeParts),
+    path.join(__dirname, '../../../', ...relativeParts),
+    path.join(process.resourcesPath, 'app.asar', ...relativeParts),
+    path.join(__dirname, '../../', ...relativeParts),
+  ];
+  return candidatePaths.find((p) => fs.existsSync(p)) || candidatePaths[0];
+}
+
 async function createWindow() {
   const windowState = loadWindowState();
 
@@ -112,7 +122,7 @@ async function createWindow() {
     backgroundColor: '#030712', // Pure dark theme; prevents white startup flashes
     show: false,
     title: 'OrbitGuard — Real-Time SSA & RF Ground Station',
-    icon: path.join(__dirname, '../../resources/icon.ico'),
+    icon: getAppFilePath('resources/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -183,7 +193,7 @@ async function createWindow() {
   });
 
   // System Tray setup
-  notificationManager.setupTray(mainWindow, path.join(__dirname, '../../resources/icon.ico'));
+  notificationManager.setupTray(mainWindow, getAppFilePath('resources/icon.ico'));
 
   // Window lifecycle events
   mainWindow.once('ready-to-show', () => {
@@ -216,13 +226,28 @@ async function createWindow() {
     });
   });
 
+  // WebContents debug & failure listeners
+  mainWindow.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL) => {
+    log.error(`[OrbitGuard Desktop] WebContents failed to load ${validatedURL}: [${errorCode}] ${errorDescription}`);
+  });
+  mainWindow.webContents.on('console-message', (_, level, message, line, sourceId) => {
+    log.info(`[Renderer] [${level}] ${message} (${sourceId}:${line})`);
+  });
+
   // Load URL: dev server vs production bundled Vite assets
   const devServerUrl = process.env.VITE_DEV_SERVER_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : null);
   if (devServerUrl) {
+    log.info(`[OrbitGuard Desktop] Loading from dev server: ${devServerUrl}`);
     await mainWindow.loadURL(devServerUrl);
   } else {
-    const indexPath = path.join(__dirname, '../../frontend/dist/index.html');
-    await mainWindow.loadFile(indexPath);
+    const indexPath = getAppFilePath('frontend/dist/index.html');
+    log.info(`[OrbitGuard Desktop] Loading frontend index from: ${indexPath}`);
+    try {
+      await mainWindow.loadFile(indexPath);
+      log.info('[OrbitGuard Desktop] Frontend loaded successfully.');
+    } catch (err: any) {
+      log.error(`[OrbitGuard Desktop] Failed loading frontend at ${indexPath}:`, err);
+    }
   }
 }
 
