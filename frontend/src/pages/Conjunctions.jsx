@@ -22,9 +22,7 @@ export const Conjunctions = () => {
             <AlertOctagon className="w-6 h-6 text-rose-500" />
             Active Orbital Conjunction Alerts & Collision Screening
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Predictive 24-hour lookahead screening detecting close approaches between operational satellites and space debris fragments.
-          </p>
+
         </div>
 
         <div className="flex items-center gap-2">
