@@ -239,7 +239,7 @@ export const PassPredictor = () => {
             Ground Station Pass Predictor (AOS / LOS / Max Elevation)
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            SGP4 topocentric line-of-sight tracking for satellite communication and optical observation
+            Topocentric line-of-sight tracking for satellite communication and optical observation
           </p>
         </div>
 

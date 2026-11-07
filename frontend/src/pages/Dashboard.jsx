@@ -757,27 +757,97 @@ export const Dashboard = () => {
 
 
 
-  const totalTracked = analytics?.total_tracked_objects || satellites.length + debris.length;
+  const isroSatellites = useMemo(() => {
+    const pool = catalog && catalog.length > 0 ? catalog : satellites;
+    return pool.filter((s) => s.is_isro || (s.country || '').toLowerCase().includes('india'));
+  }, [catalog, satellites]);
 
-  const activeCount = analytics?.active_satellites || satellites.length;
+  const allSatellites = useMemo(() => {
+    const pool = catalog && catalog.length > 0 ? catalog : satellites;
+    return pool.filter((s) => s.object_type === 'Satellite');
+  }, [catalog, satellites]);
 
-  const debrisCount = analytics?.debris_pieces || debris.length;
+  const allDebris = useMemo(() => {
+    const pool = catalog && catalog.length > 0 ? catalog : debris;
+    return pool.filter((s) => s.object_type !== 'Satellite');
+  }, [catalog, debris]);
 
+  const isroDebris = useMemo(() => {
+    return allDebris.filter(
+      (d) =>
+        d.is_isro ||
+        (d.country || '').toLowerCase().includes('india') ||
+        (d.name || '').toLowerCase().includes('pslv')
+    );
+  }, [allDebris]);
 
+  const totalTracked = isroOnly
+    ? (isroSatellites.length + (isroDebris.length > 0 ? isroDebris.length : 0))
+    : (catalog.length || (satellites.length + debris.length));
 
-  const typeBreakdown = analytics?.type_breakdown || [
+  const activeCount = isroOnly ? isroSatellites.length : allSatellites.length;
 
-    { name: 'Operational Satellites', value: 20, color: '#10b981' },
+  const debrisCount = isroOnly
+    ? (isroDebris.length > 0 ? isroDebris.length : allDebris.length)
+    : allDebris.length;
 
-    { name: 'Space Debris & Fragments', value: 9, color: '#ef4444' },
+  const meanVelocity = useMemo(() => {
+    const pool = isroOnly ? isroSatellites : allSatellites;
+    const leoObjects = pool.filter((s) => {
+      const a = s.semi_major_axis_km;
+      if (a && a > 6500 && a < 8500) return true;
+      const alt = s.alt_km || s.altitude;
+      return alt !== undefined && alt > 150 && alt <= 2000;
+    });
+    if (leoObjects.length === 0) return isroOnly ? '7.54' : '7.46';
+    const GM = 398600.4418;
+    let totalV = 0;
+    for (const s of leoObjects) {
+      const a = s.semi_major_axis_km || (6378.137 + (s.alt_km || s.altitude || 650));
+      totalV += Math.sqrt(GM / a);
+    }
+    return (totalV / leoObjects.length).toFixed(2);
+  }, [isroOnly, isroSatellites, allSatellites]);
 
-    { name: 'Rocket Upper Stages', value: 3, color: '#f59e0b' },
+  const typeBreakdown = useMemo(() => {
+    if (isroOnly) {
+      return [
+        { name: 'Active ISRO Payloads', value: isroSatellites.length || 80, color: '#10b981' },
+        { name: 'Monitored Debris Hazards', value: allDebris.length || 2672, color: '#ef4444' },
+      ];
+    }
+    return [
+      { name: 'Operational Satellites', value: allSatellites.length || 1121, color: '#10b981' },
+      { name: 'Space Debris & Fragments', value: allDebris.length || 2672, color: '#ef4444' },
+    ];
+  }, [isroOnly, isroSatellites, allSatellites, allDebris]);
 
-  ];
+  const altHistogram = useMemo(() => {
+    const pool = isroOnly ? isroSatellites : (catalog && catalog.length > 0 ? catalog : satellites);
+    const bins = [
+      { range: '200-500 km', count: 0 },
+      { range: '500-700 km', count: 0 },
+      { range: '700-1000 km', count: 0 },
+      { range: '1000-2000 km', count: 0 },
+      { range: 'MEO (2-35k)', count: 0 },
+      { range: 'GEO (~36k km)', count: 0 },
+    ];
+    for (const s of pool) {
+      const alt = s.semi_major_axis_km
+        ? s.semi_major_axis_km - 6378.137
+        : (s.perigee_km && s.apogee_km)
+        ? (s.perigee_km + s.apogee_km) / 2
+        : s.alt_km || 600;
+      if (alt < 500) bins[0].count++;
+      else if (alt < 700) bins[1].count++;
+      else if (alt < 1000) bins[2].count++;
+      else if (alt < 2000) bins[3].count++;
+      else if (alt < 35000) bins[4].count++;
+      else bins[5].count++;
+    }
+    return bins;
+  }, [isroOnly, isroSatellites, catalog, satellites]);
 
-
-
-  const altHistogram = analytics?.altitude_histogram || [];
 
 
 
@@ -876,132 +946,86 @@ export const Dashboard = () => {
     <div className="w-full bg-space-950 p-4 md:p-6 text-slate-100 space-y-6">
 
       {/* Top Header */}
-
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-cyan-500/20 gap-3">
-
         <div>
-
           <h1 className="text-xl md:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent">
-
             Orbital Situational Awareness & Debris Risk Analytics
-
           </h1>
-
-          <p className="text-xs text-slate-400 mt-1">
-
-            Global Space Surveillance Network (SSN) telemetry ingestion, conjunction probability assessment, and pass tracking.
-
-          </p>
-
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          {/* Live Auto-Sync Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold font-mono text-xs shadow-glow-emerald">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Auto Sync</span>
+          </div>
 
-          <span className="px-3 py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono text-xs flex items-center gap-1.5">
-
-            <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" /> SGP4 Propagated
-
-          </span>
-
+          {/* ISRO Filter Toggle */}
+          <button
+            onClick={() => setIsroOnly(!isroOnly)}
+            className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold transition flex items-center gap-1.5 ${
+              isroOnly
+                ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-glow-amber'
+                : 'bg-space-900 border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {isroOnly ? 'ISRO Assets Only' : 'Showing All Assets'}
+          </button>
         </div>
-
       </div>
-
-
 
       {/* KPI Cards */}
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
         <div className="glass-panel rounded-xl p-4 shadow-xl border-l-4 border-l-cyan-500">
-
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-
             <span>Total Tracked Objects</span>
-
             <Globe2 className="w-4 h-4 text-cyan-400" />
-
           </div>
-
           <div className="text-2xl md:text-3xl font-mono font-bold text-slate-100">
-
-            {totalTracked}
-
+            {totalTracked.toLocaleString()}
           </div>
-
-          <div className="text-[11px] text-cyan-400 font-mono mt-1">Cataloged in Orbit</div>
-
+          <div className="text-[11px] text-cyan-400 font-mono mt-1">
+            {isroOnly ? 'Cataloged ISRO in Orbit' : 'Cataloged in Orbit'}
+          </div>
         </div>
-
-
 
         <div className="glass-panel rounded-xl p-4 shadow-xl border-l-4 border-l-emerald-500">
-
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-
             <span>Operational Satellites</span>
-
             <Satellite className="w-4 h-4 text-emerald-400" />
-
           </div>
-
           <div className="text-2xl md:text-3xl font-mono font-bold text-emerald-300">
-
-            {activeCount}
-
+            {activeCount.toLocaleString()}
           </div>
-
-          <div className="text-[11px] text-emerald-400 font-mono mt-1">Active Spacecraft</div>
-
+          <div className="text-[11px] text-emerald-400 font-mono mt-1">
+            {isroOnly ? 'Active ISRO Spacecraft' : 'Active Spacecraft'}
+          </div>
         </div>
-
-
 
         <div className="glass-panel rounded-xl p-4 shadow-xl border-l-4 border-l-rose-500">
-
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-
             <span>Cataloged Debris & R/B</span>
-
             <ShieldAlert className="w-4 h-4 text-rose-500" />
-
           </div>
-
           <div className="text-2xl md:text-3xl font-mono font-bold text-rose-400">
-
-            {debrisCount}
-
+            {debrisCount.toLocaleString()}
           </div>
-
-          <div className="text-[11px] text-rose-400 font-mono mt-1">Collisional Hazard</div>
-
+          <div className="text-[11px] text-rose-400 font-mono mt-1">
+            {isroOnly ? 'Monitored Hazard Debris' : 'Collisional Hazard'}
+          </div>
         </div>
-
-
 
         <div className="glass-panel rounded-xl p-4 shadow-xl border-l-4 border-l-amber-500">
-
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1 font-mono">
-
             <span>Mean Velocity (LEO)</span>
-
             <TrendingUp className="w-4 h-4 text-amber-400" />
-
           </div>
-
           <div className="text-2xl md:text-3xl font-mono font-bold text-amber-300">
-
-            7.68 km/s
-
+            {meanVelocity} km/s
           </div>
-
-          <div className="text-[11px] text-amber-400 font-mono mt-1">First Cosmic Speed</div>
-
+          <div className="text-[11px] text-amber-400 font-mono mt-1">Mean Orbital Speed (LEO)</div>
         </div>
-
       </div>
-
-
 
       {/* Main 2-Column Visual Charts Grid */}
 

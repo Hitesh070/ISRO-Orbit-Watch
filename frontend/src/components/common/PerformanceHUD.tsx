@@ -129,7 +129,7 @@ export const PerformanceHUD = () => {
           {/* SGP4 Worker Latency */}
           <div className="p-2 rounded-lg bg-space-900/80 border border-slate-800">
             <div className="flex items-center justify-between text-[10px] text-slate-400">
-              <span>SGP4 WORKER</span>
+              <span>PROPAGATOR</span>
               <Cpu className="w-3 h-3 text-emerald-400" />
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
