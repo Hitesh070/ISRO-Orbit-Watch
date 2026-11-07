@@ -30,9 +30,19 @@ const getInitialSettings = () => {
 const getInitialFavourites = () => {
   try {
     const saved = localStorage.getItem('orbitguard_favourites');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        // Clear legacy unrequested ISS default [25544]
+        if (parsed.length === 1 && parsed[0] === 25544 && !localStorage.getItem('orbitguard_user_starred')) {
+          localStorage.removeItem('orbitguard_favourites');
+          return [];
+        }
+        return parsed;
+      }
+    }
   } catch {}
-  return [25544]; // default ISS
+  return [];
 };
 
 const getInitialOnboarding = () => {
@@ -118,6 +128,7 @@ export const useOrbitStore = create((set, get) => ({
       : [...current, numId];
     try {
       localStorage.setItem('orbitguard_favourites', JSON.stringify(next));
+      localStorage.setItem('orbitguard_user_starred', 'true');
     } catch {}
     set({ favourites: next });
   },
