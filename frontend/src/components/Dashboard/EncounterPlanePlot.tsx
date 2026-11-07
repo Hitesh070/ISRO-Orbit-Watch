@@ -110,12 +110,12 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
   const distPx = Math.hypot(deltaPxX, deltaPxY);
 
   // Smart placement for Spacecraft 1 label (at Origin)
-  const obj1Anchor = deltaPxX >= 0 ? 'end' : 'start';
+  const obj1Anchor: 'start' | 'end' = deltaPxX >= 0 ? 'end' : 'start';
   const obj1LabelX = deltaPxX >= 0 ? center - 12 : center + 12;
   const obj1LabelY = deltaPxY >= 0 ? center - 12 : center + 14;
 
   // Smart placement for Threat Object 2 label (at Miss Point)
-  let obj2Anchor = 'start';
+  let obj2Anchor: 'start' | 'end' = 'start';
   let obj2LabelX = missPxX + 12;
   let obj2LabelY = missPxY + 4;
 
