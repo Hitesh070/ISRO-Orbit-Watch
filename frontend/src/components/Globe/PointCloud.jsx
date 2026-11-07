@@ -50,9 +50,9 @@ const vertexShader = `
 
     // Crisp distance-attenuated point size (camera dist ~ 2.0 - 5.0)
     float dist = max(-mvPosition.z, 0.8);
-    float baseScale = (aIsSatellite > 0.5) ? 32.0 : 22.0;
+    float baseScale = (aIsSatellite > 0.5) ? 14.0 : 9.0;
     gl_PointSize = (aSize * baseScale / dist) * uScale;
-    gl_PointSize = clamp(gl_PointSize, 2.0, 32.0);
+    gl_PointSize = clamp(gl_PointSize, 2.0, 18.0);
   }
 `;
 
@@ -181,7 +181,7 @@ export const PointCloud = ({
       colors[i * 3 + 2] = b;
 
       // Sharp, distinct point sizes: satellites are prominent, debris is compact
-      sizes[i] = isISRO ? 5.5 : isDebris ? 2.2 : 4.0;
+      sizes[i] = isISRO ? 2.8 : isDebris ? 1.4 : 2.2;
       visibilities[i] = 1.0;
       isSatellites[i] = (!isDebris && item.object_type === 'Satellite') ? 1.0 : 0.0;
     }

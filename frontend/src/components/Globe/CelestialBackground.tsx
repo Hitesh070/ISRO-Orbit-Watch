@@ -11,7 +11,7 @@
  */
 
 import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   getMoonTexture,
@@ -70,6 +70,17 @@ export const CelestialBackground: React.FC<CelestialBackgroundProps> = ({
   const sunHaloRef = useRef<THREE.Mesh>(null);
   const moonRef = useRef<THREE.Group>(null);
   const skyboxRef = useRef<THREE.Mesh>(null);
+
+  // Load 4K Ultra-HD authentic cosmic deep-space starfield from Three-Globe / Google Earth
+  const nightSkyTexture = useLoader(THREE.TextureLoader, './textures/night-sky.png');
+  useMemo(() => {
+    if (nightSkyTexture) {
+      nightSkyTexture.minFilter = THREE.LinearMipmapLinearFilter;
+      nightSkyTexture.magFilter = THREE.LinearFilter;
+      nightSkyTexture.generateMipmaps = true;
+      nightSkyTexture.needsUpdate = true;
+    }
+  }, [nightSkyTexture]);
 
   // Textures generated deterministically in memory
   const moonTexture = useMemo(() => getMoonTexture(), []);
@@ -203,12 +214,12 @@ export const CelestialBackground: React.FC<CelestialBackgroundProps> = ({
   return (
     <group>
       {/* =========================================================================
-          1. 360° PHOTOREALISTIC DEEP-SPACE MILKY WAY SKYBOX (Radius = 140)
+          1. 360° PHOTOREALISTIC 4K DEEP-SPACE SKYBOX (Radius = 140)
          ========================================================================= */}
       <mesh ref={skyboxRef} rotation={[0.42, 0.85, 0.2]}>
         <sphereGeometry args={[140, 48, 48]} />
         <meshBasicMaterial
-          map={milkyWayTexture}
+          map={nightSkyTexture || milkyWayTexture}
           side={THREE.BackSide}
           depthWrite={false}
         />

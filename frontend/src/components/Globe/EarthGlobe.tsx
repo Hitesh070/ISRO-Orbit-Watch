@@ -127,6 +127,7 @@ const EarthShaderMaterial = {
   uniforms: {
     uDayMap: { value: null },
     uNightMap: { value: null },
+    uSpecularMap: { value: null },
     uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
   },
   vertexShader: `
@@ -150,6 +151,7 @@ const EarthShaderMaterial = {
 
     uniform sampler2D uDayMap;
     uniform sampler2D uNightMap;
+    uniform sampler2D uSpecularMap;
     uniform vec3 uSunDirection;
 
     void main() {
@@ -163,38 +165,34 @@ const EarthShaderMaterial = {
       // 2. Texture lookups
       vec4 dayColor = texture2D(uDayMap, vUv);
       vec4 nightColor = texture2D(uNightMap, vUv);
+      float specularMask = texture2D(uSpecularMap, vUv).r;
 
       // 3. Smooth day/night terminator transitions
-      float dayFactor = smoothstep(-0.06, 0.08, NdotL);
-      float nightFactor = 1.0 - smoothstep(-0.04, 0.08, NdotL);
+      float dayFactor = smoothstep(-0.08, 0.08, NdotL);
+      float nightFactor = 1.0 - smoothstep(-0.06, 0.06, NdotL);
 
       // 4. Day diffuse lighting
       float diffuse = max(0.0, NdotL);
-      vec3 litDay = dayColor.rgb * (diffuse * 1.12 + 0.04);
+      vec3 litDay = dayColor.rgb * (diffuse * 1.15 + 0.035);
 
-      // 5. Specular ocean sun glint (Blinn-Phong reflection)
+      // 5. Specular ocean sun glint (Blinn-Phong reflection driven by 2K specular map)
       vec3 halfVector = normalize(sunDir + viewDir);
       float NdotH = max(0.0, dot(normal, halfVector));
-      float oceanMask = clamp((dayColor.b - dayColor.r * 0.72) * 3.0, 0.0, 1.0);
-      float specular = pow(NdotH, 48.0) * oceanMask * dayFactor * 2.2;
-      vec3 sunGlint = vec3(1.0, 0.98, 0.90) * specular;
+      float specular = pow(NdotH, 64.0) * specularMask * dayFactor * 2.4;
+      vec3 sunGlint = vec3(1.0, 0.98, 0.92) * specular;
 
-      // 6. Night Zone: Deep Dark Velvet Oceans/Land + Warm Glowing City Lights
-      vec3 nightAmbient = dayColor.rgb * vec3(0.012, 0.016, 0.024);
-      vec3 cityLights = nightColor.rgb * vec3(1.15, 1.02, 0.82) * 2.8 * nightFactor;
+      // 6. Night Zone: Deep Dark Velvet Oceans/Land + Clean Warm Golden City Lights (Zero Purple Tint)
+      vec3 nightAmbient = dayColor.rgb * vec3(0.006, 0.008, 0.014);
+      vec3 cityLights = nightColor.rgb * vec3(1.22, 1.06, 0.82) * 2.4 * nightFactor;
       vec3 litNight = nightAmbient + cityLights;
 
-      // 7. Subtle Sunset/Sunrise Rayleigh twilight scatter along terminator
-      float twilight = smoothstep(-0.06, 0.0, NdotL) * (1.0 - smoothstep(0.0, 0.06, NdotL));
-      vec3 twilightScatter = vec3(0.95, 0.42, 0.15) * twilight * 0.28;
+      // 7. Composite Surface
+      vec3 surface = mix(litNight, litDay + sunGlint, dayFactor);
 
-      // 8. Composite Surface
-      vec3 surface = mix(litNight, litDay + sunGlint, dayFactor) + twilightScatter;
-
-      // 9. Atmospheric Rayleigh Rim Glow ONLY on sunlit limb
-      float fresnel = pow(1.0 - max(0.0, dot(viewDir, normal)), 3.2);
-      float sunlitAtmosphere = smoothstep(-0.15, 0.25, NdotL);
-      vec3 atmosphereRim = vec3(0.20, 0.62, 0.98) * fresnel * sunlitAtmosphere * 1.3;
+      // 8. Atmospheric Rayleigh Rim Glow on sunlit horizon limb
+      float fresnel = pow(1.0 - max(0.0, dot(viewDir, normal)), 3.5);
+      float sunlitAtmosphere = smoothstep(-0.10, 0.30, NdotL);
+      vec3 atmosphereRim = vec3(0.22, 0.65, 1.0) * fresnel * sunlitAtmosphere * 1.25;
 
       gl_FragColor = vec4(surface + atmosphereRim, 1.0);
     }
@@ -231,11 +229,11 @@ const AtmosphereShaderMaterial = {
       vec3 sunDir = normalize(uSunDirection);
 
       float NdotL = dot(normal, sunDir);
-      float fresnel = pow(1.0 - max(0.0, dot(viewDir, normal)), 3.0);
-      float sunlit = smoothstep(-0.15, 0.25, NdotL);
+      float fresnel = pow(1.0 - abs(dot(viewDir, normal)), 3.8);
+      float sunlit = smoothstep(-0.08, 0.28, NdotL);
 
       vec3 color = vec3(0.22, 0.65, 1.0) * fresnel * sunlit * 1.25;
-      float alpha = fresnel * sunlit * 0.75;
+      float alpha = fresnel * sunlit * 0.45;
       gl_FragColor = vec4(color, alpha);
     }
   `,
@@ -243,7 +241,7 @@ const AtmosphereShaderMaterial = {
 
 /**
  * Photorealistic Cloud Deck Shader Material
- * Sunlit white clouds on day side; dark, soft silhouettes on night side.
+ * 4K Continuous Alpha Cloud Deck: Smooth feathered edges, NO DISCARD, sunlit day/night lighting.
  */
 const CloudShaderMaterial = {
   uniforms: {
@@ -271,14 +269,17 @@ const CloudShaderMaterial = {
       vec3 sunDir = normalize(uSunDirection);
       float NdotL = dot(normal, sunDir);
 
+      // Continuous alpha density lookup (eliminates 8-bit chunky stepping)
       float cloudAlpha = texture2D(uCloudMap, vUv).r;
-      if (cloudAlpha < 0.02) discard;
+      float alpha = smoothstep(0.04, 0.82, cloudAlpha);
 
-      float dayFactor = smoothstep(-0.06, 0.10, NdotL);
-      vec3 cloudColor = mix(vec3(0.015, 0.018, 0.025), vec3(1.0, 1.0, 0.98), dayFactor);
-      float alpha = cloudAlpha * (dayFactor * 0.44 + 0.18);
+      float dayFactor = smoothstep(-0.08, 0.12, NdotL);
+      vec3 dayCloud = vec3(0.98, 0.99, 1.0);
+      vec3 nightCloud = vec3(0.012, 0.015, 0.022);
+      vec3 cloudColor = mix(nightCloud, dayCloud, dayFactor);
+      float finalAlpha = alpha * mix(0.12, 0.65, dayFactor);
 
-      gl_FragColor = vec4(cloudColor, alpha);
+      gl_FragColor = vec4(cloudColor, finalAlpha);
     }
   `,
 };
@@ -305,12 +306,26 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
   const cloudDriftRef = useRef(0);
   const lastSyncRef = useRef(0);
 
-  // Load NASA Blue Marble daymap, night lights, and cloud layer textures
-  const [dayTexture, nightTexture, cloudsTexture] = useLoader(THREE.TextureLoader, [
-    './textures/earth_daymap.jpg',
-    './textures/earth_nightmap.jpg',
-    './textures/earth_clouds.jpg',
+  // Load 4K Ultra-HD NASA Blue Marble daymap, night lights, specular ocean reflection, and clouds
+  const [dayTexture, nightTexture, cloudsTexture, specularTexture] = useLoader(THREE.TextureLoader, [
+    './textures/earth_day_4096.jpg',
+    './textures/earth_night_4096.jpg',
+    './textures/earth_clouds_hd.png',
+    './textures/earth_specular_2048.jpg',
   ]);
+
+  // Configure trilinear mipmap filtering and 8x anisotropy for razor-sharp 4K rendering
+  useMemo(() => {
+    [dayTexture, nightTexture, cloudsTexture, specularTexture].forEach((tex) => {
+      if (tex) {
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.generateMipmaps = true;
+        tex.anisotropy = 8;
+        tex.needsUpdate = true;
+      }
+    });
+  }, [dayTexture, nightTexture, cloudsTexture, specularTexture]);
 
   // Create custom shader material instances
   const customEarthMat = useMemo(() => {
@@ -318,12 +333,13 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
       uniforms: {
         uDayMap: { value: dayTexture },
         uNightMap: { value: nightTexture },
+        uSpecularMap: { value: specularTexture },
         uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
       },
       vertexShader: EarthShaderMaterial.vertexShader,
       fragmentShader: EarthShaderMaterial.fragmentShader,
     });
-  }, [dayTexture, nightTexture]);
+  }, [dayTexture, nightTexture, specularTexture]);
 
   const customCloudsMat = useMemo(() => {
     return new THREE.ShaderMaterial({
@@ -347,7 +363,7 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
       fragmentShader: AtmosphereShaderMaterial.fragmentShader,
       transparent: true,
       blending: THREE.AdditiveBlending,
-      side: THREE.BackSide,
+      side: THREE.FrontSide,
       depthWrite: false,
     });
   }, []);
@@ -388,22 +404,22 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
 
   return (
     <group ref={earthRef}>
-      {/* Primary Earth Globe Sphere (Radius = 1.0) with Photorealistic Shader */}
+      {/* Primary Earth Globe Sphere (Radius = 1.0) with High Polygon Roundness & 4K Textures */}
       <mesh ref={earthMeshRef} material={customEarthMat}>
-        <sphereGeometry args={[1, 64, 64]} />
+        <sphereGeometry args={[1, 96, 96]} />
       </mesh>
 
       {/* Realistic Rotating Cloud Layer (Radius = 1.012) */}
       {layers.clouds && (
         <mesh ref={cloudsRef} material={customCloudsMat}>
-          <sphereGeometry args={[1.012, 64, 64]} />
+          <sphereGeometry args={[1.012, 96, 96]} />
         </mesh>
       )}
 
-      {/* Atmospheric Rayleigh Scattering Glow (Radius = 1.025, Sunlit Limb Only) */}
+      {/* Atmospheric Rayleigh Scattering Glow (Radius = 1.016, FrontSide Limb Only) */}
       {layers.atmosphere && (
         <mesh material={customAtmoMat}>
-          <sphereGeometry args={[1.025, 64, 64]} />
+          <sphereGeometry args={[1.016, 64, 64]} />
         </mesh>
       )}
 
@@ -533,10 +549,12 @@ const GlobeScene = () => {
   return (
     <>
       {/* Deep Space Cosmic Starfield & Solar System Planets (Sun, Moon, Mars, Jupiter, Saturn, Venus) */}
-      <CelestialBackground
-        sunPosition={currentSunPosition}
-        simulatedTimeMs={simulatedTimeMs || Date.now()}
-      />
+      <Suspense fallback={null}>
+        <CelestialBackground
+          sunPosition={currentSunPosition}
+          simulatedTimeMs={simulatedTimeMs || Date.now()}
+        />
+      </Suspense>
 
       {/* Ambient Deep Space Light */}
       <ambientLight intensity={0.28} />
