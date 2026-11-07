@@ -298,6 +298,7 @@ export const PassPredictor = () => {
                 } else {
                   setIsCustom(false);
                   setSelectedCity(e.target.value);
+                  fetchPasses(e.target.value, selectedNorad);
                 }
               }}
               className="w-full px-3 py-2 rounded-lg bg-space-950/80 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-400"
@@ -455,7 +456,7 @@ export const PassPredictor = () => {
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-cyan-400" />
           <span>
-            Target Location: <strong className="text-cyan-200">{stationInfo.name || 'Selected Ground Station'}</strong> ({stationInfo.lat?.toFixed(2)}°, {stationInfo.lon?.toFixed(2)}°)
+            Target Location: <strong className="text-cyan-200">{stationInfo.name || (isCustom && customLat && customLon ? `Custom Station (${Number(customLat).toFixed(2)}°, ${Number(customLon).toFixed(2)}°)` : 'Selected Ground Station')}</strong> ({typeof stationInfo.lat === 'number' ? stationInfo.lat.toFixed(2) : customLat ? Number(customLat).toFixed(2) : '--'}°, {typeof stationInfo.lon === 'number' ? stationInfo.lon.toFixed(2) : customLon ? Number(customLon).toFixed(2) : '--'}°)
           </span>
         </div>
         <div className="flex items-center gap-2">

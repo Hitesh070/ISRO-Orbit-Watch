@@ -51,6 +51,22 @@ class PassPredictor:
         if key in FAMOUS_GROUND_STATIONS:
             return FAMOUS_GROUND_STATIONS[key]
 
+        if "," in key:
+            try:
+                parts = key.split(",")
+                p_lat = float(parts[0].strip())
+                p_lon = float(parts[1].strip())
+                return {
+                    "name": f"Custom Ground Station ({p_lat:.2f}°, {p_lon:.2f}°)",
+                    "city": "Custom GPS",
+                    "country": "User Specified",
+                    "lat": p_lat,
+                    "lon": p_lon,
+                    "alt_m": 100.0,
+                }
+            except Exception:
+                pass
+
         # Partial match (only for a non-empty query: "" is a substring of everything and
         # used to silently return the first station, ignoring explicit lat/lon)
         if key:

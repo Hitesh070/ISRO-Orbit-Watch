@@ -6,7 +6,12 @@
 
 import { create } from 'zustand';
 import { orbitApi } from '../api/orbitApi';
-import { predictPassesClient } from '../utils/passPredictor';
+import {
+  predictPassesClient,
+  computeGroundTrackClient,
+  resolveLocationClient,
+  FAMOUS_GROUND_STATIONS,
+} from '../utils/passPredictor';
 
 export const DEFAULT_SETTINGS = {
   units: 'metric', // 'metric' (km, km/s) | 'imperial' (miles, mi/s)
@@ -53,6 +58,28 @@ const getInitialOnboarding = () => {
   }
 };
 
+const getInitialTheme = () => {
+  try {
+    return localStorage.getItem('orbitguard_theme') || 'dark';
+  } catch {
+    return 'dark';
+  }
+};
+
+const getInitialObserver = () => {
+  try {
+    const saved = localStorage.getItem('orbitguard_observer');
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return {
+    lat: 12.9716,
+    lon: 77.5946,
+    alt_m: 920,
+    name: 'Bengaluru, India',
+    isLive: false,
+  };
+};
+
 export const useOrbitStore = create((set, get) => ({
   // Core orbital dataset
   catalog: [],
@@ -69,7 +96,7 @@ export const useOrbitStore = create((set, get) => ({
   passesData: null,
   passesError: null,
   analytics: null,
-  groundStations: [],
+  groundStations: FAMOUS_GROUND_STATIONS,
   metadata: null,
 
   // Performance & Astrodynamic HUD (Phase 2)
@@ -166,7 +193,7 @@ export const useOrbitStore = create((set, get) => ({
   },
 
   // App Theme, Simulation Speed & Mission Clock
-  theme: localStorage.getItem('orbitguard_theme') || 'dark',
+  theme: getInitialTheme(),
   simulationSpeed: 1, // 1x, 5x, 15x, 60x fast-forward
   simulatedTimeMs: Date.now(),
   setSimulatedTimeMs: (ms) => set({ simulatedTimeMs: ms }),
@@ -177,13 +204,7 @@ export const useOrbitStore = create((set, get) => ({
   triggerCameraAction: (type) => set({ cameraAction: { type, id: Date.now() } }),
 
   // Observer Ground Station Geolocation Sync
-  observerLocation: JSON.parse(localStorage.getItem('orbitguard_observer') || 'null') || {
-    lat: 12.9716,
-    lon: 77.5946,
-    alt_m: 920,
-    name: 'Bengaluru, India',
-    isLive: false,
-  },
+  observerLocation: getInitialObserver(),
 
   detectUserLocation: () => {
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -414,7 +435,7 @@ export const useOrbitStore = create((set, get) => ({
         debris: activeDebris,
         riskOverview: riskRes,
         conjunctions: conjRes.conjunctions || [],
-        groundStations: stationsRes || [],
+        groundStations: (stationsRes && stationsRes.length > 0) ? stationsRes : FAMOUS_GROUND_STATIONS,
         metadata: metaRes,
         isLoading: false,
         lastUpdated: new Date().toLocaleTimeString(),
@@ -432,6 +453,7 @@ export const useOrbitStore = create((set, get) => ({
         satellites: (staticCatalog || []).filter((s) => s.object_type === 'Satellite'),
         debris: (staticCatalog || []).filter((d) => d.object_type !== 'Satellite'),
         conjunctions: conjRes?.conjunctions || [],
+        groundStations: FAMOUS_GROUND_STATIONS,
         metadata: meta,
         error: err.message || 'Failed to initialize orbit telemetry data',
         isLoading: false,
@@ -449,20 +471,82 @@ export const useOrbitStore = create((set, get) => ({
   },
 
   fetchPasses: async (city = 'bengaluru', noradId = 25544) => {
+    set({ passesError: null });
+
+    // Parse coordinates if city is formatted as "lat,lon"
+    let lat = null;
+    let lon = null;
+    const rawCity = String(city || '').trim();
+    if (rawCity.includes(',')) {
+      const parts = rawCity.split(',');
+      const pLat = parseFloat(parts[0]);
+      const pLon = parseFloat(parts[1]);
+      if (!isNaN(pLat) && !isNaN(pLon)) {
+        lat = pLat;
+        lon = pLon;
+      }
+    }
+
+    // 1. Attempt backend fetch if API is online
     try {
-      set({ passesError: null });
-      const res = await orbitApi.getPasses({ city, norad_id: noradId });
-      set({ passesData: res, passesError: null });
-    } catch (err) {
-      console.warn('Error fetching passes:', err);
-      if (err?.response?.status === 404 || String(err?.message || '').includes('404')) {
+      let res = null;
+      if (lat !== null && lon !== null) {
+        res = await orbitApi.getPasses({ lat, lon, norad_id: noradId });
+      } else {
+        res = await orbitApi.getPasses({ city: rawCity, norad_id: noradId });
+      }
+      if (res && res.passes && res.passes.length > 0) {
+        set({ passesData: res, passesError: null });
+        return;
+      }
+    } catch {
+      // Backend offline or non-responsive, fallback to client SGP4
+    }
+
+    // 2. High-precision client-side SGP4 topocentric pass prediction fallback
+    try {
+      let catalog = get().catalog || [];
+      if (catalog.length === 0) {
+        catalog = (await orbitApi.getStaticCatalog()) || [];
+      }
+
+      const numId = Number(noradId);
+      const sat = catalog.find((s) => s.norad_id === numId);
+      if (!sat || !sat.line1 || !sat.line2) {
         set({
           passesData: null,
-          passesError: 'Satellite unavailable in current catalog',
+          passesError: `Satellite NORAD #${noradId} not available in catalog for propagation`,
         });
-      } else {
-        set({ passesError: 'Failed to evaluate pass predictions for this location' });
+        return;
       }
+
+      const station = resolveLocationClient(rawCity, lat, lon);
+      const clientPasses = predictPassesClient(sat.line1, sat.line2, station, 5, 10.0, 10);
+      const groundTrack = computeGroundTrackClient(sat.line1, sat.line2, 45, 45, 2);
+
+      set({
+        passesData: {
+          ground_station: station,
+          satellite: {
+            name: sat.name,
+            norad_id: sat.norad_id,
+            line1: sat.line1,
+            line2: sat.line2,
+          },
+          passes: clientPasses,
+          ground_track: groundTrack,
+        },
+        passesError:
+          clientPasses.length === 0
+            ? 'No pass opportunities exceeding 10° elevation detected in the next 5 days for this location.'
+            : null,
+      });
+    } catch (clientErr) {
+      console.error('Client-side pass prediction failed:', clientErr);
+      set({
+        passesData: null,
+        passesError: 'Failed to evaluate pass predictions for this location',
+      });
     }
   },
 
