@@ -159,13 +159,20 @@ export const Dashboard = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#070d1d',
-                    borderColor: 'rgba(34, 211, 238, 0.4)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    color: '#f8fafc',
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0];
+                    return (
+                      <div className="p-2.5 rounded-lg bg-space-950 border border-cyan-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.payload.color }} />
+                          <span className="font-bold text-slate-100">{d.name}</span>
+                        </div>
+                        <div className="mt-1 text-cyan-300 font-bold">
+                          {Number(d.value).toLocaleString()} objects
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Legend
@@ -199,13 +206,17 @@ export const Dashboard = () => {
                 />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#070d1d',
-                    borderColor: 'rgba(34, 211, 238, 0.4)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    color: '#f8fafc',
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0];
+                    return (
+                      <div className="p-2.5 rounded-lg bg-space-950 border border-cyan-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
+                        <div className="text-slate-400 font-semibold">{d.payload.range}</div>
+                        <div className="mt-1 text-cyan-300 font-bold">
+                          {Number(d.value).toLocaleString()} objects
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Bar dataKey="count" fill="#38bdf8" radius={[4, 4, 0, 0]} />
@@ -236,13 +247,17 @@ export const Dashboard = () => {
                 <XAxis dataKey="year" stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#070d1d',
-                    borderColor: 'rgba(34, 211, 238, 0.4)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    color: '#f8fafc',
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0];
+                    return (
+                      <div className="p-2.5 rounded-lg bg-space-950 border border-emerald-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
+                        <div className="text-slate-400 font-semibold">Year {d.payload.year}</div>
+                        <div className="mt-1 text-emerald-300 font-bold">
+                          {Number(d.value).toLocaleString()} Annual Launches
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Bar dataKey="launches" fill="#10b981" name="Annual Launches" radius={[4, 4, 0, 0]} />
@@ -278,13 +293,17 @@ export const Dashboard = () => {
                   width={90}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#070d1d',
-                    borderColor: 'rgba(34, 211, 238, 0.4)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    color: '#f8fafc',
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0];
+                    return (
+                      <div className="p-2.5 rounded-lg bg-space-950 border border-indigo-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
+                        <div className="text-slate-300 font-bold">{d.payload.country}</div>
+                        <div className="mt-1 text-indigo-300 font-bold">
+                          {Number(d.value).toLocaleString()} Satellites
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Bar dataKey="satellites" fill="#818cf8" radius={[0, 4, 4, 0]} />

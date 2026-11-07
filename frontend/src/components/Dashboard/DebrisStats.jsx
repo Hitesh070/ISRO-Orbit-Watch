@@ -62,13 +62,20 @@ export const DebrisStats = () => {
                 />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#070d1d',
-                    borderColor: 'rgba(34, 211, 238, 0.4)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    color: '#f8fafc',
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const d = payload[0];
+                    return (
+                      <div className="p-2.5 rounded-lg bg-space-950 border border-cyan-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
+                        <div className="text-slate-300 font-bold">{d.payload.shell}</div>
+                        <div className="mt-1 text-cyan-300 font-bold">
+                          {Number(d.value).toLocaleString()} Tracked Debris
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          Risk: <span className="font-semibold text-rose-400">{d.payload.density}</span>
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
