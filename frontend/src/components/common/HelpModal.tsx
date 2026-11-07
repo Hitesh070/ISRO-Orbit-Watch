@@ -197,7 +197,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-slate-800 bg-space-950/70 text-slate-400 text-[11px]">
-          <span>OrbitGuard v4.0 • EEE Space Systems Suite</span>
+          <span>OrbitGuard v4.3 • Astrodynamics & Space Systems Suite</span>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded-lg bg-space-900 hover:bg-space-850 text-slate-200 border border-slate-700 transition"

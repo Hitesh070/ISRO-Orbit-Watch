@@ -30,7 +30,7 @@ interface OnboardingModalProps {
 const SLIDES = [
   {
     icon: Sparkles,
-    badge: 'Welcome to OrbitGuard v4.2',
+    badge: 'Welcome to OrbitGuard v4.3',
     title: 'Real-Time Space Situational Awareness & Ground Station',
     description:
       'OrbitGuard is a high-fidelity astrodynamics and RF engineering platform built for real-time satellite tracking, debris conjunction screening, and automated antenna tracking. Designed specifically for ISRO and aerospace engineering defense.',

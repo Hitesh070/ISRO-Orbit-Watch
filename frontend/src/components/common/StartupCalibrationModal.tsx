@@ -85,7 +85,7 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
 
     const runCalibrationSequence = async () => {
       // Stage 0: Initial boot
-      addLog('INIT: OrbitGuard Astrodynamic Ground Station v4.2 booting...');
+      addLog('INIT: OrbitGuard Astrodynamic Ground Station v4.3 booting...');
       addLog('DIAG: Initializing hardware sensors and sub-second astrodynamics pipeline...');
       setProgress(15);
       await new Promise((r) => setTimeout(r, 350));
@@ -209,7 +209,7 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
                   OrbitGuard System Calibration
                 </h1>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v4.2
+                  v4.3
                 </span>
               </div>
               <p className="text-xs font-mono text-slate-400 mt-0.5">

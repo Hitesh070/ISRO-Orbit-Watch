@@ -40,6 +40,21 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [v4.3] - 2026-11-07 (Release: 4K NASA Globe, Continuous Clouds, Cosmic Skybox & Astrodynamics Parity)
+### Added
+- **4K Ultra-HD NASA Blue Marble & Google Earth Textures**: 4096x2048 high-resolution day map, night city lights, specular ocean reflection, and 96x96 sphere geometry.
+- **Continuous Alpha Cloud Deck**: True continuous opacity cloud layer with smooth feathered edges, eliminating chunky 8-bit staircase artifacts.
+- **4K Google Earth Cosmic Skybox**: Panoramic deep-space Milky Way background with anti-aliased Gaussian Airy disc pinpoint stars.
+- **Spacecraft vs Debris Distinct Visuals**: Crisp high-tech diamond reticles with solar diffraction spikes and telemetry beacons for satellites, compact dots for debris.
+- **Autonomous Desktop Risk Engine**: Client-side synthesis of the 4x4 Altitude x Inclination risk density matrix and LEO/MEO/GEO shell breakdown.
+
+### Fixed
+- **Terminator Smear**: Removed artificial dark orange streak, rendering physical solar twilight.
+- **Night-Side Violet Wash**: Replaced indexed night texture with pure #000000 velvet oceans/land and warm golden city emitters.
+- **Pass Predictor Topocentric SGP4**: Reliable client-side propagation for custom GPS coordinates.
+
+---
+
 ## [v4.2] - 2026-11-06 (Phase 6 Final: Deep-Linking, Settings Drawer, Offline PWA)
 ### Added
 - **State Deep-Linking & Share System**: URL query synchronization (`?norad=<id>&speed=<warp>`) with automatic state restoration on load, history push/replace, and one-click "Share State" button in the Navbar.

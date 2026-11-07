@@ -103,7 +103,7 @@ export const orbitApi = {
           oldest_epoch: meta.oldestEpoch || '',
           newest_epoch: meta.newestEpoch || '',
           compression: 'gzip',
-          schema_version: 'v4.2-desktop',
+          schema_version: 'v4.3-desktop',
         };
       }
     }
