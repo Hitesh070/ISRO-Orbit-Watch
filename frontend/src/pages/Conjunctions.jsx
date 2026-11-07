@@ -32,7 +32,7 @@ export const Conjunctions = () => {
         <div className="flex items-center gap-2">
           <span className="px-3 py-1.5 rounded-lg bg-rose-950/60 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-glow-rose">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            {criticalCount} Critical Conjunctions (&lt;1 km / Pc ≥ 1e-4)
+            {criticalCount} Critical Conjunctions
           </span>
         </div>
       </div>
