@@ -24,6 +24,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { useOrbitStore, getShareableUrl } from '../../store/useOrbitStore';
+import { LocationModal } from '../common/LocationModal';
 
 export const Navbar = () => {
   const satellites = useOrbitStore((state) => state.satellites);
@@ -44,7 +45,9 @@ export const Navbar = () => {
 
   const [utcTime, setUtcTime] = useState('');
   const [localTime, setLocalTime] = useState('');
+  const [timeZoneLabel, setTimeZoneLabel] = useState('LOC');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   const handleCopyLink = () => {
     const url = getShareableUrl();
@@ -58,24 +61,29 @@ export const Navbar = () => {
 
   // Live Dual Clocks (Synchronized User Local Time + Simulated Spacecraft UTC Time)
   useEffect(() => {
+    const pad = (n) => String(n).padStart(2, '0');
     const updateTime = () => {
       const state = useOrbitStore.getState();
       const wallNow = new Date();
       const currentSimMs = state.simulationSpeed > 1 ? (state.simulatedTimeMs || Date.now()) : Date.now();
       const simNow = new Date(currentSimMs);
 
-      // Simulated Mission UTC time
-      setUtcTime(simNow.toUTCString().replace('GMT', 'UTC'));
-      // Local time with user's timezone abbreviation
-      setLocalTime(
-        wallNow.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-          timeZoneName: 'short',
-        })
-      );
+      const lHours = pad(wallNow.getHours());
+      const lMinutes = pad(wallNow.getMinutes());
+      const lSeconds = pad(wallNow.getSeconds());
+      setLocalTime(`${lHours}:${lMinutes}:${lSeconds}`);
+
+      const uHours = pad(simNow.getUTCHours());
+      const uMinutes = pad(simNow.getUTCMinutes());
+      const uSeconds = pad(simNow.getUTCSeconds());
+      setUtcTime(`${uHours}:${uMinutes}:${uSeconds} UTC`);
+
+      try {
+        const parts = wallNow.toLocaleTimeString([], { timeZoneName: 'short' }).split(' ');
+        setTimeZoneLabel(parts[parts.length - 1] || 'LOC');
+      } catch {
+        setTimeZoneLabel('LOC');
+      }
     };
     updateTime();
     const interval = setInterval(updateTime, 250);
@@ -203,37 +211,36 @@ export const Navbar = () => {
         <div className="flex items-center gap-3">
           {/* Ground Station / Observer Location */}
           <button
-            onClick={detectUserLocation}
-            title="Click to re-sync Ground Station with browser GPS coordinates"
-            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-emerald-400 text-[11px] font-mono text-slate-300 hover:text-emerald-300 transition"
+            onClick={() => setIsLocationModalOpen(true)}
+            title="Click to select Ground Station preset or enter custom coordinates"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-400 text-[11px] font-mono text-slate-300 hover:text-cyan-300 transition shrink-0"
           >
             <MapPin className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span className="truncate max-w-[140px]">{observerLocation?.name || 'Observer Station'}</span>
+            <span className="truncate max-w-[130px] font-medium">{observerLocation?.name || 'Observer Station'}</span>
           </button>
 
           {/* Clock */}
-          <div className="hidden sm:block text-right font-mono">
-            <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" />
-              <span>
-                {settings?.timeFormat === 'utc_primary'
-                  ? utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'
-                  : localTime || 'Local Time'}
+          <div className="hidden sm:flex flex-col items-end justify-center shrink-0 whitespace-nowrap text-right font-mono px-2 py-0.5 rounded-lg bg-space-950/60 border border-slate-800">
+            <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5 leading-tight">
+              <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+              <span className="tracking-wider">
+                {settings?.timeFormat === 'utc_primary' ? utcTime : localTime}
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                {settings?.timeFormat === 'utc_primary' ? '' : timeZoneLabel}
               </span>
               <span
-                className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
                   simulationSpeed > 1
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 }`}
               >
-                {simulationSpeed > 1 ? `${simulationSpeed}x WARP` : '1x LIVE'}
+                {simulationSpeed > 1 ? `${simulationSpeed}x` : 'LIVE'}
               </span>
             </div>
-            <div className="text-[10px] text-slate-400">
-              {settings?.timeFormat === 'utc_primary'
-                ? localTime || 'Local Time'
-                : utcTime ? utcTime.split(' ').slice(0, 5).join(' ') : 'UTC Space Time'}
+            <div className="text-[10px] text-slate-400 tracking-wider leading-tight mt-0.5">
+              {settings?.timeFormat === 'utc_primary' ? `${localTime} ${timeZoneLabel}` : utcTime}
             </div>
           </div>
 
@@ -304,6 +311,7 @@ export const Navbar = () => {
           </button>
         </div>
       </div>
+      <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </header>
   );
 };

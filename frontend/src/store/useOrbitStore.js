@@ -140,6 +140,7 @@ export const useOrbitStore = create((set, get) => ({
     objectType: 'ALL',
     riskLevel: 'ALL',
     favouritesOnly: false,
+    indianSatsOnly: true,
   },
 
   // App Theme, Simulation Speed & Mission Clock
@@ -272,6 +273,7 @@ export const useOrbitStore = create((set, get) => ({
         objectType: 'ALL',
         riskLevel: 'ALL',
         favouritesOnly: false,
+        indianSatsOnly: true,
       },
       highlightedNoradIds: [],
     });

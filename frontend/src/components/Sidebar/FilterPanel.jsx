@@ -102,6 +102,24 @@ export const FilterPanel = () => {
         </div>
       </div>
 
+      {/* Indian Satellites Only (ISRO) Filter */}
+      <button
+        onClick={() => setFilter('indianSatsOnly', !filters.indianSatsOnly)}
+        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-mono transition mb-2 ${
+          filters.indianSatsOnly
+            ? 'bg-amber-950/70 border-amber-500/80 text-amber-300 font-bold shadow-glow-amber'
+            : 'bg-space-950/60 border-slate-800 text-slate-400 hover:text-white'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">????</span>
+          <span className="text-[11px]">Indian Satellites Only (ISRO)</span>
+        </div>
+        <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${filters.indianSatsOnly ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50' : 'bg-space-900 text-slate-400'}`}>
+          {filters.indianSatsOnly ? 'Active (79)' : 'All Active'}
+        </span>
+      </button>
+
       {/* Starred Favourites Only Filter */}
       <button
         onClick={() => setFilter('favouritesOnly', !filters.favouritesOnly)}
@@ -182,7 +200,7 @@ export const FilterPanel = () => {
       <div className="mt-3.5 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center">
         <span>Tracking:</span>
         <span className="text-cyan-300 font-bold">
-          {satellites.length} Active | {debris.length} Debris
+          {filters.indianSatsOnly ? '79 ISRO Active' : `${satellites.length} Active`} | {debris.length} Debris
         </span>
       </div>
     </div>

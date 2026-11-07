@@ -140,6 +140,7 @@ const RealisticEarthMesh = () => {
 
   const simTimeRef = useRef(Date.now());
   const cloudDriftRef = useRef(0);
+  const visualSpinRef = useRef(0);
   const lastSyncRef = useRef(0);
 
   // Load NASA Blue Marble daymap, night lights, and cloud layer textures
@@ -155,17 +156,22 @@ const RealisticEarthMesh = () => {
     const simDate = new Date(simTimeRef.current);
     const gmst = satellite.gstime(simDate);
 
-    // Rotate Earth by Greenwich Mean Sidereal Time in the TEME frame
-    if (earthRef.current) {
-      earthRef.current.rotation.y = gmst;
+    // Smooth perceptible axial rotation of the Earth globe itself
+    if (!settings?.reducedMotion) {
+      visualSpinRef.current += delta * 0.04 * Math.min(simulationSpeed, 8);
     }
 
-    // Dynamic cloud layer atmospheric drift (faster than surface rotation for realistic weather motion)
+    // Rotate Earth on its polar axis (+Y in Three.js TEME frame)
+    if (earthRef.current) {
+      earthRef.current.rotation.y = gmst + visualSpinRef.current;
+    }
+
+    // Dynamic cloud layer atmospheric drift
     if (cloudsRef.current && layers.clouds) {
       if (!settings?.reducedMotion) {
         cloudDriftRef.current += delta * (0.012 + 0.004 * Math.min(simulationSpeed, 10));
       }
-      cloudsRef.current.rotation.y = gmst + cloudDriftRef.current;
+      cloudsRef.current.rotation.y = gmst + visualSpinRef.current + cloudDriftRef.current;
     }
 
     // Throttle sync of simulated time to Zustand store (~10 Hz)
@@ -338,13 +344,12 @@ const GlobeScene = () => {
         />
       )}
 
-      {/* Camera Orbit Controls */}
+      {/* Camera Orbit Controls (autoRotate disabled: deep space remains steady, globe rotates on its axis) */}
       <OrbitControls
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
-        autoRotate={!settings?.reducedMotion}
-        autoRotateSpeed={0.35}
+        autoRotate={false}
         minDistance={1.25}
         maxDistance={8.5}
         rotateSpeed={0.5}

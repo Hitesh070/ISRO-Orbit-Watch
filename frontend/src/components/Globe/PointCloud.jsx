@@ -197,7 +197,17 @@ export const PointCloud = ({
         if (filters.objectType === 'Satellite' && isDebris) visible = 0.0;
         if (filters.objectType === 'Debris' && !isDebris) visible = 0.0;
         if (filters.riskLevel !== 'ALL' && item.risk_level !== filters.riskLevel) visible = 0.0;
-        if (filters.country !== 'ALL' && !item.country?.toLowerCase().includes(filters.country.toLowerCase())) visible = 0.0;
+        // User requirement: "only indian satellites, but all debris"
+        if (filters.indianSatsOnly) {
+          if (isSatellite && !item.is_isro && !item.country?.toLowerCase().includes('india')) {
+            visible = 0.0;
+          }
+          // All debris pieces remain completely visible!
+        } else if (filters.country !== 'ALL') {
+          if (isSatellite && !item.country?.toLowerCase().includes(filters.country.toLowerCase())) {
+            visible = 0.0;
+          }
+        }
         if (filters.search) {
           const q = filters.search.toLowerCase().trim();
           if (!item.name.toLowerCase().includes(q) && !String(item.norad_id).includes(q)) {
