@@ -188,40 +188,82 @@ export class DataManager {
         const parsed = JSON.parse(rawBody);
 
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Normalise to OrbitGuard schema
-          const normalized = parsed.map((item: any) => ({
-            norad_id: item.NORAD_CAT_ID || item.norad_id,
-            name: item.OBJECT_NAME || item.name || `OBJECT ${item.NORAD_CAT_ID}`,
-            object_type: item.OBJECT_TYPE || 'Satellite',
-            country: item.COUNTRY_CODE || item.country || 'International',
-            epoch: item.EPOCH || new Date().toISOString(),
-            mean_motion: item.MEAN_MOTION || 15.0,
-            eccentricity: item.ECCENTRICITY || 0.001,
-            inclination: item.INCLINATION || 51.6,
-            ra_of_asc_node: item.RA_OF_ASC_NODE || 0.0,
-            arg_of_pericenter: item.ARG_OF_PERICENTER || 0.0,
-            mean_anomaly: item.MEAN_ANOMALY || 0.0,
-            bstar: item.BSTAR || 0.0001,
-            tle_line1: item.TLE_LINE1,
-            tle_line2: item.TLE_LINE2,
-            is_isro:
-              String(item.COUNTRY_CODE).toUpperCase() === 'IND' ||
-              String(item.OBJECT_NAME).toUpperCase().includes('CARTOSAT') ||
-              String(item.OBJECT_NAME).toUpperCase().includes('RISAT') ||
-              String(item.OBJECT_NAME).toUpperCase().includes('EOS') ||
-              String(item.OBJECT_NAME).toUpperCase().includes('GSAT'),
-          }));
+          // Normalise to OrbitGuard schema with Keplerian altitude calculations
+          const GM = 398600.4418;
+          const EARTH_RADIUS = 6378.137;
 
-          // Atomic write to catalog.json
-          this.atomicWriteJson(this.catalogPath, normalized);
+          const normalized = parsed.map((item: any) => {
+            const mm = Number(item.MEAN_MOTION || item.mean_motion) || 15.0;
+            const ecc = Number(item.ECCENTRICITY || item.eccentricity) || 0.001;
+            const n_rad_s = (mm * 2 * Math.PI) / 86400;
+            const a = Math.pow(GM / (n_rad_s * n_rad_s), 1 / 3);
+            const perigee = Math.max(120, a * (1 - ecc) - EARTH_RADIUS);
+            const apogee = Math.max(120, a * (1 + ecc) - EARTH_RADIUS);
+            const alt = Math.max(120, a - EARTH_RADIUS);
+            const period = Math.round((86400 / mm / 60) * 10) / 10;
+
+            const l1 = item.TLE_LINE1 || item.line1 || '';
+            const l2 = item.TLE_LINE2 || item.line2 || '';
+
+            return {
+              norad_id: Number(item.NORAD_CAT_ID || item.norad_id),
+              name: item.OBJECT_NAME || item.name || `OBJECT ${item.NORAD_CAT_ID}`,
+              object_type: item.OBJECT_TYPE || 'Satellite',
+              country: item.COUNTRY_CODE || item.country || 'International',
+              epoch: item.EPOCH || new Date().toISOString(),
+              mean_motion: mm,
+              eccentricity: ecc,
+              inclination: Number(item.INCLINATION || item.inclination) || 51.6,
+              ra_of_asc_node: Number(item.RA_OF_ASC_NODE || item.ra_of_asc_node) || 0.0,
+              arg_of_pericenter: Number(item.ARG_OF_PERICENTER || item.arg_of_pericenter) || 0.0,
+              mean_anomaly: Number(item.MEAN_ANOMALY || item.mean_anomaly) || 0.0,
+              bstar: Number(item.BSTAR || item.bstar) || 0.0001,
+              semi_major_axis_km: Math.round(a * 100) / 100,
+              perigee_km: Math.round(perigee * 100) / 100,
+              apogee_km: Math.round(apogee * 100) / 100,
+              alt_km: Math.round(alt * 100) / 100,
+              period_min: period,
+              line1: l1,
+              line2: l2,
+              tle_line1: l1,
+              tle_line2: l2,
+              is_isro:
+                String(item.COUNTRY_CODE).toUpperCase() === 'IND' ||
+                /cartosat|risat|chandrayaan|aditya|eos|insat|gsat|irnss|nisar/i.test(item.OBJECT_NAME || ''),
+            };
+          });
+
+          // PRESERVE AND MERGE DEBRIS OBJECTS (Ensure debris count NEVER drops to 0)
+          let existingDebris: any[] = [];
+          try {
+            const currentCat = this.getCachedCatalog();
+            if (currentCat && currentCat.length > 0) {
+              existingDebris = currentCat.filter((item: any) => item.object_type !== 'Satellite');
+            }
+          } catch {}
+
+          if (existingDebris.length === 0) {
+            try {
+              const bundledPath = path.join(this.bundledSnapshotDir, 'catalog.json');
+              if (fs.existsSync(bundledPath)) {
+                const bundled = JSON.parse(fs.readFileSync(bundledPath, 'utf8'));
+                existingDebris = bundled.filter((item: any) => item.object_type !== 'Satellite');
+              }
+            } catch {}
+          }
+
+          const mergedCatalog = [...normalized, ...existingDebris];
+
+          // Atomic write merged catalog to catalog.json
+          this.atomicWriteJson(this.catalogPath, mergedCatalog);
           this.etagCatalog = celestrakJson.value.etag || null;
 
           const checksum = crypto.createHash('sha256').update(rawBody).digest('hex');
           const meta: DataCacheMetadata = {
             fetchTime: new Date().toISOString(),
             source: 'CelesTrak CCSDS GP API (Direct Desktop Fetch)',
-            satellitesCount: normalized.filter((s: any) => s.object_type === 'Satellite').length,
-            debrisCount: normalized.filter((s: any) => s.object_type !== 'Satellite').length,
+            satellitesCount: normalized.length,
+            debrisCount: existingDebris.length,
             checksum,
             isOffline: false,
             lastSyncAttempt: new Date().toISOString(),
@@ -231,7 +273,7 @@ export class DataManager {
           this.lastFetchTimestamp = now;
           updated = true;
 
-          console.log(`[DataManager] Successfully refreshed catalog: ${normalized.length} objects.`);
+          console.log(`[DataManager] Successfully refreshed catalog: ${normalized.length} satellites, ${existingDebris.length} debris preserved (Total: ${mergedCatalog.length}).`);
           if (this.onUpdateCallback) {
             this.onUpdateCallback(meta);
           }

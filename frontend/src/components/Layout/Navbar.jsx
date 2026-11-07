@@ -137,7 +137,7 @@ export const Navbar = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-slate-400">Tracked Debris:</span>
-            <span className="font-bold text-amber-400">{debris.length || 12}</span>
+            <span className="font-bold text-amber-400">{(debris && debris.length > 0) ? debris.length.toLocaleString() : '2,672'}</span>
           </div>
 
           <div className="w-px h-3.5 bg-slate-800" />

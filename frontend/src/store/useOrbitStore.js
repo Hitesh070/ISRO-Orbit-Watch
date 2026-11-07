@@ -424,10 +424,26 @@ export const useOrbitStore = create((set, get) => ({
           ? satsRes.satellites
           : activeCatalog.filter((s) => s.object_type === 'Satellite');
 
-      const activeDebris =
+      let activeDebris =
         debrisRes.debris && debrisRes.debris.length > 0
           ? debrisRes.debris
           : activeCatalog.filter((d) => d.object_type !== 'Satellite');
+
+      // Guarantee debris objects are always loaded from static snapshot if activeCatalog lacks them
+      if (activeDebris.length === 0) {
+        try {
+          const bundledRes = await fetch('/data/catalog.json');
+          if (bundledRes.ok) {
+            const bundledData = await bundledRes.json();
+            activeDebris = bundledData.filter((d) => d.object_type !== 'Satellite');
+          }
+        } catch {}
+      }
+
+      // If activeCatalog was missing debris, merge them together
+      if (activeDebris.length > 0 && activeCatalog.filter((d) => d.object_type !== 'Satellite').length === 0) {
+        activeCatalog = [...activeCatalog, ...activeDebris];
+      }
 
       set({
         catalog: activeCatalog,
@@ -512,7 +528,10 @@ export const useOrbitStore = create((set, get) => ({
 
       const numId = Number(noradId);
       const sat = catalog.find((s) => s.norad_id === numId);
-      if (!sat || !sat.line1 || !sat.line2) {
+      const l1 = sat?.line1 || sat?.tle_line1;
+      const l2 = sat?.line2 || sat?.tle_line2;
+
+      if (!sat || !l1 || !l2) {
         set({
           passesData: null,
           passesError: `Satellite NORAD #${noradId} not available in catalog for propagation`,
@@ -521,8 +540,8 @@ export const useOrbitStore = create((set, get) => ({
       }
 
       const station = resolveLocationClient(rawCity, lat, lon);
-      const clientPasses = predictPassesClient(sat.line1, sat.line2, station, 5, 10.0, 10);
-      const groundTrack = computeGroundTrackClient(sat.line1, sat.line2, 45, 45, 2);
+      const clientPasses = predictPassesClient(l1, l2, station, 5, 10.0, 10);
+      const groundTrack = computeGroundTrackClient(l1, l2, 45, 45, 2);
 
       set({
         passesData: {
@@ -530,8 +549,8 @@ export const useOrbitStore = create((set, get) => ({
           satellite: {
             name: sat.name,
             norad_id: sat.norad_id,
-            line1: sat.line1,
-            line2: sat.line2,
+            line1: l1,
+            line2: l2,
           },
           passes: clientPasses,
           ground_track: groundTrack,
