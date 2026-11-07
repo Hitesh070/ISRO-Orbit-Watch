@@ -107,28 +107,16 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
   // Collision prevention for SVG labels
   const deltaPxX = missPxX - center;
   const deltaPxY = missPxY - center;
-  const distPx = Math.hypot(deltaPxX, deltaPxY);
 
-  // Smart placement for Spacecraft 1 label (at Origin)
-  const obj1Anchor: 'start' | 'end' = deltaPxX >= 0 ? 'end' : 'start';
-  const obj1LabelX = deltaPxX >= 0 ? center - 12 : center + 12;
-  const obj1LabelY = deltaPxY >= 0 ? center - 12 : center + 14;
+  // Position Obj 1 (Origin) safely in upper-left quadrant from center
+  const obj1Anchor: 'start' | 'end' = 'end';
+  const obj1LabelX = center - 14;
+  const obj1LabelY = center - 14;
 
-  // Smart placement for Threat Object 2 label (at Miss Point)
-  let obj2Anchor: 'start' | 'end' = 'start';
-  let obj2LabelX = missPxX + 12;
-  let obj2LabelY = missPxY + 4;
-
-  if (distPx < 50) {
-    // If very close, push Obj 2 further away along the relative angle
-    const angle = Math.atan2(deltaPxY, deltaPxX);
-    obj2LabelX = missPxX + Math.cos(angle) * 35;
-    obj2LabelY = missPxY + Math.sin(angle) * 35 + 4;
-    obj2Anchor = Math.cos(angle) >= 0 ? 'start' : 'end';
-  } else if (missPxX > center + 120) {
-    obj2Anchor = 'end';
-    obj2LabelX = missPxX - 12;
-  }
+  // Position Obj 2 (Threat) safely away from miss point
+  const obj2Anchor: 'start' | 'end' = deltaPxX >= 0 ? 'start' : 'end';
+  const obj2LabelX = deltaPxX >= 0 ? missPxX + 14 : missPxX - 14;
+  const obj2LabelY = deltaPxY >= 0 ? missPxY + 16 : missPxY - 14;
 
   // Generate sensitivity curve data for Pc vs covariance scale factor k
   const sensitivityCurve = useMemo(() => {
@@ -224,19 +212,6 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* Scientific Honesty Provenance Alert */}
-        <div className="px-5 py-2.5 bg-cyan-950/40 border-b border-cyan-500/20 text-[11px] font-mono flex items-center justify-between gap-3 text-cyan-300">
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>
-              <strong>Covariance Source:</strong> Synthetic RTN Model (Screening-Grade). Calibrated for TLE age error growth.
-            </span>
-          </div>
-          <span className="hidden sm:inline px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-[10px]">
-            Foster-1992 2-D Integral
-          </span>
         </div>
 
         {/* Content Tabs */}
@@ -687,11 +662,6 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Footer Disclaimer */}
-        <div className="p-3 bg-space-950 border-t border-slate-800 text-[10px] text-slate-500 font-mono text-center">
-          {conjunction.disclaimer}
         </div>
       </div>
     </div>

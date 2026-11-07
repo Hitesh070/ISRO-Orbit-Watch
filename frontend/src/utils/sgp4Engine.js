@@ -339,18 +339,31 @@ export function geodeticToCartesian(latDeg, lonDeg, altKm) {
 }
 
 /**
+ * Register or update TLE elements for a satellite to compile satrec into cache
+ */
+export function registerSatelliteTLE(noradId, line1, line2) {
+  if (!noradId || !line1 || !line2) return null;
+  const numId = Number(noradId);
+  try {
+    const satrec = satellite.twoline2satrec(line1, line2);
+    if (satrec) {
+      SATREC_CACHE.set(numId, satrec);
+      return satrec;
+    }
+  } catch (err) {
+    console.warn(`Failed compiling satrec for ${noradId}:`, err);
+  }
+  return null;
+}
+
+/**
  * Propagate a single satellite to the exact timestamp `date`
  */
 export function propagateSatelliteRealTime(noradId, date = new Date(), line1 = null, line2 = null) {
   const numId = Number(noradId);
   let satrec = SATREC_CACHE.get(numId);
   if (!satrec && line1 && line2) {
-    try {
-      satrec = satellite.twoline2satrec(line1, line2);
-      if (satrec) {
-        SATREC_CACHE.set(numId, satrec);
-      }
-    } catch (e) {}
+    satrec = registerSatelliteTLE(numId, line1, line2);
   }
   if (!satrec) return null;
 
@@ -371,13 +384,24 @@ export function propagateSatelliteRealTime(noradId, date = new Date(), line1 = n
     const vz = pv.velocity.z;
     const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
 
+    // Compute radial climb rate in m/s: dr/dt = (r · v) / |r|
+    const rMag = Math.sqrt(pv.position.x * pv.position.x + pv.position.y * pv.position.y + pv.position.z * pv.position.z);
+    const vRadialKms = (pv.position.x * vx + pv.position.y * vy + pv.position.z * vz) / (rMag || 1);
+    const radialRateMs = vRadialKms * 1000.0;
+
     const cartesian = geodeticToCartesian(latDeg, lonDeg, altKm);
 
     return {
       lat: Number(latDeg.toFixed(4)),
       lon: Number(lonDeg.toFixed(4)),
-      alt_km: Number(altKm.toFixed(2)),
-      velocity_km_s: Number(speed.toFixed(3)),
+      alt_km: altKm,
+      alt_km_display: Number(altKm.toFixed(3)),
+      velocity_km_s: speed,
+      velocity_km_s_display: Number(speed.toFixed(4)),
+      vx: Number(vx.toFixed(3)),
+      vy: Number(vy.toFixed(3)),
+      vz: Number(vz.toFixed(3)),
+      radial_rate_ms: radialRateMs,
       cartesian,
     };
   } catch (err) {

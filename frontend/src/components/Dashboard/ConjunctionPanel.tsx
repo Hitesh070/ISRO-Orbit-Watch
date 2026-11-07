@@ -566,7 +566,7 @@ export const ConjunctionPanel = () => {
 
                 <th className="py-3 px-3 text-cyan-300">
 
-                  <div className="flex items-center gap-1">Live Separation (IRT)</div>
+                  <div className="flex items-center gap-1">Live Separation</div>
 
                 </th>
 

@@ -28,23 +28,41 @@ export const SatelliteInfo = () => {
   useEffect(() => {
     if (!selectedSatellite?.norad_id) return;
 
-    // High frequency 100ms update loop for live sub-second propagation
-    const interval = setInterval(() => {
-      const now = new Date();
-      const currentTarget = useOrbitStore.getState().selectedSatellite;
-      const realTimeData = propagateSatelliteRealTime(
-        selectedSatellite.norad_id,
-        now,
-        currentTarget?.line1,
-        currentTarget?.line2
-      );
+    const tick = () => {
+      const state = useOrbitStore.getState();
+      const numId = Number(selectedSatellite.norad_id);
+
+      // Advance in lockstep with global master simulation clock
+      const simMs = state.simulatedTimeMs || Date.now();
+      const simDate = new Date(simMs);
+
+      // Guarantee TLE line1 & line2
+      const currentTarget = state.selectedSatellite;
+      let line1 = currentTarget?.line1;
+      let line2 = currentTarget?.line2;
+
+      if (!line1 || !line2) {
+        const item =
+          (state.catalog || []).find((s) => Number(s.norad_id) === numId || Number(s.alt_alias_id) === numId) ||
+          (state.satellites || []).find((s) => Number(s.norad_id) === numId) ||
+          (state.debris || []).find((s) => Number(s.norad_id) === numId);
+        if (item) {
+          line1 = item.line1;
+          line2 = item.line2;
+        }
+      }
+
+      const realTimeData = propagateSatelliteRealTime(numId, simDate, line1, line2);
       if (realTimeData) {
         setLiveTelemetry(realTimeData);
       }
-    }, 100);
+    };
+
+    tick();
+    const interval = setInterval(tick, 100);
 
     return () => clearInterval(interval);
-  }, [selectedSatellite?.norad_id]);
+  }, [selectedSatellite?.norad_id, selectedSatellite?.line1, selectedSatellite?.line2]);
 
   if (!selectedSatellite) return null;
 
@@ -118,21 +136,40 @@ export const SatelliteInfo = () => {
       {/* Primary Metrics Grid (Continuously Ticking Sub-Second Telemetry) */}
       <div className="grid grid-cols-2 gap-2 my-2.5">
         <div className="p-2 rounded-lg bg-space-900/80 border border-slate-800">
-          <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
-            <Gauge className="w-3 h-3 text-cyan-400" /> Real-Time Altitude
+          <div className="flex items-center justify-between text-slate-400 text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <Gauge className="w-3 h-3 text-cyan-400" /> Real-Time Altitude
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" title="Live continuous propagation feed" />
           </div>
           <div className="text-sm font-mono font-bold text-slate-100 mt-0.5">
-            {formatDistance(currentAlt, settings?.units, 2)}
+            {formatDistance(currentAlt, settings?.units, 3)}
           </div>
+          {liveTelemetry?.radial_rate_ms !== undefined && (
+            <div className={`text-[10px] font-mono mt-0.5 flex items-center gap-1 font-semibold ${
+              liveTelemetry.radial_rate_ms >= 0 ? 'text-cyan-400' : 'text-amber-400'
+            }`}>
+              <span>{liveTelemetry.radial_rate_ms >= 0 ? '▲ +' : '▼ '}</span>
+              <span>{Math.abs(liveTelemetry.radial_rate_ms).toFixed(1)} m/s rate</span>
+            </div>
+          )}
         </div>
 
         <div className="p-2 rounded-lg bg-space-900/80 border border-slate-800">
-          <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
-            <Clock className="w-3 h-3 text-cyan-400" /> Velocity Vector
+          <div className="flex items-center justify-between text-slate-400 text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3 text-cyan-400" /> Velocity Vector
+            </div>
+            <span className="text-[9px] font-mono text-emerald-400 font-semibold">|v|</span>
           </div>
           <div className="text-sm font-mono font-bold text-emerald-300 mt-0.5">
-            {formatSpeed(currentVel, settings?.units, 3)}
+            {formatSpeed(currentVel, settings?.units, 4)}
           </div>
+          {liveTelemetry?.vx !== undefined && (
+            <div className="text-[9px] font-mono text-slate-400 mt-0.5 truncate" title={`[vx, vy, vz]: [${liveTelemetry.vx}, ${liveTelemetry.vy}, ${liveTelemetry.vz}] km/s`}>
+              [{liveTelemetry.vx >= 0 ? '+' : ''}{liveTelemetry.vx.toFixed(1)}, {liveTelemetry.vy >= 0 ? '+' : ''}{liveTelemetry.vy.toFixed(1)}, {liveTelemetry.vz >= 0 ? '+' : ''}{liveTelemetry.vz.toFixed(1)}]
+            </div>
+          )}
         </div>
 
         <div className="p-2 rounded-lg bg-space-900/80 border border-slate-800">
@@ -159,7 +196,9 @@ export const SatelliteInfo = () => {
         <div className="flex justify-between">
           <span className="text-slate-400">Sub-satellite Position:</span>
           <span className="text-cyan-300 font-semibold">
-            {typeof currentLat === 'number' ? `${currentLat.toFixed(4)}°, ${currentLon.toFixed(4)}°` : '---'}
+            {typeof currentLat === 'number'
+              ? `${Math.abs(currentLat).toFixed(4)}°${currentLat >= 0 ? 'N' : 'S'}, ${Math.abs(currentLon).toFixed(4)}°${currentLon >= 0 ? 'E' : 'W'}`
+              : '---'}
           </span>
         </div>
         <div className="flex justify-between">
