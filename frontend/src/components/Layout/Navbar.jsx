@@ -295,12 +295,12 @@ export const Navbar = () => {
           <button
             onClick={triggerRefreshTLE}
             disabled={isLoading}
-            title="Auto-Syncing Space Agencies IRT every second (CelesTrak / US Space Command / ISRO). Click to force immediate refresh."
+            title="Auto-Syncing Space Agencies (CelesTrak / US Space Command / ISRO). Click to force immediate refresh."
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 transition shadow-sm text-xs font-mono font-semibold shrink-0"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-300' : 'text-emerald-400'}`} />
-            <span className="hidden xl:inline">Sync Space Agencies (IRT)</span>
+            <span className="hidden xl:inline">Auto Sync</span>
           </button>
 
           {/* Reference & Help Modal Toggle */}

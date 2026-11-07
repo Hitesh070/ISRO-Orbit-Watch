@@ -429,7 +429,7 @@ export const ConjunctionPanel = () => {
           {/* Live Auto-Sync 1s Badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold text-xs shadow-glow-emerald">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Auto-Sync IRT (1s)</span>
+            <span>Auto Sync</span>
           </div>
 
           {/* ISRO Filter */}
