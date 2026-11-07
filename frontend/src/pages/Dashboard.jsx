@@ -319,7 +319,6 @@ export const Dashboard = () => {
   ];
 
   const altHistogram = analytics?.altitude_histogram || [];
-  const countryDist = analytics?.country_distribution || [];
 
   // Determine current active launch year (defaulting to 2026)
   const targetYear = useMemo(() => {
@@ -526,7 +525,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Scrollable Section: Satellites Launched in Current Year (2026) */}
-        <div className="glass-panel rounded-xl p-5 shadow-2xl flex flex-col justify-between">
+        <div className="lg:col-span-2 glass-panel rounded-xl p-5 shadow-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-cyan-500/20 mb-3">
             <h3 className="text-sm font-bold text-cyan-400 flex items-center gap-2">
               <Rocket className="w-4 h-4 text-cyan-400" />
@@ -534,7 +533,7 @@ export const Dashboard = () => {
             </h3>
             <span className="text-[11px] font-mono text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {filteredLaunchedSats.length} Satellites
+              {filteredLaunchedSats.length} Satellites Deployed
             </span>
           </div>
 
@@ -545,122 +544,78 @@ export const Dashboard = () => {
             <div className="relative shrink-0">
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search 2026 satellites..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-28 sm:w-36 px-2 py-0.5 text-[11px] font-mono rounded bg-space-950/80 border border-slate-700/80 focus:border-cyan-400 text-slate-200 placeholder-slate-500 focus:outline-none"
+                className="w-36 sm:w-48 px-2.5 py-1 text-[11px] font-mono rounded bg-space-950/80 border border-slate-700/80 focus:border-cyan-400 text-slate-200 placeholder-slate-500 focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="h-64 w-full overflow-y-auto pr-1.5 space-y-2">
+          <div className="h-64 w-full overflow-y-auto pr-1.5">
             {filteredLaunchedSats.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 font-mono text-xs">
                 <Rocket className="w-8 h-8 text-slate-600 mb-2 animate-bounce" />
                 <span>No satellites matched "{searchQuery}"</span>
               </div>
             ) : (
-              filteredLaunchedSats.map((sat) => (
-                <div
-                  key={sat.norad_id}
-                  onClick={() => {
-                    selectSatellite(sat.norad_id);
-                    navigate('/');
-                  }}
-                  className="p-2.5 rounded-lg bg-space-950/70 hover:bg-cyan-950/40 border border-slate-800/80 hover:border-cyan-500/40 transition cursor-pointer flex items-center justify-between group"
-                  title="Click to track in 3D Orbit View"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
-                        sat.is_isro
-                          ? 'bg-amber-950/50 border-amber-500/50 text-amber-400'
-                          : 'bg-cyan-950/50 border-cyan-500/40 text-cyan-400'
-                      }`}
-                    >
-                      <Rocket className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-100 group-hover:text-cyan-300 truncate">
-                          {sat.name}
-                        </span>
-                        {sat.is_isro && (
-                          <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded">
-                            ISRO
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {filteredLaunchedSats.map((sat) => (
+                  <div
+                    key={sat.norad_id}
+                    onClick={() => {
+                      selectSatellite(sat.norad_id);
+                      navigate('/');
+                    }}
+                    className="p-2.5 rounded-lg bg-space-950/70 hover:bg-cyan-950/40 border border-slate-800/80 hover:border-cyan-500/40 transition cursor-pointer flex items-center justify-between group"
+                    title="Click to track in 3D Orbit View"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 border ${
+                          sat.is_isro
+                            ? 'bg-amber-950/50 border-amber-500/50 text-amber-400'
+                            : 'bg-cyan-950/50 border-cyan-500/40 text-cyan-400'
+                        }`}
+                      >
+                        <Rocket className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-100 group-hover:text-cyan-300 truncate">
+                            {sat.name}
                           </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
-                        <span>#{sat.norad_id}</span>
-                        <span>•</span>
-                        <span className="text-cyan-400/90">{sat.intl_des}</span>
-                        <span>•</span>
-                        <span className="truncate">{sat.country || 'International'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <div className="text-right">
-                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950/70 text-cyan-300 border border-cyan-500/30">
-                        {sat.regime || 'LEO'}
-                      </span>
-                      <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                        {sat.apogee_km ? `${Math.round(sat.apogee_km).toLocaleString()} km` : 'Active'}
-                      </div>
-                    </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition" />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Bar Chart: Country-wise Satellite Count */}
-        <div className="glass-panel rounded-xl p-5 shadow-2xl flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-cyan-500/20 mb-3">
-            <h3 className="text-sm font-bold text-cyan-400 flex items-center gap-2">
-              <Globe2 className="w-4 h-4 text-cyan-400" />
-              Top Spacefaring Nations & Operating Agencies
-            </h3>
-            <span className="text-[11px] font-mono text-slate-400">National Distribution</span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={countryDist}
-                layout="vertical"
-                margin={{ top: 10, right: 20, left: 25, bottom: 10 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
-                <YAxis
-                  dataKey="country"
-                  type="category"
-                  stroke="#94a3b8"
-                  tick={{ fontSize: 11, fontFamily: 'monospace' }}
-                  width={90}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const d = payload[0];
-                    return (
-                      <div className="p-2.5 rounded-lg bg-space-950 border border-indigo-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
-                        <div className="text-slate-300 font-bold">{d.payload.country}</div>
-                        <div className="mt-1 text-indigo-300 font-bold">
-                          {Number(d.value).toLocaleString()} Satellites
+                          {sat.is_isro && (
+                            <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded">
+                              ISRO
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5 truncate">
+                          <span>#{sat.norad_id}</span>
+                          <span>•</span>
+                          <span className="text-cyan-400/90">{sat.intl_des}</span>
+                          <span>•</span>
+                          <span className="truncate">{sat.country || 'International'}</span>
                         </div>
                       </div>
-                    );
-                  }}
-                />
-                <Bar dataKey="satellites" fill="#818cf8" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <div className="text-right">
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950/70 text-cyan-300 border border-cyan-500/30">
+                          {sat.regime || 'LEO'}
+                        </span>
+                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                          {sat.apogee_km ? `${Math.round(sat.apogee_km).toLocaleString()} km` : 'Active'}
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
