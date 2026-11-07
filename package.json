@@ -6,14 +6,19 @@
   "license": "MIT",
   "main": "desktop/dist/main/index.js",
   "scripts": {
+    "dev": "npm run dev --prefix frontend",
     "dev:web": "npm run dev --prefix frontend",
     "build:web": "npm run build --prefix frontend",
     "dev:desktop": "cross-env NODE_ENV=development ELECTRON=true node scripts/dev-desktop.js",
     "build:desktop": "cross-env ELECTRON=true npm run build --prefix frontend && npm run build:electron",
     "build:electron": "tsup desktop/main/index.ts --out-dir desktop/dist/main --format cjs --target node20 --clean --external electron --external serialport && tsup desktop/preload/index.ts --out-dir desktop/dist/preload --format cjs --target node20 --clean --external electron",
-    "dist:win": "npm run build:desktop && electron-builder --win --x64",
+    "package:desktop": "electron-builder --win --x64 -c electron-builder.yml",
+    "dist:win": "npm run build:desktop && electron-builder --win --x64 -c electron-builder.yml",
     "test": "npm test --prefix frontend && npm run test:desktop",
+    "test:frontend": "npm test --prefix frontend",
     "test:desktop": "vitest run desktop/tests",
+    "test:backend": "pytest tests/ -v",
+    "lint:python": "ruff check backend scripts tests api",
     "typecheck": "npm run typecheck --prefix frontend && tsc -p desktop/tsconfig.json --noEmit"
   },
   "dependencies": {

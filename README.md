@@ -129,7 +129,7 @@ npm run dev:desktop
 
 ### 4. Build Windows Installers & Packages
 ```bash
-# Produces NSIS Setup, Portable .exe, and .zip in dist-electron/
+# Produces NSIS Setup, Portable .exe, and .zip in dist-desktop/
 npm run dist:win
 ```
 
