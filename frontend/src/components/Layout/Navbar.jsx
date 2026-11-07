@@ -98,8 +98,8 @@ export const Navbar = () => {
   const activeSatsCount = filters?.indianSatsOnly ? isroCount : (satellites.length || isroCount);
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-3 md:px-5 py-2.5 shadow-xl select-none">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-2 shadow-xl select-none">
+      <div className="w-full flex items-center justify-between gap-2 xl:gap-4">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3">
           <NavLink to="/" className="flex items-center gap-2.5 group">
@@ -125,7 +125,7 @@ export const Navbar = () => {
         </div>
 
         {/* Live Telemetry Ticker */}
-        <div className="hidden lg:flex items-center gap-4 text-xs font-mono px-3 py-1.5 rounded-lg bg-space-950/70 border border-slate-800">
+        <div className="hidden 2xl:flex items-center gap-3 text-xs font-mono px-2.5 py-1 rounded-lg bg-space-950/70 border border-slate-800 shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-slate-400">{filters?.indianSatsOnly ? 'ISRO Spacecraft:' : 'Active Spacecraft:'}</span>
@@ -150,47 +150,48 @@ export const Navbar = () => {
         </div>
 
         {/* Navigation Routes */}
-        <nav className="flex items-center gap-1 md:gap-2">
+        <nav className="flex items-center gap-1 shrink-0">
           <NavLink
             to="/"
             end
             className={({ isActive }) =>
-              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+              `flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
                 isActive
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow-cyan'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
               }`
             }
           >
-            <Globe className="w-4 h-4 text-cyan-400" />
-            <span className="hidden md:inline">3D Globe</span>
+            <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span className="hidden sm:inline">3D Globe</span>
           </NavLink>
 
           <NavLink
             to="/dashboard"
             className={({ isActive }) =>
-              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+              `flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
                 isActive
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow-cyan'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
               }`
             }
           >
-            <BarChart3 className="w-4 h-4 text-emerald-400" />
-            <span className="hidden md:inline">Analytics & Risk</span>
+            <BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="hidden md:inline">Analytics</span>
+            <span className="hidden xl:inline"> &amp; Risk</span>
           </NavLink>
 
           <NavLink
             to="/conjunctions"
             className={({ isActive }) =>
-              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition relative ${
+              `flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition relative ${
                 isActive
                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-glow-rose'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
               }`
             }
           >
-            <AlertOctagon className="w-4 h-4 text-rose-400" />
+            <AlertOctagon className="w-4 h-4 text-rose-400 shrink-0" />
             <span className="hidden md:inline">Conjunctions</span>
             {criticalConjunctions > 0 && (
               <span className="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 animate-pulse" />
@@ -200,31 +201,31 @@ export const Navbar = () => {
           <NavLink
             to="/rf"
             className={({ isActive }) =>
-              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+              `flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
                 isActive
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow-cyan'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
               }`
             }
           >
-            <Radio className="w-4 h-4 text-cyan-400" />
-            <span className="hidden md:inline">RF Ground Station</span>
+            <Radio className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span className="hidden md:inline">RF Station</span>
           </NavLink>
         </nav>
 
-        {/* Dual Live Clocks & Observer Location Sync */}
-        <div className="flex items-center gap-3">
+        {/* Right Section: Location, Live Clock & Control Suite (Guaranteed Visible) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Ground Station / Observer Location */}
           <button
             onClick={() => setIsLocationModalOpen(true)}
             title="Click to select Ground Station preset or enter custom coordinates"
-            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-400 text-[11px] font-mono text-slate-300 hover:text-cyan-300 transition shrink-0"
+            className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-400 text-[11px] font-mono text-slate-300 hover:text-cyan-300 transition shrink-0"
           >
-            <MapPin className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span className="truncate max-w-[130px] font-medium">{observerLocation?.name || 'Observer Station'}</span>
+            <MapPin className="w-3.5 h-3.5 text-emerald-400 animate-pulse shrink-0" />
+            <span className="truncate max-w-[100px] font-medium">{observerLocation?.name || 'Station'}</span>
           </button>
 
-          {/* Clock */}
+          {/* Clock Widget */}
           <div className="hidden sm:flex flex-col items-end justify-center shrink-0 whitespace-nowrap text-right font-mono px-2 py-0.5 rounded-lg bg-space-950/60 border border-slate-800">
             <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5 leading-tight">
               <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
@@ -249,73 +250,76 @@ export const Navbar = () => {
             </div>
           </div>
 
-          {/* Copy Shareable State Link */}
-          <button
-            onClick={handleCopyLink}
-            title={copiedLink ? 'Deep-Link Copied to Clipboard!' : 'Share State: Copy Deep-Link URL to Clipboard'}
-            className={`p-2 rounded-lg border transition shadow-sm ${
-              copiedLink
-                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-emerald'
-                : 'bg-space-900 border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300'
-            }`}
-          >
-            {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
-          </button>
+          {/* Action Control Buttons (Always Visible with shrink-0) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Copy Shareable State Link */}
+            <button
+              onClick={handleCopyLink}
+              title={copiedLink ? 'Deep-Link Copied to Clipboard!' : 'Share State: Copy Deep-Link URL'}
+              className={`p-1.5 rounded-lg border transition shadow-sm ${
+                copiedLink
+                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-emerald'
+                  : 'bg-space-900 border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300'
+              }`}
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+            </button>
 
-          {/* ISRO & HAL Interview Trainer */}
-          <button
-            onClick={toggleTrainer}
-            title="Launch ISRO & HAL Technical Interview Simulator (I)"
-            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-amber-400 text-amber-300 hover:text-amber-100 transition shadow-sm relative group"
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span className="hidden lg:group-hover:block absolute top-full mt-2 right-0 z-50 bg-space-950 border border-amber-500/40 text-[10px] text-amber-300 font-mono px-2 py-0.5 rounded whitespace-nowrap shadow-2xl">
-              ISRO / HAL Simulator (I)
-            </span>
-          </button>
+            {/* ISRO & HAL Interview Trainer */}
+            <button
+              onClick={toggleTrainer}
+              title="Launch ISRO & HAL Technical Interview Simulator (I)"
+              className="p-1.5 rounded-lg bg-space-900 border border-slate-700 hover:border-amber-400 text-amber-300 hover:text-amber-100 transition shadow-sm relative group"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span className="hidden lg:group-hover:block absolute top-full mt-2 right-0 z-50 bg-space-950 border border-amber-500/40 text-[10px] text-amber-300 font-mono px-2 py-0.5 rounded whitespace-nowrap shadow-2xl">
+                ISRO / HAL Simulator (I)
+              </span>
+            </button>
 
-          {/* Performance HUD Toggle */}
-          <button
-            onClick={toggleHud}
-            title="Toggle Performance & Astrodynamic HUD (~)"
-            className={`p-2 rounded-lg border transition shadow-sm ${
-              isHudVisible
-                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-emerald'
-                : 'bg-space-900 border-slate-700 hover:border-emerald-400 text-slate-300 hover:text-emerald-300'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-          </button>
+            {/* Performance HUD Toggle */}
+            <button
+              onClick={toggleHud}
+              title="Toggle Performance & Astrodynamic HUD (~)"
+              className={`p-1.5 rounded-lg border transition shadow-sm ${
+                isHudVisible
+                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-glow-emerald'
+                  : 'bg-space-900 border-slate-700 hover:border-emerald-400 text-slate-300 hover:text-emerald-300'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+            </button>
 
-          {/* System Settings Drawer */}
-          <button
-            onClick={toggleSettings}
-            title="Open System Settings & Units"
-            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition shadow-sm"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+            {/* System Settings Drawer */}
+            <button
+              onClick={toggleSettings}
+              title="Open System Settings & Units"
+              className="p-1.5 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition shadow-sm"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
 
-          {/* Space Agency Auto-Sync IRT (1s) Button */}
-          <button
-            onClick={triggerRefreshTLE}
-            disabled={isLoading}
-            title="Auto-Syncing Space Agencies (CelesTrak / US Space Command / ISRO). Click to force immediate refresh."
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 transition shadow-sm text-xs font-mono font-semibold shrink-0"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-300' : 'text-emerald-400'}`} />
-            <span className="hidden xl:inline">Auto Sync</span>
-          </button>
+            {/* Space Agency Auto-Sync Button */}
+            <button
+              onClick={triggerRefreshTLE}
+              disabled={isLoading}
+              title="Auto-Sync Space Agencies (CelesTrak / US Space Command / ISRO). Click to refresh."
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 transition shadow-sm text-xs font-mono font-semibold shrink-0"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-300' : 'text-emerald-400'}`} />
+              <span className="hidden 2xl:inline">Auto Sync</span>
+            </button>
 
-          {/* Reference & Help Modal Toggle */}
-          <button
-            onClick={toggleHelp}
-            title="Open Documentation & Keyboard Shortcuts (?)"
-            className="p-2 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition shadow-sm"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
+            {/* Reference & Help Modal Toggle */}
+            <button
+              onClick={toggleHelp}
+              title="Open Documentation & Keyboard Shortcuts (?)"
+              className="p-1.5 rounded-lg bg-space-900 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition shadow-sm"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
