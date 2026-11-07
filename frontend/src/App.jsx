@@ -10,7 +10,6 @@ import Navbar from './components/Layout/Navbar';
 import Home from './pages/Home';
 import { useOrbitStore } from './store/useOrbitStore';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import StaleDataBanner from './components/common/StaleDataBanner';
 import PerformanceHUD from './components/common/PerformanceHUD';
 import HelpModal from './components/common/HelpModal';
 import SettingsDrawer from './components/common/SettingsDrawer';
@@ -192,7 +191,6 @@ export const App = () => {
     <Router>
       <div className="min-h-screen bg-space-950 text-slate-100 flex flex-col font-sans">
         <Navbar />
-        <StaleDataBanner />
         <PerformanceHUD />
         <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
         <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
