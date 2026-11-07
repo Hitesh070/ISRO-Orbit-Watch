@@ -98,8 +98,8 @@ export const Navbar = () => {
   const activeSatsCount = filters?.indianSatsOnly ? isroCount : (satellites.length || isroCount);
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-2 shadow-xl select-none">
-      <div className="w-full flex items-center justify-between gap-2 xl:gap-4">
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-1.5 shadow-xl select-none overflow-x-hidden">
+      <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3">
           <NavLink to="/" className="flex items-center gap-2.5 group">
@@ -222,7 +222,13 @@ export const Navbar = () => {
             className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-400 text-[11px] font-mono text-slate-300 hover:text-cyan-300 transition shrink-0"
           >
             <MapPin className="w-3.5 h-3.5 text-emerald-400 animate-pulse shrink-0" />
-            <span className="truncate max-w-[100px] font-medium">{observerLocation?.name || 'Station'}</span>
+            <span className="truncate max-w-[130px] font-medium">
+              {(observerLocation?.name || 'Station')
+                .replace(/\(Inferred\s*GPS\)/i, '(GPS)')
+                .replace(/\(Inferred\)/i, '')
+                .replace(/Ground\s*Station/i, '')
+                .trim()}
+            </span>
           </button>
 
           {/* Clock Widget */}

@@ -790,8 +790,8 @@ export const Dashboard = () => {
   const activeCount = isroOnly ? (isroSatellites.length || 105) : (allSatellites.length || 1121);
 
   const debrisCount = isroOnly
-    ? (isroDebris.length > 0 ? isroDebris.length : (allDebris.length || 2672))
-    : (allDebris.length || 2672);
+    ? (isroDebris.length > 0 ? isroDebris.length : 12)
+    : (allDebris.length > 0 ? allDebris.length : 2672);
 
   const meanVelocity = useMemo(() => {
     const pool = isroOnly ? isroSatellites : allSatellites;
@@ -1184,7 +1184,7 @@ export const Dashboard = () => {
 
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height={240} minHeight={240}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={altHistogram} margin={{ top: 20, right: 10, left: -15, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis

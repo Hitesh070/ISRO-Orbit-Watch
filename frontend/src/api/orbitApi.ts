@@ -138,6 +138,15 @@ export const orbitApi = {
    * Fetch active satellites with positions and risk scores (with static fallback)
    */
   getSatellites: async (params: Record<string, any> = {}): Promise<{ count: number; total_active: number; satellites: SatelliteItem[] }> => {
+    if (platform.isDesktop) {
+      const staticData = await orbitApi.getStaticCatalog();
+      const active = staticData.filter((s) => s.object_type === 'Satellite');
+      return {
+        count: active.length,
+        total_active: active.length,
+        satellites: active,
+      };
+    }
     try {
       return await fetchWithRetry({ url: '/api/satellites', method: 'GET', params });
     } catch (err) {
@@ -163,6 +172,14 @@ export const orbitApi = {
    * Fetch cataloged space debris objects (with static fallback)
    */
   getDebris: async (limit: number | null = null): Promise<{ count: number; debris: SatelliteItem[] }> => {
+    if (platform.isDesktop) {
+      const staticData = await orbitApi.getStaticCatalog();
+      const debris = staticData.filter((s) => s.object_type !== 'Satellite');
+      return {
+        count: debris.length,
+        debris: limit ? debris.slice(0, limit) : debris,
+      };
+    }
     try {
       return await fetchWithRetry({ url: '/api/debris', method: 'GET', params: { limit } });
     } catch (err) {
@@ -180,7 +197,14 @@ export const orbitApi = {
    * Fetch global risk summary, top 10 high-risk satellites, shell counts, and heatmap
    */
   getRiskOverview: async (): Promise<any> => {
-    return fetchWithRetry({ url: '/api/risk', method: 'GET' });
+    if (platform.isDesktop) {
+      return null;
+    }
+    try {
+      return await fetchWithRetry({ url: '/api/risk', method: 'GET' });
+    } catch {
+      return null;
+    }
   },
 
   /**
@@ -215,6 +239,9 @@ export const orbitApi = {
    * Fetch ground station pass predictions and ground track
    */
   getPasses: async (params: Record<string, any> = {}): Promise<any> => {
+    if (platform.isDesktop) {
+      return null;
+    }
     return fetchWithRetry({ url: '/api/passes', method: 'GET', params });
   },
 
@@ -222,14 +249,28 @@ export const orbitApi = {
    * Fetch curated ground stations
    */
   getGroundStations: async (): Promise<any> => {
-    return fetchWithRetry({ url: '/api/ground-stations', method: 'GET' });
+    if (platform.isDesktop) {
+      return null;
+    }
+    try {
+      return await fetchWithRetry({ url: '/api/ground-stations', method: 'GET' });
+    } catch {
+      return null;
+    }
   },
 
   /**
    * Fetch macro statistics & charts data
    */
   getAnalytics: async (): Promise<any> => {
-    return fetchWithRetry({ url: '/api/analytics', method: 'GET' });
+    if (platform.isDesktop) {
+      return null;
+    }
+    try {
+      return await fetchWithRetry({ url: '/api/analytics', method: 'GET' });
+    } catch {
+      return null;
+    }
   },
 
   /**

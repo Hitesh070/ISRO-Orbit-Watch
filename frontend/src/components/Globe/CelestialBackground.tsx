@@ -39,8 +39,8 @@ const StarShaderMaterial = {
       vAlpha = aAlpha;
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
       // Realistic astronomical size attenuation with strict upper bound
-      float pSize = aSize * (180.0 / -mvPosition.z);
-      gl_PointSize = clamp(pSize, 1.0, 3.8);
+      float pSize = aSize * (150.0 / -mvPosition.z);
+      gl_PointSize = clamp(pSize, 1.0, 3.2);
       gl_Position = projectionMatrix * mvPosition;
     }
   `,
@@ -59,7 +59,7 @@ const StarShaderMaterial = {
       float halo = (1.0 - smoothstep(0.06, 0.5, dist)) * 0.28;
       float intensity = core + halo;
 
-      gl_FragColor = vec4(vColor, intensity * vAlpha);
+      gl_FragColor = vec4(vColor, intensity * vAlpha * 0.78);
     }
   `,
 };

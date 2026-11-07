@@ -14,12 +14,13 @@ import * as THREE from 'three';
 import * as satellite from 'satellite.js';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
-// Custom GLSL Shaders for single-draw-call point cloud
+// Custom GLSL Shaders for single-draw-call point cloud with distinct satellite reticle & beacon
 const vertexShader = `
   attribute vec3 aVel;
   attribute vec3 aColor;
   attribute float aSize;
   attribute float aVisible;
+  attribute float aIsSatellite;
 
   uniform float uDt;
   uniform float uScale;
@@ -27,10 +28,14 @@ const vertexShader = `
 
   varying vec3 vColor;
   varying float vVisible;
+  varying float vIsSatellite;
+  varying float vTime;
 
   void main() {
     vColor = aColor;
     vVisible = aVisible;
+    vIsSatellite = aIsSatellite;
+    vTime = uTime;
 
     if (aVisible < 0.5) {
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
@@ -45,28 +50,56 @@ const vertexShader = `
 
     // Crisp distance-attenuated point size (camera dist ~ 2.0 - 5.0)
     float dist = max(-mvPosition.z, 0.8);
-    gl_PointSize = (aSize * 26.0 / dist) * uScale;
-    gl_PointSize = clamp(gl_PointSize, 2.0, 24.0);
+    float baseScale = (aIsSatellite > 0.5) ? 32.0 : 22.0;
+    gl_PointSize = (aSize * baseScale / dist) * uScale;
+    gl_PointSize = clamp(gl_PointSize, 2.0, 32.0);
   }
 `;
 
 const fragmentShader = `
   varying vec3 vColor;
   varying float vVisible;
+  varying float vIsSatellite;
+  varying float vTime;
 
   void main() {
     if (vVisible < 0.5) discard;
 
-    // Anti-aliased circular particle sprite
     vec2 coord = gl_PointCoord - vec2(0.5);
     float r = length(coord);
     if (r > 0.5) discard;
 
-    // Strict GLSL edge0 < edge1 compliance
-    float alpha = 1.0 - smoothstep(0.15, 0.5, r);
-    float core = 1.0 - smoothstep(0.0, 0.18, r);
-    vec3 col = mix(vColor, vec3(1.0), core * 0.45);
-    gl_FragColor = vec4(col, alpha);
+    if (vIsSatellite > 0.5) {
+      // SATELLITE SPRITE: High-tech diamond cross reticle with luminous telemetry beacon
+      // Distinct diamond contour simulates satellite bus + solar panel diffraction
+      float diamond = abs(coord.x) + abs(coord.y);
+      if (diamond > 0.48) discard;
+
+      // Concentric telemetry beacon ring
+      float beaconRing = smoothstep(0.46, 0.40, diamond) * smoothstep(0.28, 0.35, diamond);
+
+      // Intense optical core emitter
+      float core = 1.0 - smoothstep(0.0, 0.20, r);
+
+      // Solar panel diffraction arms along X and Y axes
+      float crosshair = max(
+        (1.0 - smoothstep(0.02, 0.08, abs(coord.y))) * (1.0 - smoothstep(0.0, 0.42, abs(coord.x))),
+        (1.0 - smoothstep(0.02, 0.08, abs(coord.x))) * (1.0 - smoothstep(0.0, 0.42, abs(coord.y)))
+      );
+
+      // Subtle active navigational beacon pulse (simulating live spacecraft telemetry)
+      float pulse = 0.88 + 0.12 * sin(vTime * 3.2 + vColor.g * 20.0);
+
+      // Luminous technological spacecraft palette: pure white emitter core + saturated aura
+      vec3 satCoreCol = mix(vColor, vec3(1.0, 1.0, 1.0), core * 0.85);
+      float alpha = clamp(core * 1.0 + beaconRing * 0.75 + crosshair * 0.6 + (1.0 - diamond * 2.0) * 0.3, 0.0, 1.0);
+
+      gl_FragColor = vec4(satCoreCol, alpha * pulse);
+    } else {
+      // DEBRIS: Small, sharp circular fragment marker with warning tint
+      float core = 1.0 - smoothstep(0.05, 0.48, r);
+      gl_FragColor = vec4(vColor, core * 0.85);
+    }
   }
 `;
 
@@ -99,6 +132,7 @@ export const PointCloud = ({
     const colors = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
     const visibilities = new Float32Array(count);
+    const isSatellites = new Float32Array(count);
 
     const now = new Date();
     const KM_TO_SCENE = 1.0 / 6378.137;
@@ -146,9 +180,10 @@ export const PointCloud = ({
       colors[i * 3 + 1] = g;
       colors[i * 3 + 2] = b;
 
-      // Sharp, balanced point size
-      sizes[i] = isISRO ? 4.5 : isDebris ? 1.8 : 2.8;
+      // Sharp, distinct point sizes: satellites are prominent, debris is compact
+      sizes[i] = isISRO ? 5.5 : isDebris ? 2.2 : 4.0;
       visibilities[i] = 1.0;
+      isSatellites[i] = (!isDebris && item.object_type === 'Satellite') ? 1.0 : 0.0;
     }
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -156,10 +191,12 @@ export const PointCloud = ({
     const cAttr = new THREE.BufferAttribute(colors, 3);
     const sAttr = new THREE.BufferAttribute(sizes, 1);
     const vAttr = new THREE.BufferAttribute(visibilities, 1);
+    const isSatAttr = new THREE.BufferAttribute(isSatellites, 1);
 
     geo.setAttribute('aColor', cAttr);
     geo.setAttribute('aSize', sAttr);
     geo.setAttribute('aVisible', vAttr);
+    geo.setAttribute('aIsSatellite', isSatAttr);
 
     // Fixed generous bounding sphere
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 25.0);
@@ -259,30 +296,30 @@ export const PointCloud = ({
       const idx3 = i * 3;
 
       if (isSelected) {
-        sizes[i] = 12.0; // Extra large high-visibility point
+        sizes[i] = 14.0; // Extra large high-visibility point
         colors[idx3] = 0.1;
         colors[idx3 + 1] = 1.0;
         colors[idx3 + 2] = 1.0; // Blazing Electric Cyan
       } else if (isHighlighted) {
-        sizes[i] = 7.5;
+        sizes[i] = 9.0;
         colors[idx3] = 1.0;
         colors[idx3 + 1] = 0.2;
         colors[idx3 + 2] = 0.5; // Warning Pink
       } else if (item.is_isro) {
-        sizes[i] = 4.5;
+        sizes[i] = 5.5;
         colors[idx3] = 1.0;
         colors[idx3 + 1] = 0.6;
-        colors[idx3 + 2] = 0.2; // ISRO Saffron
+        colors[idx3 + 2] = 0.15; // ISRO Saffron
       } else if (isDebris) {
-        sizes[i] = 1.8;
-        colors[idx3] = 0.96;
-        colors[idx3 + 1] = 0.35;
-        colors[idx3 + 2] = 0.42; // Debris Rose
+        sizes[i] = 2.2;
+        colors[idx3] = 0.98;
+        colors[idx3 + 1] = 0.32;
+        colors[idx3 + 2] = 0.38; // Debris Coral
       } else {
-        sizes[i] = 2.8;
+        sizes[i] = 4.0;
         colors[idx3] = 0.0;
-        colors[idx3 + 1] = 0.94;
-        colors[idx3 + 2] = 1.0; // Normal Cyan
+        colors[idx3 + 1] = 0.96;
+        colors[idx3 + 2] = 1.0; // Active Satellite Vivid Cyan
       }
     }
 

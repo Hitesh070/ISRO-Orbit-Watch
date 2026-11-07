@@ -122,7 +122,7 @@ export const FilterPanel = () => {
 
         {/* Dropdown Results Overlay */}
         {isOpen && filters.search && filters.search.trim().length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-space-950/95 border border-cyan-500/40 rounded-xl shadow-2xl backdrop-blur-md max-h-60 overflow-y-auto no-scrollbar p-1.5 divide-y divide-slate-800">
+          <div className="mt-2 z-30 bg-space-950/95 border border-cyan-500/50 rounded-xl shadow-2xl backdrop-blur-md max-h-56 overflow-y-auto p-1 divide-y divide-slate-800">
             {searchResults.length > 0 ? (
               searchResults.map((item) => {
                 const isDebris = item.object_type !== 'Satellite';
