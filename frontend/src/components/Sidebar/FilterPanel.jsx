@@ -102,22 +102,17 @@ export const FilterPanel = () => {
         </div>
       </div>
 
-      {/* Indian Satellites Only (ISRO) Filter */}
+      {/* ISRO Filter Button */}
       <button
         onClick={() => setFilter('indianSatsOnly', !filters.indianSatsOnly)}
-        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-mono transition mb-2 ${
+        className={`w-full flex items-center justify-center py-2 px-3 rounded-lg border text-xs font-mono font-bold transition mb-2 tracking-wider ${
           filters.indianSatsOnly
-            ? 'bg-amber-950/70 border-amber-500/80 text-amber-300 font-bold shadow-glow-amber'
-            : 'bg-space-950/60 border-slate-800 text-slate-400 hover:text-white'
+            ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-glow-amber'
+            : 'bg-space-950/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
         }`}
+        title="Filter ISRO Spacecraft"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">ISRO</span>
-          <span className="text-[11px] font-medium">Indian Satellites Only</span>
-        </div>
-        <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${filters.indianSatsOnly ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50' : 'bg-space-900 text-slate-400'}`}>
-          {filters.indianSatsOnly ? 'Active (79)' : 'All Active'}
-        </span>
+        <span>ISRO</span>
       </button>
 
       {/* Starred Favourites Only Filter */}
@@ -200,7 +195,7 @@ export const FilterPanel = () => {
       <div className="mt-3.5 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center">
         <span>Tracking:</span>
         <span className="text-cyan-300 font-bold">
-          {filters.indianSatsOnly ? '79 ISRO Active' : `${satellites.length} Active`} | {debris.length} Debris
+          {filters.indianSatsOnly ? `${satellites.filter(s => s.is_isro).length || 79} ISRO Active` : `${satellites.length} Active`} | {debris.length} Debris
         </span>
       </div>
     </div>
