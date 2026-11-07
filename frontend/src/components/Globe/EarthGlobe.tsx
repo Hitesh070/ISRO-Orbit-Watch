@@ -32,8 +32,6 @@
 
  */
 
-
-
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
@@ -54,8 +52,6 @@ import OrbitPath from './OrbitPath';
 
 import SelectedSatelliteReticle from './SelectedSatelliteReticle';
 
-
-
 /**
 
  * Calculates current astronomical solar position in Three.js TEME coordinates.
@@ -72,8 +68,6 @@ function getSunPositionInTEME(simDate: Date = new Date()): [number, number, numb
 
   const subsolarLon = -(utcHours - 12) * 15 * (Math.PI / 180);
 
-
-
   // Solar declination approximation based on Earth's axial tilt (23.44°)
 
   const startOfYear = new Date(Date.UTC(simDate.getUTCFullYear(), 0, 1));
@@ -82,13 +76,9 @@ function getSunPositionInTEME(simDate: Date = new Date()): [number, number, numb
 
   const declination = (-23.44 * (Math.PI / 180)) * Math.cos(((2 * Math.PI) / 365.25) * (dayOfYear + 10));
 
-
-
   // Sun right ascension in TEME
 
   const alpha = gmst + subsolarLon;
-
-
 
   const dist = 6.0;
 
@@ -101,8 +91,6 @@ function getSunPositionInTEME(simDate: Date = new Date()): [number, number, numb
   return [x, y, z];
 
 }
-
-
 
 /**
 
@@ -124,8 +112,6 @@ interface ObserverBeaconProps {
 
 }
 
-
-
 const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
 
   const phi = (lat * Math.PI) / 180;
@@ -133,8 +119,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
   const lambda = (lon * Math.PI) / 180;
 
   const R = 1.0025; // Placed slightly above Earth surface to prevent z-fighting
-
-
 
   // Cartesian coordinates on Three.js Earth sphere
 
@@ -144,13 +128,9 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
 
   const z = -R * Math.cos(phi) * Math.sin(lambda);
 
-
-
   const ring1Ref = useRef<THREE.Mesh>(null);
 
   const ring2Ref = useRef<THREE.Mesh>(null);
-
-
 
   // Align beacon local +Z with surface normal pointing outward
 
@@ -165,8 +145,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
     return q;
 
   }, [x, y, z]);
-
-
 
   useFrame(({ clock }) => {
 
@@ -198,8 +176,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
 
   });
 
-
-
   return (
 
     <group position={[x, y, z]} quaternion={orientation}>
@@ -214,8 +190,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
 
       </mesh>
 
-
-
       {/* Vertical Laser Beacon Pin */}
 
       <mesh position={[0, 0, 0.03]} rotation={[Math.PI / 2, 0, 0]}>
@@ -226,8 +200,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
 
       </mesh>
 
-
-
       {/* Pulsing Concentric Radar Rings */}
 
       <mesh ref={ring1Ref} position={[0, 0, 0.001]}>
@@ -237,8 +209,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
         <meshBasicMaterial color="#10b981" transparent opacity={0.8} side={THREE.DoubleSide} />
 
       </mesh>
-
-
 
       <mesh ref={ring2Ref} position={[0, 0, 0.001]}>
 
@@ -253,8 +223,6 @@ const ObserverBeacon = ({ lat, lon }: ObserverBeaconProps) => {
   );
 
 };
-
-
 
 /**
 
@@ -278,8 +246,6 @@ const RealisticEarthMesh = () => {
 
   const setSimulatedTimeMs = useOrbitStore((state) => state.setSimulatedTimeMs);
 
-
-
   const simTimeRef = useRef(Date.now());
 
   const cloudDriftRef = useRef(0);
@@ -287,8 +253,6 @@ const RealisticEarthMesh = () => {
   const visualSpinRef = useRef(0);
 
   const lastSyncRef = useRef(0);
-
-
 
   // Load NASA Blue Marble daymap, night lights, and cloud layer textures
 
@@ -302,8 +266,6 @@ const RealisticEarthMesh = () => {
 
   ]);
 
-
-
   useFrame((_, delta) => {
 
     // Advance simulated time with user-selected simulation speed (1x, 5x, 15x, 60x)
@@ -314,8 +276,6 @@ const RealisticEarthMesh = () => {
 
     const gmst = satellite.gstime(simDate);
 
-
-
     // Smooth perceptible axial rotation of the Earth globe itself
 
     if (!settings?.reducedMotion) {
@@ -324,8 +284,6 @@ const RealisticEarthMesh = () => {
 
     }
 
-
-
     // Rotate Earth on its polar axis (+Y in Three.js TEME frame)
 
     if (earthRef.current) {
@@ -333,8 +291,6 @@ const RealisticEarthMesh = () => {
       earthRef.current.rotation.y = gmst + visualSpinRef.current;
 
     }
-
-
 
     // Dynamic cloud layer atmospheric drift
 
@@ -350,8 +306,6 @@ const RealisticEarthMesh = () => {
 
     }
 
-
-
     // Throttle sync of simulated time to Zustand store (~10 Hz)
 
     if (Math.abs(simTimeRef.current - lastSyncRef.current) > 100) {
@@ -363,8 +317,6 @@ const RealisticEarthMesh = () => {
     }
 
   });
-
-
 
   return (
 
@@ -394,8 +346,6 @@ const RealisticEarthMesh = () => {
 
       </mesh>
 
-
-
       {/* Realistic Rotating Cloud Layer (Radius = 1.015) */}
 
       {layers.clouds && (
@@ -421,8 +371,6 @@ const RealisticEarthMesh = () => {
         </mesh>
 
       )}
-
-
 
       {/* Atmospheric Rayleigh Scattering Glow (Radius = 1.035) */}
 
@@ -450,8 +398,6 @@ const RealisticEarthMesh = () => {
 
       )}
 
-
-
       {/* Ground Station Observer Marker Beacon (rotates rigidly with Earth surface) */}
 
       {observerLocation && (
@@ -474,8 +420,6 @@ const RealisticEarthMesh = () => {
 
 };
 
-
-
 /**
 
  * Fallback procedural Earth
@@ -493,8 +437,6 @@ const EarthFallback = () => (
   </mesh>
 
 );
-
-
 
 /**
 
@@ -534,8 +476,6 @@ function getOptimalCameraPosition(width: number, height: number): [number, numbe
 
 }
 
-
-
 const GlobeScene = () => {
 
   const cameraAction = useOrbitStore((state) => state.cameraAction);
@@ -543,8 +483,6 @@ const GlobeScene = () => {
   const { camera, size } = useThree();
 
   const controlsRef = useRef<any>(null);
-
-
 
   // Initialize and maintain optimal responsive center on window resize
 
@@ -555,8 +493,6 @@ const GlobeScene = () => {
     controlsRef.current.target.set(0, 0, 0);
 
   }, [size.width, size.height]);
-
-
 
   useEffect(() => {
 
@@ -622,13 +558,9 @@ const GlobeScene = () => {
 
   const settings = useOrbitStore((state) => state.settings);
 
-
-
   const sunLightRef = useRef<THREE.DirectionalLight>(null);
 
   const fillLightRef = useRef<THREE.PointLight>(null);
-
-
 
   // Web Worker SGP4 Propagator Hook with ping-pong transferable buffers
 
@@ -650,8 +582,6 @@ const GlobeScene = () => {
 
   } = usePropagatorWorker(catalog);
 
-
-
   // Sync latency metric to store for Performance HUD
 
   useEffect(() => {
@@ -659,8 +589,6 @@ const GlobeScene = () => {
     setWorkerLatencyMs(workerMs);
 
   }, [workerMs, setWorkerLatencyMs]);
-
-
 
   // Request high-precision 180-point orbit path calculation when a satellite is selected
 
@@ -673,8 +601,6 @@ const GlobeScene = () => {
     }
 
   }, [selectedSatellite?.norad_id, requestOrbitPath]);
-
-
 
   // Update real-time astronomical sun light in TEME
 
@@ -698,8 +624,6 @@ const GlobeScene = () => {
 
   });
 
-
-
   return (
 
     <>
@@ -708,25 +632,17 @@ const GlobeScene = () => {
 
       <Stars radius={100} depth={50} count={4000} factor={4} saturation={0.5} fade speed={0.8} />
 
-
-
       {/* Ambient Deep Space Light */}
 
       <ambientLight intensity={0.35} />
-
-
 
       {/* Real-time Astronomical Sun Light Positioned at Subsolar Point in TEME */}
 
       <directionalLight ref={sunLightRef} position={[6, 0, 0]} intensity={2.2} />
 
-
-
       {/* Soft fill light from opposite dark side */}
 
       <pointLight ref={fillLightRef} position={[-6, 0, 0]} intensity={0.25} color="#38bdf8" />
-
-
 
       {/* Realistic 3D Earth Globe Mesh (Rotates by GMST with Ground Station Beacon) */}
 
@@ -735,8 +651,6 @@ const GlobeScene = () => {
         <RealisticEarthMesh />
 
       </Suspense>
-
-
 
       {/* Selected Satellite Glowing Orbit Path (Computed in Web Worker) */}
 
@@ -766,8 +680,6 @@ const GlobeScene = () => {
 
       )}
 
-
-
       {/* Selected Satellite 3D Target Reticle & Nadir Ground Projection */}
 
       {selectedSatellite && (
@@ -789,8 +701,6 @@ const GlobeScene = () => {
         />
 
       )}
-
-
 
       {/* High-Performance 25,000+ Object Point Cloud (Single GPU Draw Call) */}
 
@@ -815,8 +725,6 @@ const GlobeScene = () => {
         />
 
       )}
-
-
 
       {/* Camera Orbit Controls (centered at Earth [0,0,0], bounds clamped to prevent tiny globe) */}
 
@@ -852,8 +760,6 @@ const GlobeScene = () => {
 
 };
 
-
-
 export const EarthGlobe = () => {
 
   return (
@@ -879,8 +785,6 @@ export const EarthGlobe = () => {
   );
 
 };
-
-
 
 export default EarthGlobe;
 

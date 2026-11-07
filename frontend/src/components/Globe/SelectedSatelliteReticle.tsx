@@ -11,7 +11,6 @@
 
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import * as satelliteJs from 'satellite.js';
 
@@ -177,12 +176,7 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
     }
   });
 
-  const displayAlt = satellite.alt_km
-    ? `${Math.round(satellite.alt_km).toLocaleString()} km`
-    : satellite.apogee_km
-    ? `${Math.round(satellite.apogee_km).toLocaleString()} km`
-    : null;
-
+  
   return (
     <>
       {/* 3D Target Reticle at Satellite Position in Deep Space */}
@@ -205,31 +199,7 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
           <meshBasicMaterial color={accentColor} side={THREE.DoubleSide} transparent opacity={0.7} />
         </mesh>
 
-        {/* Floating 3D Nameplate Tag */}
-        <Html position={[0, 0.14, 0]} center style={{ pointerEvents: 'none' }}>
-          <div className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-space-950/95 border border-cyan-400/90 shadow-2xl backdrop-blur-md flex items-center gap-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full animate-ping"
-              style={{ backgroundColor: accentColor }}
-            />
-            <span className="font-mono text-xs font-bold text-cyan-200">
-              {satellite.name}
-            </span>
-            {displayAlt && (
-              <span className="font-mono text-[10px] text-amber-300 font-bold px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
-                {displayAlt}
-              </span>
-            )}
-            <span className="font-mono text-[9px] text-slate-300 px-1 py-0.2 rounded bg-slate-800/80 border border-slate-700">
-              NORAD #{satellite.norad_id}
-            </span>
-            {satellite.regime && (
-              <span className="font-mono text-[9px] text-cyan-300 font-bold px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-500/30">
-                {satellite.regime}
-              </span>
-            )}
-          </div>
-        </Html>
+        
       </group>
 
       {/* Nadir Drop-Line down to Earth */}
