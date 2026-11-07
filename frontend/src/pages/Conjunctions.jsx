@@ -4,16 +4,14 @@
  * collision avoidance thresholds, TCA countdowns, and close approach geometry analysis.
  */
 
-import React, { useEffect } from 'react';
-import { AlertOctagon, ShieldAlert, Zap, Compass, Info, CheckCircle2 } from 'lucide-react';
+import React from 'react';
+import { AlertOctagon } from 'lucide-react';
 import ConjunctionPanel from '../components/Dashboard/ConjunctionPanel';
 import { useOrbitStore } from '../store/useOrbitStore';
 
 export const Conjunctions = () => {
   const conjunctions = useOrbitStore((state) => state.conjunctions);
-
   const criticalCount = conjunctions.filter((c) => c.risk_level === 'CRITICAL').length;
-  const highCount = conjunctions.filter((c) => c.risk_level === 'HIGH').length;
 
   return (
     <div className="w-full bg-space-950 p-4 md:p-6 text-slate-100 space-y-6">
@@ -34,47 +32,6 @@ export const Conjunctions = () => {
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
             {criticalCount} Critical Conjunctions
           </span>
-        </div>
-      </div>
-
-      {/* Screening Advisory Notice */}
-      <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200 text-xs font-mono flex items-start gap-3">
-        <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold text-amber-300">Screening Advisory & Scientific Disclaimer:</span>
-          <span className="text-slate-300 ml-1.5">
-            Conjunction assessment calculations are generated from public TLE/GP element sets using synthetic RTN covariance models. They serve as <strong>screening-grade situational awareness</strong>. Collision Avoidance Maneuver (CAM) decisions require official Conjunction Data Messages (CDMs) from owner-operators or JSpOC.
-          </span>
-        </div>
-      </div>
-
-      {/* Protocol Explanation Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl glass-panel border border-cyan-500/20">
-          <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs font-mono mb-1.5">
-            <Info className="w-4 h-4 text-cyan-400" /> 1. Foster-1992 2-D Integral
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Integrates the bivariate Gaussian position uncertainty over the hard-body circle on the encounter plane perpendicular to relative velocity using 64-point Gauss-Legendre quadrature.
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl glass-panel border border-amber-500/20">
-          <div className="flex items-center gap-2 text-amber-300 font-bold text-xs font-mono mb-1.5">
-            <Zap className="w-4 h-4 text-amber-400" /> 2. Akella-Alfriend Pc_max
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Conservative upper bound on collision risk. Scans covariance scaling factors k from 0.01x to 100x to identify the worst-case collision probability independent of covariance scale calibration errors.
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl glass-panel border border-emerald-500/20">
-          <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs font-mono mb-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> 3. Screening Advisory Thresholds
-          </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Operational action threshold is typically Pc ≥ 10⁻⁴ (1 in 10,000) or miss distance &lt; 1 km. Monitored threshold is Pc ≥ 10⁻⁷. Co-orbital pairs (closing speed &lt; 80 m/s) are flagged separately.
-          </p>
         </div>
       </div>
 
