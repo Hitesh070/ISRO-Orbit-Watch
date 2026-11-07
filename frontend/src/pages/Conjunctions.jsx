@@ -10,7 +10,7 @@ import { useOrbitStore } from '../store/useOrbitStore';
 
 export const Conjunctions = () => {
   const conjunctions = useOrbitStore((state) => state.conjunctions);
-  const criticalCount = conjunctions.filter((c) => c.risk_level === 'CRITICAL').length;
+  const criticalCount = conjunctions.filter((c) => c.risk_level === 'CRITICAL' && (c.object1?.is_isro || c.object2?.is_isro)).length;
 
   return (
     <div className="w-full bg-space-950 p-4 md:p-6 text-slate-100 space-y-6">

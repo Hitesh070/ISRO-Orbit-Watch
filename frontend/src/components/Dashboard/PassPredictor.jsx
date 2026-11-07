@@ -35,7 +35,8 @@ export const PassPredictor = () => {
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
 
   const [selectedCity, setSelectedCity] = useState('bengaluru');
-  const [selectedNorad, setSelectedNorad] = useState(25544); // ISS
+  const [selectedNorad, setSelectedNorad] = useState(36795); // Default to ISRO CARTOSAT-2B
+  const [isroOnly, setIsroOnly] = useState(true);
   const [customLat, setCustomLat] = useState('');
   const [customLon, setCustomLon] = useState('');
   const [isCustom, setIsCustom] = useState(false);
@@ -95,16 +96,20 @@ export const PassPredictor = () => {
   }, [allSatellites, selectedNorad]);
 
   const filteredSatellites = useMemo(() => {
-    if (!searchTerm.trim()) return allSatellites;
+    let list = allSatellites;
+    if (isroOnly) {
+      list = list.filter((s) => s.is_isro || s.country?.toLowerCase().includes('india'));
+    }
+    if (!searchTerm.trim()) return list;
     const q = searchTerm.toLowerCase().trim();
-    return allSatellites.filter(
+    return list.filter(
       (s) =>
         (s.name || '').toLowerCase().includes(q) ||
         String(s.norad_id).includes(q) ||
         (s.intl_des || '').toLowerCase().includes(q) ||
         (s.country || '').toLowerCase().includes(q)
     );
-  }, [allSatellites, searchTerm]);
+  }, [allSatellites, isroOnly, searchTerm]);
 
   // Auto-detect user's real location on load with smooth fallback
   useEffect(() => {
@@ -311,7 +316,20 @@ export const PassPredictor = () => {
         <div className="relative" ref={dropdownRef}>
           <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span>Target Spacecraft</span>
-            <span className="text-[10px] text-cyan-400 font-normal">Searchable</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsroOnly(!isroOnly)}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition ${
+                  isroOnly
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                    : 'bg-space-900 border-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                {isroOnly ? 'ISRO Assets Only' : 'Showing All'}
+              </button>
+              <span className="text-[10px] text-cyan-400 font-normal">Searchable</span>
+            </div>
           </label>
 
           <div

@@ -42,6 +42,7 @@ export const Navbar = () => {
   const toggleSettings = useOrbitStore((state) => state.toggleSettings);
   const toggleTrainer = useOrbitStore((state) => state.toggleTrainer);
   const settings = useOrbitStore((state) => state.settings);
+  const filters = useOrbitStore((state) => state.filters);
 
   const [utcTime, setUtcTime] = useState('');
   const [localTime, setLocalTime] = useState('');
@@ -90,7 +91,11 @@ export const Navbar = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const criticalConjunctions = conjunctions.filter((c) => c.risk_level === 'CRITICAL').length;
+  const criticalConjunctions = conjunctions.filter(
+    (c) => c.risk_level === 'CRITICAL' && (!filters?.indianSatsOnly || c.object1?.is_isro || c.object2?.is_isro)
+  ).length;
+  const isroCount = satellites.filter((s) => s.is_isro).length || 79;
+  const activeSatsCount = filters?.indianSatsOnly ? isroCount : (satellites.length || isroCount);
 
   return (
     <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-3 md:px-5 py-2.5 shadow-xl select-none">
@@ -123,8 +128,8 @@ export const Navbar = () => {
         <div className="hidden lg:flex items-center gap-4 text-xs font-mono px-3 py-1.5 rounded-lg bg-space-950/70 border border-slate-800">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-400">Active Spacecraft:</span>
-            <span className="font-bold text-emerald-400">{satellites.length || 20}</span>
+            <span className="text-slate-400">{filters?.indianSatsOnly ? 'ISRO Spacecraft:' : 'Active Spacecraft:'}</span>
+            <span className="font-bold text-emerald-400">{activeSatsCount}</span>
           </div>
 
           <div className="w-px h-3.5 bg-slate-800" />

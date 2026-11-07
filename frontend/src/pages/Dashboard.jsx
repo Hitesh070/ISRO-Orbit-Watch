@@ -745,6 +745,7 @@ export const Dashboard = () => {
 
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isroOnly, setIsroOnly] = useState(true);
 
 
 
@@ -842,11 +843,15 @@ export const Dashboard = () => {
 
   const filteredLaunchedSats = useMemo(() => {
 
-    if (!searchQuery.trim()) return launchedThisYear;
+    let list = launchedThisYear;
+    if (isroOnly) {
+      list = list.filter((s) => s.is_isro || (s.country || '').toLowerCase().includes('india'));
+    }
+    if (!searchQuery.trim()) return list;
 
     const q = searchQuery.toLowerCase().trim();
 
-    return launchedThisYear.filter(
+    return list.filter(
 
       (s) =>
 
@@ -862,7 +867,7 @@ export const Dashboard = () => {
 
     );
 
-  }, [launchedThisYear, searchQuery]);
+  }, [launchedThisYear, isroOnly, searchQuery]);
 
 
 
@@ -1224,7 +1229,18 @@ export const Dashboard = () => {
 
             </p>
 
-            <div className="relative shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsroOnly(!isroOnly)}
+                className={`px-2 py-1 text-[11px] font-mono font-bold rounded border transition ${
+                  isroOnly
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                    : 'bg-space-950/80 border-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                {isroOnly ? 'ISRO Assets Only' : 'Showing All'}
+              </button>
 
               <input
 

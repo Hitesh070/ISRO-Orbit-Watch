@@ -186,7 +186,7 @@ export const ConjunctionPanel = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [isroOnly, setIsroOnly] = useState(false);
+  const [isroOnly, setIsroOnly] = useState(true);
 
   const [riskFilter, setRiskFilter] = useState('ALL');
 
@@ -450,7 +450,7 @@ export const ConjunctionPanel = () => {
 
           >
 
-            ISRO Assets Only
+            {isroOnly ? 'ISRO Assets Only' : 'Showing All Assets'}
 
           </button>
 

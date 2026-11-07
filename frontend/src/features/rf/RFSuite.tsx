@@ -56,7 +56,9 @@ export const RFSuite: React.FC = () => {
 
   // Active target satellite NORAD ID
   const [targetNoradId, setTargetNoradId] = useState<number>(
-    selectedSatellite?.norad_id || 25544 // Default to ISS
+    selectedSatellite?.norad_id || 36795 // Default to ISRO CARTOSAT-2B
+  );
+  const [isroOnly, setIsroOnly] = useState<boolean>(true
   );
 
   // Frequency database with local user edits
@@ -77,6 +79,10 @@ export const RFSuite: React.FC = () => {
 
   // Hovered sample along trajectory
   const [hoveredSample, setHoveredSample] = useState<PassSample | null>(null);
+
+  const availableSats = useMemo(() => {
+    return catalog.filter((s: any) => !isroOnly || s.is_isro || s.country?.toLowerCase().includes('india'));
+  }, [catalog, isroOnly]);
 
   // Target satellite record
   const targetSat = useMemo(() => {
@@ -245,12 +251,23 @@ export const RFSuite: React.FC = () => {
             }}
             className="px-3 py-1.5 rounded-lg bg-space-950 border border-slate-700 text-cyan-300 font-semibold focus:outline-none focus:border-cyan-400"
           >
-            {catalog.map((s: any) => (
+            {availableSats.map((s: any) => (
               <option key={s.norad_id} value={s.norad_id}>
                 {s.name} (NORAD {s.norad_id}) {s.is_isro ? '🇮🇳 [ISRO]' : ''}
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setIsroOnly(!isroOnly)}
+            className={`px-2 py-1 rounded-lg text-xs font-mono font-bold border transition ${
+              isroOnly
+                ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                : 'bg-space-950 border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            {isroOnly ? 'ISRO Assets' : 'Showing All'}
+          </button>
         </div>
 
         {/* Frequency & Verification Status Badge */}

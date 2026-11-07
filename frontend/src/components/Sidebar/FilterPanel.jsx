@@ -112,7 +112,7 @@ export const FilterPanel = () => {
         }`}
         title="Filter ISRO Spacecraft"
       >
-        <span>ISRO</span>
+        <span>{filters.indianSatsOnly ? 'ISRO Assets Only' : 'Showing All Assets'}</span>
       </button>
 
       {/* Starred Favourites Only Filter */}

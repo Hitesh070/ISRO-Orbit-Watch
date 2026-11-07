@@ -43,7 +43,7 @@ export const RiskTable = () => {
 
   const [sortField, setSortField] = useState('pc_foster');
   const [sortAsc, setSortAsc] = useState(false);
-  const [isroOnly, setIsroOnly] = useState(false);
+  const [isroOnly, setIsroOnly] = useState(true);
 
   // Merge conjunction risk metrics & spacecraft data
   const combinedRiskRows = useMemo(() => {
@@ -186,7 +186,7 @@ export const RiskTable = () => {
                 : 'bg-space-900 border-slate-700 text-slate-400 hover:text-white'
             }`}
           >
-            ISRO Assets Only
+            {isroOnly ? 'ISRO Assets Only' : 'Showing All Assets'}
           </button>
           <span className="text-xs font-mono text-cyan-300 bg-cyan-950/40 px-3 py-1 rounded-lg border border-cyan-500/30">
             Synthetic RTN Covariance
