@@ -7,7 +7,7 @@
 [![Astrodynamics](https://img.shields.io/badge/Astrodynamics-SGP4%20%7C%20Vallado%20Verified-009688.svg?style=flat)](https://celestrak.org)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-61DAFB.svg?style=flat&logo=react)](https://reactjs.org/)
 [![Three.js](https://img.shields.io/badge/3D%20Graphics-Three.js%20%7C%20GPU%20Shader-black.svg?style=flat&logo=three.js)](https://threejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-66%20Vitest%20%2B%2010%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
+[![Tests](https://img.shields.io/badge/Tests-69%20Vitest%20%2B%2015%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **OrbitGuard** is an advanced, production-grade Space Situational Awareness (SSA) and RF ground-station operations platform. It propagates thousands of active spacecraft and space debris fragments in real time, evaluates bivariate collision probabilities ($P_c$) via 2-D encounter plane integration, estimates RF Doppler shifts with Earth-rotation tangential velocity compensation, computes pass-resolved link budgets, and drives dual-axis antenna rotators.
@@ -135,10 +135,10 @@ npm run dist:win
 
 ### 5. Run Test Suite
 ```bash
-# Full Test Suite (66 Vitest unit tests: 35 frontend + 31 desktop)
+# Full Test Suite (69 Vitest unit tests: 38 frontend + 31 desktop)
 npm test
 
-# Backend Math & Conjunction Tests (Pytest - 10 tests)
+# Backend Math & Conjunction Tests (Pytest - 15 tests)
 pytest tests/
 ```
 

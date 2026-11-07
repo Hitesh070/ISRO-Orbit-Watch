@@ -285,13 +285,39 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
 
           <div className="flex items-center gap-2">
             {rotStatus.connected && (
-              <button
-                onClick={handleTestConnection}
-                className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 text-[11px] font-bold transition flex items-center gap-1"
-                title="Send harmless GS-232 C2 query to verify controller response"
-              >
-                <Zap className="w-3 h-3 text-cyan-400" /> Test Link (C2)
-              </button>
+              <>
+                <button
+                  onClick={handleTestConnection}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 text-[11px] font-bold transition flex items-center gap-1"
+                  title="Send harmless GS-232 C2 query to verify controller response"
+                >
+                  <Zap className="w-3 h-3 text-cyan-400" /> Test Link (C2)
+                </button>
+
+                <button
+                  onClick={() => activeTransport.home?.()}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 text-[11px] font-bold transition flex items-center gap-1"
+                  title="Drive antenna rotator toward physical home limit switches"
+                >
+                  <Compass className="w-3 h-3 text-amber-400" /> Home (H)
+                </button>
+
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    rotStatus.isHomed
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : rotStatus.homingState === 'HOMING'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                  }`}
+                >
+                  {rotStatus.isHomed
+                    ? 'HOMED (READY)'
+                    : rotStatus.homingState === 'HOMING'
+                    ? 'HOMING...'
+                    : 'NOT HOMED'}
+                </span>
+              </>
             )}
             <span className="text-[10px] text-slate-500 font-sans hidden lg:inline">
               * Supports FTDI, CH340, CP210x, and ESP32 drivers.

@@ -1,11 +1,12 @@
 /**
- * OrbitGuard Web Worker Hook (Phase 2)
- * =====================================
+ * OrbitGuard Web Worker Hook (Phase 2 & 3 - Zero-Churn Buffer Pool)
+ * ==================================================================
  * Manages the background SGP4 Web Worker lifecycle and ping-pong zero-copy transferable
- * Float32Array / Uint8Array buffers.
- *
- * Runs SGP4 orbital propagation at ~1-2 Hz off the main thread.
- * Coordinates are output in TEME scene units (R_E = 1.0).
+ * Float32Array / Uint8Array buffers without memory churn:
+ *  1. Tracks catalog revision keys so periodic catalog polling does not re-emit INIT_CATALOG.
+ *  2. Implements a 3-buffer-set pool (renderer-active, worker-active, spare pool).
+ *  3. Recycles rendered buffers back into the spare pool once GPU attributes are updated.
+ *  4. Allocates buffer memory once upon catalog initialization, eliminating periodic allocations.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -19,23 +20,42 @@ export interface UsePropagatorWorkerResult {
   workerTickTimeMs: number;
   workerMs: number;
   validCount: number;
+  allocCount: number;
   orbitPoints: [number, number, number][];
   requestOrbitPath: (noradId: number, timeMs?: number) => void;
 }
 
-interface BufferPair {
+interface BufferSet {
   pos: Float32Array;
   vel: Float32Array;
   status: Uint8Array;
 }
 
+/**
+ * Computes a deterministic revision fingerprint for the orbital catalog.
+ * Changes only when asset count, norad IDs, or TLE element lines change.
+ */
+export function getCatalogRevisionKey(catalog: any[]): string {
+  if (!catalog || catalog.length === 0) return '';
+  const n = catalog.length;
+  const c0 = catalog[0];
+  const cm = catalog[Math.floor(n / 2)];
+  const cl = catalog[n - 1];
+  const l0 = (c0?.line1 || '').slice(18, 32);
+  const lm = (cm?.line1 || '').slice(18, 32);
+  const ll = (cl?.line1 || '').slice(18, 32);
+  return `${n}:${c0?.norad_id || 0}_${l0}:${cm?.norad_id || 0}_${lm}:${cl?.norad_id || 0}_${ll}`;
+}
+
 export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
   const workerRef = useRef<Worker | null>(null);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
+  const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
 
   const [isReady, setIsReady] = useState(false);
   const [workerMs, setWorkerMs] = useState(0);
   const [validCount, setValidCount] = useState(0);
+  const [allocCount, setAllocCount] = useState(0);
   const [workerTickTimeMs, setWorkerTickTimeMs] = useState(Date.now());
   const [orbitPoints, setOrbitPoints] = useState<[number, number, number][]>([]);
 
@@ -50,11 +70,27 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
     status: null,
   });
 
-  // Spare buffer set for ping-pong transfers
-  const spareBufferRef = useRef<BufferPair | null>(null);
+  // Zero-churn 3-buffer-set pool
+  const sparePoolRef = useRef<BufferSet[]>([]);
+  const previousRenderBuffersRef = useRef<{
+    pos: ArrayBuffer | null;
+    vel: ArrayBuffer | null;
+    status: ArrayBuffer | null;
+  } | null>(null);
+
   const isWorkerBusyRef = useRef<boolean>(false);
   const simTimeRef = useRef<number>(Date.now());
   const lastWallTimeRef = useRef<number>(performance.now());
+  const lastRevisionRef = useRef<string>('');
+  const totalAllocsRef = useRef<number>(0);
+
+  // Synchronize internal sim clock when store changes
+  useEffect(() => {
+    if (simulatedTimeMs) {
+      simTimeRef.current = simulatedTimeMs;
+      lastWallTimeRef.current = performance.now();
+    }
+  }, [simulatedTimeMs]);
 
   // Instantiate worker
   useEffect(() => {
@@ -70,9 +106,35 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
       if (type === 'INIT_COMPLETE') {
         setIsReady(true);
       } else if (type === 'TICK_RESULT') {
-        const { targetTimeMs, workerMs: latencyMs, validCount: count, posBuffer, velBuffer, statusBuffer } = payload;
+        const { workerMs: latencyMs, validCount: count, posBuffer, velBuffer, statusBuffer } = payload;
 
-        // The returned buffers become the new active buffers
+        // The PREVIOUS render buffer has already been copied into Three.js GPU attributes by PointCloud.
+        // Recycle it back into the spare pool so no new buffers ever need to be allocated!
+        const prev = previousRenderBuffersRef.current;
+        if (
+          prev &&
+          prev.pos &&
+          prev.vel &&
+          prev.status &&
+          prev.pos.byteLength > 0 &&
+          prev.vel.byteLength > 0 &&
+          prev.status.byteLength > 0
+        ) {
+          sparePoolRef.current.push({
+            pos: new Float32Array(prev.pos),
+            vel: new Float32Array(prev.vel),
+            status: new Uint8Array(prev.status),
+          });
+        }
+
+        // Store the newly arrived buffers as previousRenderBuffers for the next recycle cycle
+        previousRenderBuffersRef.current = {
+          pos: posBuffer,
+          vel: velBuffer,
+          status: statusBuffer,
+        };
+
+        // Deliver active buffers to renderer
         setActiveBuffers({
           pos: posBuffer,
           vel: velBuffer,
@@ -94,18 +156,35 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
     };
   }, []);
 
-  // Initialize catalog in worker & allocate ping-pong buffers
+  // Initialize catalog in worker only when catalog revision fingerprint changes
   useEffect(() => {
     if (!workerRef.current || catalog.length === 0) return;
 
+    const revisionKey = getCatalogRevisionKey(catalog);
+    if (revisionKey === lastRevisionRef.current) {
+      // Catalog content is identical - do NOT reinitialize worker or trash buffers
+      return;
+    }
+    lastRevisionRef.current = revisionKey;
+
     const count = catalog.length;
 
-    // Allocate spare buffers for ping-pong
-    spareBufferRef.current = {
-      pos: new Float32Array(count * 3),
-      vel: new Float32Array(count * 3),
-      status: new Uint8Array(count),
-    };
+    // Reset pool and pre-allocate exactly 2 spare buffer sets for ping-pong
+    sparePoolRef.current = [
+      {
+        pos: new Float32Array(count * 3),
+        vel: new Float32Array(count * 3),
+        status: new Uint8Array(count),
+      },
+      {
+        pos: new Float32Array(count * 3),
+        vel: new Float32Array(count * 3),
+        status: new Uint8Array(count),
+      },
+    ];
+    previousRenderBuffersRef.current = null;
+    totalAllocsRef.current = 2;
+    setAllocCount(2);
 
     setIsReady(false);
     workerRef.current.postMessage({
@@ -114,14 +193,14 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
     });
   }, [catalog]);
 
-  // Propagation tick loop (~2 Hz or every 500 ms)
+  // Propagation tick loop (~2 Hz / 500 ms)
   useEffect(() => {
     if (!isReady || catalog.length === 0) return;
 
     const tickInterval = 500; // ms
 
     const intervalId = setInterval(() => {
-      if (isWorkerBusyRef.current || !workerRef.current || !spareBufferRef.current) {
+      if (isWorkerBusyRef.current || !workerRef.current) {
         return;
       }
 
@@ -133,11 +212,24 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
       simTimeRef.current += elapsedWall * 1000 * simulationSpeed;
       const targetTimeMs = simTimeRef.current;
 
-      const buffers = spareBufferRef.current;
+      // Obtain a buffer set from the recycled spare pool, or allocate only if pool is empty
+      let buffers: BufferSet;
+      if (sparePoolRef.current.length > 0) {
+        buffers = sparePoolRef.current.pop()!;
+      } else {
+        totalAllocsRef.current++;
+        setAllocCount(totalAllocsRef.current);
+        buffers = {
+          pos: new Float32Array(catalog.length * 3),
+          vel: new Float32Array(catalog.length * 3),
+          status: new Uint8Array(catalog.length),
+        };
+      }
+
       // Mark worker busy
       isWorkerBusyRef.current = true;
 
-      // Transfer spare buffers to worker
+      // Transfer buffers to worker (Zero Copy)
       workerRef.current.postMessage(
         {
           type: 'PROPAGATE_TICK',
@@ -150,14 +242,6 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
         },
         [buffers.pos.buffer, buffers.vel.buffer, buffers.status.buffer]
       );
-
-      // Re-allocate spare buffers for the NEXT tick (or wait for returned buffers)
-      // Since ArrayBuffers were transferred, we allocate a fresh holder for the next outgoing tick
-      spareBufferRef.current = {
-        pos: new Float32Array(catalog.length * 3),
-        vel: new Float32Array(catalog.length * 3),
-        status: new Uint8Array(catalog.length),
-      };
     }, tickInterval);
 
     return () => clearInterval(intervalId);
@@ -180,6 +264,7 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
     workerTickTimeMs,
     workerMs,
     validCount,
+    allocCount,
     orbitPoints,
     requestOrbitPath,
   };

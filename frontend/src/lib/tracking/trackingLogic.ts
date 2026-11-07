@@ -170,6 +170,18 @@ export class TrackingController {
       return;
     }
 
+    // P0 Hardware Safety Gate: Block satellite tracking until rotator has completed physical homing
+    if (
+      !this.isDryRun &&
+      rotStatus.connected &&
+      rotStatus.transportType !== 'SIMULATOR' &&
+      rotStatus.isHomed === false
+    ) {
+      this.state = 'IDLE';
+      this.notify();
+      return;
+    }
+
     if (!this.activePass) {
       this.state = 'IDLE';
       this.notify();

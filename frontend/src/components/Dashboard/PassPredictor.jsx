@@ -12,6 +12,7 @@ import { useOrbitStore } from '../../store/useOrbitStore';
 export const PassPredictor = () => {
   const groundStations = useOrbitStore((state) => state.groundStations);
   const passesData = useOrbitStore((state) => state.passesData);
+  const passesError = useOrbitStore((state) => state.passesError);
   const fetchPasses = useOrbitStore((state) => state.fetchPasses);
   const satellites = useOrbitStore((state) => state.satellites);
 
@@ -294,8 +295,8 @@ export const PassPredictor = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="py-6 text-center text-slate-400 font-mono">
-                  Evaluating upcoming pass geometry over your location...
+                <td colSpan={7} className={`py-6 text-center font-mono ${passesError ? 'text-amber-400 bg-amber-950/20' : 'text-slate-400'}`}>
+                  {passesError || 'Evaluating upcoming pass geometry over your location...'}
                 </td>
               </tr>
             )}

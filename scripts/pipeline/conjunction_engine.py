@@ -25,8 +25,8 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
 import numpy as np
-from numpy.polynomial.legendre import leggauss
 import yaml
+from numpy.polynomial.legendre import leggauss
 
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "config", "covariance.yaml")
 

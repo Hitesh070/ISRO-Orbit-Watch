@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+
 try:  # optional: only needed for local/Docker deployments, not for the GitHub Actions pipeline
     from apscheduler.schedulers.background import BackgroundScheduler
 except ImportError:  # pragma: no cover

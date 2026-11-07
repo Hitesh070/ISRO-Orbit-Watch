@@ -57,6 +57,7 @@ export const useOrbitStore = create((set, get) => ({
   riskOverview: null,
   conjunctions: [],
   passesData: null,
+  passesError: null,
   analytics: null,
   groundStations: [],
   metadata: null,
@@ -380,10 +381,19 @@ export const useOrbitStore = create((set, get) => ({
 
   fetchPasses: async (city = 'bengaluru', noradId = 25544) => {
     try {
+      set({ passesError: null });
       const res = await orbitApi.getPasses({ city, norad_id: noradId });
-      set({ passesData: res });
+      set({ passesData: res, passesError: null });
     } catch (err) {
-      console.error('Error fetching passes:', err);
+      console.warn('Error fetching passes:', err);
+      if (err?.response?.status === 404 || String(err?.message || '').includes('404')) {
+        set({
+          passesData: null,
+          passesError: 'Satellite unavailable in current catalog',
+        });
+      } else {
+        set({ passesError: 'Failed to evaluate pass predictions for this location' });
+      }
     }
   },
 

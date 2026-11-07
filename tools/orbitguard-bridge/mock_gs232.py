@@ -43,6 +43,14 @@ class MockGS232Rotator:
                 self.commanded_az, self.commanded_el = self.actual_az, self.actual_el
             return "\r\n"
 
+        if cmd == "H":
+            with self._lock:
+                self.commanded_az = 0.0
+                self.commanded_el = 0.0
+                self.actual_az = 0.0
+                self.actual_el = 0.0
+            return "STATUS HOMED_READY\r\n"
+
         if cmd in ("C2", "C"):
             with self._lock:
                 az, el = int(round(self.actual_az)), int(round(self.actual_el))

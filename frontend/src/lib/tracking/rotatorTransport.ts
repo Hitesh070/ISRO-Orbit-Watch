@@ -28,6 +28,8 @@ export interface RotatorStatus {
   pointingErrorDeg: number;
   error: string | null;
   lastUpdatedMs: number;
+  isHomed?: boolean;
+  homingState?: 'UNHOMED' | 'HOMING' | 'READY' | 'FAULT';
 }
 
 export interface CommandLogEntry {
@@ -42,6 +44,7 @@ export interface RotatorTransport {
   disconnect(): Promise<void>;
   setTarget(azDeg: number, elDeg: number): Promise<void>;
   stop(): Promise<void>;
+  home?(): Promise<void>;
   getStatus(): RotatorStatus;
   onStatusUpdate(listener: (status: RotatorStatus) => void): () => void;
   onCommandLog(listener: (entry: CommandLogEntry) => void): () => void;
@@ -513,7 +516,30 @@ export class NativeSerialTransport implements RotatorTransport {
 
     // Subscribe to incoming stream
     const unsubData = platform.serial.onData((data) => {
-      this.emitLog(data.trim(), 'RX');
+      const trimmed = data.trim();
+      this.emitLog(trimmed, 'RX');
+
+      if (trimmed.includes('HOMED_READY')) {
+        this.status.isHomed = true;
+        this.status.homingState = 'READY';
+        this.status.error = null;
+        this.notifyStatus();
+      } else if (trimmed.includes('HOMING_INIT') || trimmed.includes('HOMING')) {
+        this.status.isHomed = false;
+        this.status.homingState = 'HOMING';
+        this.notifyStatus();
+      } else if (trimmed.includes('ERR NOT_HOMED')) {
+        this.status.isHomed = false;
+        this.status.homingState = 'UNHOMED';
+        this.status.error = 'Rotator not homed. Hardware homing required before tracking.';
+        this.notifyStatus();
+      } else if (trimmed.includes('ERR HOMING_TIMEOUT')) {
+        this.status.isHomed = false;
+        this.status.homingState = 'FAULT';
+        this.status.error = 'Homing timeout. Check limit switches and power cycle.';
+        this.notifyStatus();
+      }
+
       const parsed = parseGS232Reply(data);
       if (parsed) {
         this.status.actualAz = parsed.azDeg;
@@ -570,6 +596,15 @@ export class NativeSerialTransport implements RotatorTransport {
     const cmd = encodeGS232Stop();
     await platform.serial.write(cmd);
     this.emitLog(cmd.trim(), 'TX');
+  }
+
+  async home(): Promise<void> {
+    if (!this.status.connected) return;
+    this.status.homingState = 'HOMING';
+    this.status.isHomed = false;
+    this.notifyStatus();
+    await platform.serial.write('H\r');
+    this.emitLog('H', 'TX');
   }
 
   getStatus(): RotatorStatus {

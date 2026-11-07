@@ -124,7 +124,7 @@ def root():
 
 @app.get("/api/satellites")
 def get_satellites(
-    limit: Optional[int] = Query(default=150, description="Maximum number of satellites to return"),
+    limit: int = Query(default=150, ge=1, le=500, description="Maximum number of satellites to return (1-500)"),
     regime: Optional[str] = Query(default=None, description="Filter by orbital regime: LEO, MEO, GEO, HEO"),
     country: Optional[str] = Query(default=None, description="Filter by country or operating agency"),
     search: Optional[str] = Query(default=None, description="Search query by name or NORAD ID"),
@@ -216,7 +216,7 @@ def get_satellite_detail(norad_id: int):
 
 @app.get("/api/debris")
 def get_debris(
-    limit: Optional[int] = Query(default=None, description="Limit count of debris pieces"),
+    limit: Optional[int] = Query(default=None, ge=1, le=500, description="Limit count of debris pieces (1-500)"),
 ):
     """
     Returns real-time orbital positions and elements for cataloged space debris pieces
@@ -304,10 +304,10 @@ def get_conjunction_alerts():
 @app.get("/api/passes")
 def get_satellite_passes(
     city: Optional[str] = Query(default=None, description="City or space center name (e.g. Bangalore, Sriharikota)"),
-    lat: Optional[float] = Query(default=None, description="Ground latitude"),
-    lon: Optional[float] = Query(default=None, description="Ground longitude"),
-    norad_id: int = Query(default=25544, description="Satellite NORAD ID (default 25544 = ISS)"),
-    days: int = Query(default=5, description="Lookahead window in days"),
+    lat: Optional[float] = Query(default=None, ge=-90.0, le=90.0, description="Ground latitude (-90 to 90)"),
+    lon: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Ground longitude (-180 to 180)"),
+    norad_id: Optional[int] = Query(default=None, ge=1, description="Satellite NORAD ID (omitted defaults to 25544 ISS)"),
+    days: int = Query(default=5, ge=1, le=30, description="Lookahead window in days (1 to 30)"),
 ):
     """
     Predicts upcoming ground passes (AOS, Max Elevation, LOS) over a ground station
@@ -320,18 +320,28 @@ def get_satellite_passes(
     debris_sats = propagator.parse_tle_file(tle_fetcher.debris_file)
     all_sats = active_sats + debris_sats
 
+    requested_id = norad_id if norad_id is not None else 25544
+
     target_sat = None
     for sat in all_sats:
-        if int(sat.model.satnum) == norad_id:
+        if int(sat.model.satnum) == requested_id:
             target_sat = sat
             break
 
     if not target_sat:
-        # Default to ISS if specific id was not found
+        if norad_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Satellite with NORAD ID {norad_id} not found in current catalog.",
+            )
+        # Only fallback to first active satellite if norad_id was omitted and ISS wasn't found
         target_sat = active_sats[0] if active_sats else None
 
     if not target_sat:
-        raise HTTPException(status_code=404, detail="No satellite available for pass prediction.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No satellite available for pass prediction.",
+        )
 
     passes = pass_predictor.predict_passes(
         target_sat,
