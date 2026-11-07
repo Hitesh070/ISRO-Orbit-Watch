@@ -1,12 +1,28 @@
 /**
  * PassPredictor Component
  * High-precision ground station pass prediction engine using Skyfield's find_events.
- * Features automated browser GPS geolocation auto-detection.
+ * Features automated browser GPS geolocation auto-detection, searchable spacecraft selector,
+ * and topocentric AOS / LOS / Max Elevation pass trajectories.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio, MapPin, Compass, Clock, Send, Globe2, Sparkles, Navigation, LocateFixed, ArrowRight } from 'lucide-react';
+import {
+  Radio,
+  MapPin,
+  Compass,
+  Clock,
+  Send,
+  Globe2,
+  Sparkles,
+  Navigation,
+  LocateFixed,
+  ArrowRight,
+  Search,
+  ChevronDown,
+  X,
+  Satellite,
+} from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 export const PassPredictor = () => {
@@ -15,6 +31,8 @@ export const PassPredictor = () => {
   const passesError = useOrbitStore((state) => state.passesError);
   const fetchPasses = useOrbitStore((state) => state.fetchPasses);
   const satellites = useOrbitStore((state) => state.satellites);
+  const catalog = useOrbitStore((state) => state.catalog);
+  const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
 
   const [selectedCity, setSelectedCity] = useState('bengaluru');
   const [selectedNorad, setSelectedNorad] = useState(25544); // ISS
@@ -22,6 +40,71 @@ export const PassPredictor = () => {
   const [customLon, setCustomLon] = useState('');
   const [isCustom, setIsCustom] = useState(false);
   const [geoStatus, setGeoStatus] = useState('');
+
+  // Searchable combobox states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Sync with global selected satellite if present
+  useEffect(() => {
+    if (selectedSatellite && selectedSatellite.norad_id) {
+      setSelectedNorad(selectedSatellite.norad_id);
+    }
+  }, [selectedSatellite]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Build unified satellite list with top presets prioritized
+  const allSatellites = useMemo(() => {
+    const pool = catalog && catalog.length > 0 ? catalog : satellites;
+    const filtered = pool.filter(
+      (s) => s.object_type === 'Satellite' || !s.object_type || s.type === 'PAYLOAD'
+    );
+    const map = new Map();
+    const priorityIds = [25544, 48274, 36795, 44804, 44857, 101228, 20580];
+    const priorityList = [];
+    const others = [];
+
+    for (const s of filtered) {
+      if (!s.norad_id || map.has(s.norad_id)) continue;
+      map.set(s.norad_id, s);
+      if (priorityIds.includes(s.norad_id)) {
+        priorityList.push(s);
+      } else {
+        others.push(s);
+      }
+    }
+
+    priorityList.sort((a, b) => priorityIds.indexOf(a.norad_id) - priorityIds.indexOf(b.norad_id));
+    others.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return [...priorityList, ...others];
+  }, [catalog, satellites]);
+
+  const selectedSatObj = useMemo(() => {
+    return allSatellites.find((s) => s.norad_id === selectedNorad);
+  }, [allSatellites, selectedNorad]);
+
+  const filteredSatellites = useMemo(() => {
+    if (!searchTerm.trim()) return allSatellites;
+    const q = searchTerm.toLowerCase().trim();
+    return allSatellites.filter(
+      (s) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        String(s.norad_id).includes(q) ||
+        (s.intl_des || '').toLowerCase().includes(q) ||
+        (s.country || '').toLowerCase().includes(q)
+    );
+  }, [allSatellites, searchTerm]);
 
   // Auto-detect user's real location on load
   useEffect(() => {
@@ -71,12 +154,30 @@ export const PassPredictor = () => {
   };
 
   const handlePredict = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (isCustom && customLat && customLon) {
       fetchPasses(`${customLat},${customLon}`, selectedNorad);
     } else {
       fetchPasses(selectedCity, selectedNorad);
     }
+  };
+
+  const handleSelectSatellite = (noradId) => {
+    setSelectedNorad(noradId);
+    setSearchTerm('');
+    setIsDropdownOpen(false);
+    if (isCustom && customLat && customLon) {
+      fetchPasses(`${customLat},${customLon}`, noradId);
+    } else {
+      fetchPasses(selectedCity, noradId);
+    }
+  };
+
+  const formatTrajectory = (p) => {
+    let summary = p.trajectory_summary || `${p.aos_direction || 'N'} → ${p.los_direction || 'S'}`;
+    // Strip Python tuple string artifact like ('NE',) -> NE
+    summary = summary.replace(/\(['"]?([A-Za-z]+)['"]?,\)/g, '$1').replace(/[()',]/g, '').trim();
+    return `${summary} (${p.aos_azimuth}° → ${p.los_azimuth}°)`;
   };
 
   const passes = passesData?.passes || [];
@@ -157,30 +258,96 @@ export const PassPredictor = () => {
           </div>
         </div>
 
-        {/* Target Spacecraft Selection */}
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-            Target Spacecraft
+        {/* Target Spacecraft Searchable Combobox */}
+        <div className="relative" ref={dropdownRef}>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+            <span>Target Spacecraft</span>
+            <span className="text-[10px] text-cyan-400 font-normal">Searchable</span>
           </label>
-          <select
-            value={selectedNorad}
-            onChange={(e) => setSelectedNorad(Number(e.target.value))}
-            className="w-full px-3 py-2 rounded-lg bg-space-950/80 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-400"
+
+          <div
+            onClick={() => setIsDropdownOpen(true)}
+            className="w-full px-3 py-2 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-500/50 focus-within:border-cyan-400 text-slate-200 flex items-center justify-between cursor-pointer transition"
           >
-            <option value={25544}>ISS (ZARYA) - 25544</option>
-            <option value={48274}>TIANGONG (CSS) - 48274</option>
-            <option value={36795}>CARTOSAT-2B (ISRO) - 36795</option>
-            <option value={44804}>CARTOSAT-3 (ISRO) - 44804</option>
-            <option value={44857}>RISAT-2BR1 (ISRO) - 44857</option>
-            <option value={20580}>HST (HUBBLE) - 20580</option>
-            {satellites
-              .filter((s) => ![25544, 48274, 36795, 44804, 44857, 20580].includes(s.norad_id))
-              .map((s) => (
-                <option key={s.norad_id} value={s.norad_id}>
-                  {s.name} - {s.norad_id}
-                </option>
-              ))}
-          </select>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              {isDropdownOpen ? (
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Type satellite name or NORAD..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-transparent text-slate-100 placeholder-slate-500 focus:outline-none text-xs w-full"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span className="truncate text-slate-200 font-medium">
+                  {selectedSatObj ? `${selectedSatObj.name} (${selectedSatObj.norad_id})` : `NORAD #${selectedNorad}`}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 ml-2">
+              {isDropdownOpen && searchTerm && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSearchTerm('');
+                  }}
+                  className="p-0.5 text-slate-400 hover:text-slate-200"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`}
+              />
+            </div>
+          </div>
+
+          {/* Floating Dropdown List */}
+          {isDropdownOpen && (
+            <div className="absolute left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-space-950 border border-cyan-500/40 rounded-lg shadow-2xl z-50 p-1 divide-y divide-slate-800/60 custom-scrollbar">
+              {filteredSatellites.length === 0 ? (
+                <div className="p-3 text-center text-slate-500 text-[11px]">
+                  No satellites matching "{searchTerm}"
+                </div>
+              ) : (
+                filteredSatellites.map((sat) => {
+                  const isSelected = sat.norad_id === selectedNorad;
+                  return (
+                    <div
+                      key={sat.norad_id}
+                      onClick={() => handleSelectSatellite(sat.norad_id)}
+                      className={`px-2.5 py-2 rounded flex items-center justify-between cursor-pointer transition ${
+                        isSelected
+                          ? 'bg-cyan-950/60 text-cyan-300 font-bold border border-cyan-500/40'
+                          : 'hover:bg-slate-900/80 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Satellite className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-cyan-400' : 'text-slate-500'}`} />
+                        <div className="min-w-0 truncate">
+                          <div className="truncate text-xs font-semibold">{sat.name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            NORAD #{sat.norad_id} • {sat.country || 'International'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {sat.is_isro && (
+                        <span className="shrink-0 ml-2 px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded">
+                          ISRO
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* Predict Button */}
@@ -227,7 +394,7 @@ export const PassPredictor = () => {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-emerald-400" />
           <span>
-            Spacecraft: <strong className="text-emerald-300">{satInfo.name || 'ISS (ZARYA)'}</strong> (NORAD: {satInfo.norad_id || 25544})
+            Spacecraft: <strong className="text-emerald-300">{satInfo.name || selectedSatObj?.name || 'ISS (ZARYA)'}</strong> (NORAD: {satInfo.norad_id || selectedNorad})
           </span>
         </div>
       </div>
@@ -276,7 +443,7 @@ export const PassPredictor = () => {
                     {p.duration || '---'}
                   </td>
                   <td className="py-2.5 px-3 font-mono text-cyan-400">
-                    {p.trajectory_summary || 'N/A'} ({p.aos_azimuth}° → {p.los_azimuth}°)
+                    {formatTrajectory(p)}
                   </td>
                   <td className="py-2.5 px-3 text-center">
                     <span

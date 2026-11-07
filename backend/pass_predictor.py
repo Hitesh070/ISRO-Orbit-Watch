@@ -101,10 +101,13 @@ class PassPredictor:
             dt_iso = t.utc_datetime().strftime("%Y-%m-%dT%H:%M:%SZ")
 
             if event == 0:  # AOS (Acquisition of Signal - rise above min_elevation)
+                aos_dir = compass_direction(float(az.degrees))
+                if isinstance(aos_dir, (tuple, list)):
+                    aos_dir = aos_dir[0]
                 current_pass = {
                     "aos_time": dt_iso,
                     "aos_azimuth": round(float(az.degrees), 1),
-                    "aos_direction": compass_direction(float(az.degrees)),
+                    "aos_direction": str(aos_dir),
                 }
             elif event == 1 and current_pass:  # Culmination (Max Elevation)
                 current_pass["culmination_time"] = dt_iso
@@ -114,7 +117,10 @@ class PassPredictor:
             elif event == 2 and current_pass:  # LOS (Loss of Signal - sets)
                 current_pass["los_time"] = dt_iso
                 current_pass["los_azimuth"] = round(float(az.degrees), 1)
-                current_pass["los_direction"] = compass_direction(float(az.degrees))
+                los_dir = compass_direction(float(az.degrees))
+                if isinstance(los_dir, (tuple, list)):
+                    los_dir = los_dir[0]
+                current_pass["los_direction"] = str(los_dir)
 
                 # Compute pass duration in seconds
                 try:
