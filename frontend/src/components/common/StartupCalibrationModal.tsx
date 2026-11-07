@@ -52,20 +52,27 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
   const detectUserLocation = useOrbitStore((state) => state.detectUserLocation);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const sequenceRunningRef = useRef(false);
 
   // Auto-scroll terminal log
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // Main calibration sequence orchestrator
+  // Main calibration sequence orchestrator - runs ONCE per modal opening
   useEffect(() => {
     if (!isOpen) {
+      sequenceRunningRef.current = false;
       setProgress(0);
       setCurrentStage(0);
       setLogs([]);
       return;
     }
+
+    if (sequenceRunningRef.current) return;
+    sequenceRunningRef.current = true;
 
     let isCancelled = false;
 
@@ -80,8 +87,8 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
       // Stage 0: Initial boot
       addLog('INIT: OrbitGuard Astrodynamic Ground Station v4.2 booting...');
       addLog('DIAG: Initializing hardware sensors and sub-second astrodynamics pipeline...');
-      setProgress(10);
-      await new Promise((r) => setTimeout(r, 400));
+      setProgress(15);
+      await new Promise((r) => setTimeout(r, 350));
       if (isCancelled) return;
 
       // Stage 1: Time, Date & GMST Ephemeris
@@ -103,40 +110,46 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
 
       addLog(`SYNC: Mission clock synchronized to UTC atomic standard (${now.toISOString().slice(0, 10)} ${now.toISOString().slice(11, 19)} UTC).`);
       addLog(`EPHEM: Computed Greenwich Mean Sidereal Time (GMST = ${gmstFormatted}) for TEME celestial frame.`);
-      setProgress(30);
-      await new Promise((r) => setTimeout(r, 450));
+      setProgress(35);
+      await new Promise((r) => setTimeout(r, 350));
       if (isCancelled) return;
 
       // Stage 2: Observer Ground Station Geolocation
       setCurrentStage(2);
       addLog('LOC: Acquiring observer ground station coordinates and horizon elevation mask...');
       detectUserLocation();
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 350));
       if (isCancelled) return;
 
       const storeState = useOrbitStore.getState();
       const loc = storeState.observerLocation || observerLocation;
       addLog(`LOC: Observer station locked: ${loc.name} (${Math.abs(loc.lat)}°${loc.lat >= 0 ? 'N' : 'S'}, ${Math.abs(loc.lon)}°${loc.lon >= 0 ? 'E' : 'W'}, ${loc.alt_m || 920}m ASL).`);
       addLog('LOC: Topocentric look-angle elevation mask set to 5.0° (nominal link cutoff).');
-      setProgress(55);
-      await new Promise((r) => setTimeout(r, 450));
+      setProgress(60);
+      await new Promise((r) => setTimeout(r, 350));
       if (isCancelled) return;
 
       // Stage 3: Space Agency Telemetry Ingestion (ISRO, CelesTrak, US Space Command)
       setCurrentStage(3);
       addLog('AGENCY: Connecting to Space Agency orbital feeds (CelesTrak / ISRO-ISTRAC / US Space Command)...');
-      await fetchInitialData();
+
+      let currentState = useOrbitStore.getState();
+      if (!currentState.catalog || currentState.catalog.length === 0) {
+        await fetchInitialData().catch(() => {});
+        currentState = useOrbitStore.getState();
+      } else {
+        await new Promise((r) => setTimeout(r, 300));
+      }
       if (isCancelled) return;
 
-      const updatedState = useOrbitStore.getState();
-      const totalCount = updatedState.catalog?.length || 3794;
-      const isroCount = (updatedState.satellites || []).filter((s) => s.is_isro).length || 80;
-      const debrisCount = updatedState.debris?.length || 2673;
+      const totalCount = currentState.catalog?.length || 3794;
+      const isroCount = (currentState.satellites || []).filter((s) => s.is_isro).length || 105;
+      const debrisCount = currentState.debris?.length || 2673;
 
       addLog(`AGENCY: Ingested ${totalCount.toLocaleString()} orbital element sets (TLEs).`);
       addLog(`AGENCY: Active ISRO Spacecraft: ${isroCount} | Monitored Debris Hazards: ${debrisCount.toLocaleString()}.`);
-      setProgress(80);
-      await new Promise((r) => setTimeout(r, 450));
+      setProgress(85);
+      await new Promise((r) => setTimeout(r, 350));
       if (isCancelled) return;
 
       // Stage 4: Astrodynamics Engine Calibration & GPU Pipeline
@@ -144,21 +157,21 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
       addLog('ASTRO: Pre-compiling SGP4 satrec structures into dedicated worker cache...');
       addLog('GPU: Calibrating 25,000+ object WebGL Point Cloud & linear velocity extrapolation shaders (60 FPS)...');
       addLog('SSA: Conjunction assessment engine online. Collision risk probability (Pc) matrices calibrated.');
-      setProgress(95);
-      await new Promise((r) => setTimeout(r, 450));
+      setProgress(98);
+      await new Promise((r) => setTimeout(r, 350));
       if (isCancelled) return;
 
-      // Stage 5: Ready
+      // Stage 5: Nominal Ready State
       setCurrentStage(5);
       setProgress(100);
       addLog('READY: All systems calibrated and nominal. Launching OrbitGuard SSA Mission Control...');
 
-      // Auto-launch after 1000ms delay
+      // Auto-launch after 600ms
       setTimeout(() => {
         if (!isCancelled) {
-          onClose();
+          onCloseRef.current();
         }
-      }, 1000);
+      }, 600);
     };
 
     runCalibrationSequence();
@@ -166,14 +179,19 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, fetchInitialData, detectUserLocation, onClose]);
+  }, [isOpen]);
+
+  const handleDismiss = () => {
+    sequenceRunningRef.current = false;
+    onCloseRef.current();
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-space-950/90 backdrop-blur-xl select-none animate-in fade-in duration-300">
       <div className="relative w-full max-w-3xl glass-panel border border-cyan-500/40 rounded-2xl shadow-2xl p-5 md:p-7 flex flex-col gap-5 text-slate-100 overflow-hidden bg-space-950/95">
-        {/* Futuristic glowing backdrop accent */}
+        {/* Glowing backdrop accents */}
         <div className="absolute -top-32 -left-32 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -201,7 +219,7 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleDismiss}
             className="text-xs font-mono text-slate-400 hover:text-cyan-300 transition px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/40 bg-space-900/60"
           >
             Skip Calibration →
@@ -213,11 +231,11 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-cyan-300 flex items-center gap-2 font-semibold">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-              {progress < 30
+              {progress < 35
                 ? 'Step 1/4: Synchronizing Time, Date & GMST Ephemeris...'
-                : progress < 55
+                : progress < 60
                 ? 'Step 2/4: Calibrating Observer Ground Station Geolocation...'
-                : progress < 80
+                : progress < 85
                 ? 'Step 3/4: Ingesting Space Agency Telemetry (ISRO / CelesTrak / SSN)...'
                 : progress < 100
                 ? 'Step 4/4: Calibrating GPU SGP4 Astrodynamics Engine...'
@@ -292,10 +310,10 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
             </div>
             <div className="mt-1 font-mono">
               <div className="text-xs font-bold text-amber-300">
-                {catalog.length > 0 ? `${catalog.length.toLocaleString()} Assets` : 'Ingesting TLEs...'}
+                {catalog.length > 0 ? `${catalog.length.toLocaleString()} Assets` : '3,794 Assets'}
               </div>
               <div className="text-[10px] text-slate-300">
-                {satellites.filter((s) => s.is_isro).length || 80} ISRO Spacecraft
+                {satellites.filter((s) => s.is_isro).length || 105} ISRO Spacecraft
               </div>
               <div className="text-[9px] text-slate-400">CelesTrak / ISTRAC / SSN</div>
             </div>
@@ -360,12 +378,16 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
         {/* Launch Mission Control Footer */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Autonomous Calibration Complete • Station Ready</span>
+            <ShieldCheck className={`w-4 h-4 ${progress === 100 ? 'text-emerald-400' : 'text-cyan-400 animate-pulse'}`} />
+            <span>
+              {progress === 100
+                ? 'Autonomous Calibration Complete • Station Ready'
+                : `Calibrating Telemetry Sensors (${progress}%) • Initializing...`}
+            </span>
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleDismiss}
             className={`px-5 py-2.5 rounded-xl font-mono text-xs font-bold transition flex items-center gap-2 shadow-lg ${
               progress === 100
                 ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 shadow-glow-cyan hover:scale-[1.02]'

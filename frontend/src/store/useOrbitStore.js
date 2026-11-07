@@ -118,10 +118,13 @@ export const useOrbitStore = create((set, get) => ({
   toggleTrainer: () => set((state) => ({ isTrainerOpen: !state.isTrainerOpen })),
   setTrainerOpen: (open) => set({ isTrainerOpen: open }),
 
-  isStartupCalibrationOpen: typeof sessionStorage !== 'undefined' ? !sessionStorage.getItem('orbitguard_calibrated_session') : true,
+  isStartupCalibrationOpen: typeof localStorage !== 'undefined'
+    ? (!localStorage.getItem('orbitguard_calibrated') && !sessionStorage.getItem('orbitguard_calibrated_session'))
+    : false,
   setStartupCalibrationOpen: (open) => {
     if (!open) {
       try {
+        localStorage.setItem('orbitguard_calibrated', 'true');
         sessionStorage.setItem('orbitguard_calibrated_session', 'true');
       } catch {}
     }

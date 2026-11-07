@@ -60,6 +60,10 @@ const AppContent = () => {
   const isStartupCalibrationOpen = useOrbitStore((state) => state.isStartupCalibrationOpen);
   const setStartupCalibrationOpen = useOrbitStore((state) => state.setStartupCalibrationOpen);
 
+  const handleCloseStartupCalibration = useCallback(() => {
+    setStartupCalibrationOpen(false);
+  }, [setStartupCalibrationOpen]);
+
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
   const selectSatellite = useOrbitStore((state) => state.selectSatellite);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
@@ -192,7 +196,7 @@ const AppContent = () => {
       <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       <InterviewTrainer isOpen={isTrainerOpen} onClose={() => setTrainerOpen(false)} />
       <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setOnboardingOpen(false)} />
-      <StartupCalibrationModal isOpen={isStartupCalibrationOpen} onClose={() => setStartupCalibrationOpen(false)} />
+      <StartupCalibrationModal isOpen={isStartupCalibrationOpen} onClose={handleCloseStartupCalibration} />
       <main className={`flex-1 relative ${isHomePage ? 'overflow-hidden h-full min-h-0' : ''}`}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
