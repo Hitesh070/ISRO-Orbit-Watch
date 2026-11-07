@@ -458,6 +458,7 @@ export const Dashboard = () => {
                   ))}
                 </Pie>
                 <Tooltip
+                  cursor={{ fill: 'rgba(34, 211, 238, 0.08)' }}
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
                     const d = payload[0];

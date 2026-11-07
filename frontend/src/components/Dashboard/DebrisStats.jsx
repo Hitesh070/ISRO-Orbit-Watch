@@ -14,6 +14,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from 'recharts';
 import { Layers, Flame, Info } from 'lucide-react';
 import { useOrbitStore } from '../../store/useOrbitStore';
@@ -51,7 +52,7 @@ export const DebrisStats = () => {
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={shellStats} margin={{ top: 15, right: 20, left: -10, bottom: 25 }}>
+              <BarChart data={shellStats} margin={{ top: 25, right: 20, left: -10, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis
                   dataKey="shell"
@@ -62,23 +63,42 @@ export const DebrisStats = () => {
                 />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11, fontFamily: 'monospace' }} />
                 <Tooltip
+                  cursor={{ fill: 'rgba(34, 211, 238, 0.08)' }}
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
                     const d = payload[0];
                     return (
-                      <div className="p-2.5 rounded-lg bg-space-950 border border-cyan-500/40 text-xs font-mono shadow-2xl backdrop-blur-md">
-                        <div className="text-slate-300 font-bold">{d.payload.shell}</div>
-                        <div className="mt-1 text-cyan-300 font-bold">
-                          {Number(d.value).toLocaleString()} Tracked Debris
+                      <div className="p-3 rounded-lg bg-space-950/95 border border-cyan-500/50 text-xs font-mono shadow-2xl backdrop-blur-md">
+                        <div className="text-slate-100 font-bold text-sm mb-1.5">{d.payload.shell}</div>
+                        <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs">
+                          <span>Tracked Debris:</span>
+                          <span className="text-white font-extrabold bg-cyan-950 px-2 py-0.5 rounded border border-cyan-500/40 text-sm">
+                            {Number(d.value).toLocaleString()}
+                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          Risk: <span className="font-semibold text-rose-400">{d.payload.density}</span>
+                        <div className="text-[11px] text-slate-300 mt-1.5 flex items-center gap-1.5">
+                          <span>Collision Hazard:</span>
+                          <span className={`font-bold uppercase ${
+                            d.payload.density === 'Critical' ? 'text-rose-400' :
+                            d.payload.density === 'High' ? 'text-amber-400' : 'text-emerald-400'
+                          }`}>
+                            {d.payload.density}
+                          </span>
                         </div>
                       </div>
                     );
                   }}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    fill="#38bdf8"
+                    fontSize={12}
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                    formatter={(val) => Number(val).toLocaleString()}
+                  />
                   {shellStats.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={shellColors[index % shellColors.length]} />
                   ))}
