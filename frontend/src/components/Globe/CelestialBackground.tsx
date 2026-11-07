@@ -1,12 +1,13 @@
 /**
- * CelestialBackground Component (Phase 3 Realistic Solar System & Cosmos)
- * =========================================================================
- * Renders a physically grounded celestial environment around Earth:
- *  - Real-time Astronomical Sun with blazing photosphere and corona flare halo
- *  - The Moon with cratered basaltic texture and real solar phase illumination
- *  - Outer solar system planets: Mars, Jupiter (with Great Red Spot & Galilean moons),
- *    Saturn (with majestic tilted 3D rings), and Venus
- *  - 14,000+ Multi-temperature Stellar Skybox with Milky Way galactic density plane
+ * CelestialBackground Component (Photorealistic Astronomical Cosmos)
+ * ====================================================================
+ * Renders an authentic, deep-space environment:
+ *  - 360° High-Resolution Milky Way Galactic Skybox with authentic galactic core,
+ *    dust absorption lanes (The Great Rift), and cosmic star clouds.
+ *  - 10,000 Precision Pinpoint Stars rendered with an anti-aliased Gaussian
+ *    Airy disc shader (clamped to realistic sub-pixel/pinpoint sizes, zero Minecraft squares).
+ *  - Astronomical Sun with realistic solar photosphere and coronal flare halo.
+ *  - Distant physical Moon with real solar phase illumination (tidally locked).
  */
 
 import React, { useRef, useMemo } from 'react';
@@ -14,11 +15,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   getMoonTexture,
-  getJupiterTexture,
-  getSaturnTexture,
-  getSaturnRingsTexture,
-  getMarsTexture,
   getSunCoronaTexture,
+  getMilkyWaySkyboxTexture,
 } from './celestialTextures';
 
 interface CelestialBackgroundProps {
@@ -26,67 +24,97 @@ interface CelestialBackgroundProps {
   simulatedTimeMs: number;
 }
 
+// Custom Shader for Photorealistic Anti-Aliased Pinpoint Stars
+const StarShaderMaterial = {
+  vertexShader: `
+    attribute float aSize;
+    attribute vec3 aColor;
+    attribute float aAlpha;
+
+    varying vec3 vColor;
+    varying float vAlpha;
+
+    void main() {
+      vColor = aColor;
+      vAlpha = aAlpha;
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      // Realistic astronomical size attenuation with strict upper bound
+      float pSize = aSize * (180.0 / -mvPosition.z);
+      gl_PointSize = clamp(pSize, 1.0, 3.8);
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vColor;
+    varying float vAlpha;
+
+    void main() {
+      // Coordinate relative to center of point (-0.5 to 0.5)
+      vec2 coord = gl_PointCoord - vec2(0.5);
+      float dist = length(coord);
+      if (dist > 0.5) discard;
+
+      // Physically accurate Airy disc with exponential Gaussian core and soft diffraction halo
+      float core = exp(-dist * dist * 38.0);
+      float halo = (1.0 - smoothstep(0.06, 0.5, dist)) * 0.28;
+      float intensity = core + halo;
+
+      gl_FragColor = vec4(vColor, intensity * vAlpha);
+    }
+  `,
+};
+
 export const CelestialBackground: React.FC<CelestialBackgroundProps> = ({
   sunPosition,
-  simulatedTimeMs,
 }) => {
   const sunHaloRef = useRef<THREE.Mesh>(null);
   const moonRef = useRef<THREE.Group>(null);
-  const jupiterRef = useRef<THREE.Group>(null);
-  const saturnRef = useRef<THREE.Group>(null);
-  const marsRef = useRef<THREE.Group>(null);
+  const skyboxRef = useRef<THREE.Mesh>(null);
 
   // Textures generated deterministically in memory
   const moonTexture = useMemo(() => getMoonTexture(), []);
-  const jupiterTexture = useMemo(() => getJupiterTexture(), []);
-  const saturnTexture = useMemo(() => getSaturnTexture(), []);
-  const saturnRingsTexture = useMemo(() => getSaturnRingsTexture(), []);
-  const marsTexture = useMemo(() => getMarsTexture(), []);
   const sunCoronaTexture = useMemo(() => getSunCoronaTexture(), []);
+  const milkyWayTexture = useMemo(() => getMilkyWaySkyboxTexture(), []);
 
-  // Astronomical Sun coordinates in scene space
+  // Astronomical Sun coordinates in scene space (at realistic distance)
   const sunWorldPos = useMemo(() => {
-    const v = new THREE.Vector3(...sunPosition).normalize().multiplyScalar(22.0);
-    return v;
+    return new THREE.Vector3(...sunPosition).normalize().multiplyScalar(42.0);
   }, [sunPosition]);
 
-  // Generate 14,000 Stars with Milky Way Galactic Concentration & Spectral Colors
-  const { starPositions, starColors, starSizes } = useMemo(() => {
-    const count = 14000;
+  // Generate 10,000 Photorealistic Stars with Astronomical Spectral Temperatures
+  const { starGeometry, starMaterial } = useMemo(() => {
+    const count = 10000;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
+    const alphas = new Float32Array(count);
 
-    // Astronomical star spectral color palette (B-V Color Temperatures)
+    // Realistic stellar spectral colors (B-V Color Temperatures)
     const spectralColors = [
-      new THREE.Color('#9bb0ff'), // Class O/B: Blue-White High Temperature
-      new THREE.Color('#ffffff'), // Class A: Pure White
-      new THREE.Color('#fff4e8'), // Class F: Yellow-White
-      new THREE.Color('#ffddaa'), // Class G: Solar Golden Yellow
-      new THREE.Color('#ffb56c'), // Class K: Orange Giant
-      new THREE.Color('#ff7878'), // Class M: Crimson Red Dwarf
-      new THREE.Color('#88e1ff'), // Electric Cyan
+      new THREE.Color('#b5caff'), // Class O/B: Hot blue-white
+      new THREE.Color('#ffffff'), // Class A: Pure diamond white (Sirius, Vega)
+      new THREE.Color('#fff6ec'), // Class F: Pale yellowish white (Procyon)
+      new THREE.Color('#ffe9c4'), // Class G: Solar yellow (Sun, Capella)
+      new THREE.Color('#ffd29e'), // Class K: Light orange (Arcturus, Aldebaran)
+      new THREE.Color('#ff9c80'), // Class M: Deep orange/red (Betelgeuse, Antares)
     ];
 
-    // Galactic plane normal vector (inclined at ~60.2° to celestial equator)
+    // Galactic tilt plane (~60.2° to celestial equator)
     const galacticTilt = (60.2 * Math.PI) / 180;
     const normalG = new THREE.Vector3(0, Math.cos(galacticTilt), Math.sin(galacticTilt)).normalize();
 
     for (let i = 0; i < count; i++) {
       const idx3 = i * 3;
-      const isMilkyWay = i < 5500; // First 5,500 form the dense Milky Way band
+      const isMilkyWay = i < 4500;
 
       let dir: THREE.Vector3;
       if (isMilkyWay) {
-        // Sample closely along the galactic disk plane
         const angle = Math.random() * Math.PI * 2;
         const u = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
-        // Project onto galactic plane
         const tangent = u.clone().cross(normalG).normalize();
-        const thickness = (Math.random() - 0.5) * 0.28;
+        const thickness = (Math.random() + Math.random() - 1.0) * 0.22;
         dir = tangent.clone().addScaledVector(normalG, thickness).normalize();
       } else {
-        // Uniform spherical distribution across deep space
         const u = Math.random();
         const v = Math.random();
         const theta = u * 2.0 * Math.PI;
@@ -98,72 +126,112 @@ export const CelestialBackground: React.FC<CelestialBackgroundProps> = ({
         );
       }
 
-      const dist = 75 + Math.random() * 55;
+      // Distance on outer celestial shell
+      const dist = 90 + Math.random() * 40;
       positions[idx3] = dir.x * dist;
       positions[idx3 + 1] = dir.y * dist;
       positions[idx3 + 2] = dir.z * dist;
 
-      // Color temperature selection
-      const color = spectralColors[Math.floor(Math.random() * spectralColors.length)];
-      const brightness = isMilkyWay ? 0.7 + Math.random() * 0.3 : 0.4 + Math.random() * 0.6;
+      // Color temperature selection: mostly white/blue-white with occasional yellow/orange/red
+      const rand = Math.random();
+      let color: THREE.Color;
+      if (rand < 0.40) color = spectralColors[1]; // White
+      else if (rand < 0.70) color = spectralColors[0]; // Blue-white
+      else if (rand < 0.85) color = spectralColors[2]; // Pale yellow
+      else if (rand < 0.94) color = spectralColors[3]; // Solar yellow
+      else if (rand < 0.98) color = spectralColors[4]; // Orange
+      else color = spectralColors[5]; // Red giant
+
+      // Apparent brightness (magnitude distribution)
+      const isBright = Math.random() < 0.04;
+      const isMedium = Math.random() < 0.18;
+      const brightness = isBright ? 1.0 : isMedium ? 0.75 : 0.35 + Math.random() * 0.35;
+
       colors[idx3] = color.r * brightness;
       colors[idx3 + 1] = color.g * brightness;
       colors[idx3 + 2] = color.b * brightness;
 
-      // Star apparent size
-      sizes[i] = Math.random() < 0.03 ? 2.8 : Math.random() < 0.15 ? 1.8 : 1.0;
+      // Realistic pinpoint sizes: strictly sub-pixel or small point
+      sizes[i] = isBright ? 2.4 : isMedium ? 1.6 : 1.1;
+      alphas[i] = isBright ? 1.0 : isMedium ? 0.85 : 0.55;
     }
 
-    return { starPositions: positions, starColors: colors, starSizes: sizes };
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: StarShaderMaterial.vertexShader,
+      fragmentShader: StarShaderMaterial.fragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    return { starGeometry: geo, starMaterial: mat };
   }, []);
 
-  // Frame animations: solar corona flare pulse and planetary orbits
+  // Frame animations: corona flare pulse and Moon orbit
   useFrame(({ clock }) => {
     const elapsed = clock.getElapsedTime();
 
     // Pulse Sun's coronal flare halo
     if (sunHaloRef.current) {
-      const pulse = 1.0 + Math.sin(elapsed * 1.2) * 0.05;
+      const pulse = 1.0 + Math.sin(elapsed * 1.5) * 0.04;
       sunHaloRef.current.scale.set(pulse, pulse, pulse);
-      sunHaloRef.current.rotation.z = elapsed * 0.02;
+      sunHaloRef.current.rotation.z = elapsed * 0.015;
     }
 
-    // Moon's physical orbit around Earth (~27.3-day synodic cycle)
+    // Moon's physical orbit around Earth at realistic distance
     if (moonRef.current) {
-      const moonPeriodSec = 240; // Visual orbital period
+      const moonPeriodSec = 300;
       const moonAngle = (elapsed / moonPeriodSec) * Math.PI * 2;
-      const moonDist = 13.5;
-      const moonInc = (5.14 * Math.PI) / 180; // 5.14° inclination
+      const moonDist = 26.0; // Distant physical orbit
+      const moonInc = (5.14 * Math.PI) / 180;
       moonRef.current.position.set(
         Math.cos(moonAngle) * moonDist,
         Math.sin(moonAngle) * Math.sin(moonInc) * moonDist,
         Math.sin(moonAngle) * Math.cos(moonInc) * moonDist
       );
-      // Synchronous rotation (tidally locked, rotating with orbit)
+      // Tidally locked rotation
       moonRef.current.rotation.y = moonAngle;
     }
-
-    // Slow planetary axial rotations
-    if (jupiterRef.current) jupiterRef.current.rotation.y = elapsed * 0.03;
-    if (saturnRef.current) saturnRef.current.rotation.y = elapsed * 0.025;
-    if (marsRef.current) marsRef.current.rotation.y = elapsed * 0.02;
   });
 
   return (
     <group>
       {/* =========================================================================
-          1. REAL-TIME PHYSICAL SUN & EXPONENTIAL CORONA RADIATION
+          1. 360° PHOTOREALISTIC DEEP-SPACE MILKY WAY SKYBOX (Radius = 140)
+         ========================================================================= */}
+      <mesh ref={skyboxRef} rotation={[0.42, 0.85, 0.2]}>
+        <sphereGeometry args={[140, 48, 48]} />
+        <meshBasicMaterial
+          map={milkyWayTexture}
+          side={THREE.BackSide}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {/* =========================================================================
+          2. DEEP SPACE PINPOINT STARFIELD (Anti-Aliased Circular Shader Disc)
+         ========================================================================= */}
+      <points geometry={starGeometry} material={starMaterial} />
+
+      {/* =========================================================================
+          3. REAL-TIME PHYSICAL ASTRONOMICAL SUN & RADIANT CORONA
          ========================================================================= */}
       <group position={sunWorldPos}>
         {/* Core Solar Photosphere Sphere */}
         <mesh>
-          <sphereGeometry args={[1.65, 32, 32]} />
-          <meshBasicMaterial color="#fffbe6" />
+          <sphereGeometry args={[2.2, 32, 32]} />
+          <meshBasicMaterial color="#fffef5" />
         </mesh>
 
         {/* High-Energy Solar Flare Inner Corona Billboard */}
         <mesh ref={sunHaloRef}>
-          <planeGeometry args={[9.5, 9.5]} />
+          <planeGeometry args={[12.0, 12.0]} />
           <meshBasicMaterial
             map={sunCoronaTexture}
             transparent
@@ -173,185 +241,36 @@ export const CelestialBackground: React.FC<CelestialBackgroundProps> = ({
           />
         </mesh>
 
-        {/* Outward Radial Lens Flare Ring */}
+        {/* Soft Outer Radial Glare Ring */}
         <mesh>
-          <planeGeometry args={[16.0, 16.0]} />
+          <planeGeometry args={[22.0, 22.0]} />
           <meshBasicMaterial
             map={sunCoronaTexture}
             transparent
-            opacity={0.35}
+            opacity={0.32}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             side={THREE.DoubleSide}
           />
         </mesh>
 
-        {/* Omnidirectional Solar Light source */}
-        <pointLight intensity={3.5} distance={70} decay={1.2} color="#fff6e5" />
+        {/* Omnidirectional High-Intensity Solar Light Source */}
+        <pointLight intensity={4.2} distance={120} decay={1.0} color="#fff8eb" />
       </group>
 
       {/* =========================================================================
-          2. THE MOON (Tidally Locked with Real Solar Phase Illumination)
+          4. THE MOON (Distant, Tidally Locked, with Physical Solar Phases)
          ========================================================================= */}
-      <group ref={moonRef} position={[13.5, 0.4, 0]}>
+      <group ref={moonRef} position={[26.0, 0.5, 0]}>
         <mesh receiveShadow castShadow>
-          <sphereGeometry args={[0.32, 32, 32]} />
+          <sphereGeometry args={[0.42, 32, 32]} />
           <meshStandardMaterial
             map={moonTexture}
             roughness={0.92}
-            metalness={0.05}
-          />
-        </mesh>
-
-        {/* Delicate lunar twilight limb */}
-        <mesh>
-          <sphereGeometry args={[0.325, 32, 32]} />
-          <meshBasicMaterial
-            color="#94a3b8"
-            transparent
-            opacity={0.08}
-            side={THREE.BackSide}
+            metalness={0.02}
           />
         </mesh>
       </group>
-
-      {/* =========================================================================
-          3. MARS (The Red Planet with Polar Caps)
-         ========================================================================= */}
-      <group ref={marsRef} position={[-26.0, 7.5, -18.0]}>
-        <mesh>
-          <sphereGeometry args={[0.38, 32, 32]} />
-          <meshStandardMaterial
-            map={marsTexture}
-            roughness={0.85}
-            metalness={0.1}
-          />
-        </mesh>
-        {/* Subtle atmospheric reddish haze */}
-        <mesh>
-          <sphereGeometry args={[0.39, 32, 32]} />
-          <meshBasicMaterial
-            color="#f97316"
-            transparent
-            opacity={0.12}
-            side={THREE.BackSide}
-          />
-        </mesh>
-      </group>
-
-      {/* =========================================================================
-          4. JUPITER (Gas Giant with Great Red Spot & Galilean Moons)
-         ========================================================================= */}
-      <group ref={jupiterRef} position={[36.0, -11.0, -28.0]}>
-        <mesh>
-          <sphereGeometry args={[1.25, 32, 32]} />
-          <meshStandardMaterial
-            map={jupiterTexture}
-            roughness={0.65}
-            metalness={0.05}
-          />
-        </mesh>
-
-        {/* Jovian Atmospheric Glow */}
-        <mesh>
-          <sphereGeometry args={[1.28, 32, 32]} />
-          <meshBasicMaterial
-            color="#fed7aa"
-            transparent
-            opacity={0.1}
-            side={THREE.BackSide}
-          />
-        </mesh>
-
-        {/* 4 Galilean Moons (Io, Europa, Ganymede, Callisto) */}
-        <mesh position={[1.9, 0.1, 0.4]}>
-          <sphereGeometry args={[0.04, 8, 8]} />
-          <meshBasicMaterial color="#fef08a" />
-        </mesh>
-        <mesh position={[2.5, -0.15, -0.6]}>
-          <sphereGeometry args={[0.035, 8, 8]} />
-          <meshBasicMaterial color="#e2e8f0" />
-        </mesh>
-        <mesh position={[3.3, 0.25, 0.9]}>
-          <sphereGeometry args={[0.06, 8, 8]} />
-          <meshBasicMaterial color="#cbd5e1" />
-        </mesh>
-        <mesh position={[4.2, -0.2, -1.2]}>
-          <sphereGeometry args={[0.05, 8, 8]} />
-          <meshBasicMaterial color="#94a3b8" />
-        </mesh>
-      </group>
-
-      {/* =========================================================================
-          5. SATURN (Golden Gas Giant with Majestic Tilted 3D Rings)
-         ========================================================================= */}
-      <group ref={saturnRef} position={[-42.0, -15.0, 32.0]}>
-        {/* Saturn Planet Sphere */}
-        <mesh>
-          <sphereGeometry args={[0.85, 32, 32]} />
-          <meshStandardMaterial
-            map={saturnTexture}
-            roughness={0.7}
-            metalness={0.05}
-          />
-        </mesh>
-
-        {/* Saturn 3D Rings System (Tilted at 26.7°) */}
-        <mesh rotation={[Math.PI * 0.38, 0.2, 0]}>
-          <ringGeometry args={[1.15, 2.35, 64]} />
-          <meshStandardMaterial
-            map={saturnRingsTexture}
-            side={THREE.DoubleSide}
-            transparent
-            opacity={0.88}
-            roughness={0.6}
-          />
-        </mesh>
-      </group>
-
-      {/* =========================================================================
-          6. VENUS (Brilliant Morning/Evening Celestial Star)
-         ========================================================================= */}
-      <group position={[18.0, 12.0, 14.0]}>
-        <mesh>
-          <sphereGeometry args={[0.26, 16, 16]} />
-          <meshBasicMaterial color="#fffbeb" />
-        </mesh>
-        <mesh>
-          <planeGeometry args={[1.6, 1.6]} />
-          <meshBasicMaterial
-            map={sunCoronaTexture}
-            transparent
-            opacity={0.65}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </group>
-
-      {/* =========================================================================
-          7. DEEP SPACE COSMIC STARFIELD (14,000 Multi-Colored Stellar Points)
-         ========================================================================= */}
-      <points>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[starPositions, 3]}
-          />
-          <bufferAttribute
-            attach="attributes-color"
-            args={[starColors, 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={1.3}
-          vertexColors
-          transparent
-          opacity={0.92}
-          sizeAttenuation={true}
-        />
-      </points>
     </group>
   );
 };

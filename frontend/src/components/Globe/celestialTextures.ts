@@ -331,3 +331,167 @@ export function getSunCoronaTexture(): THREE.CanvasTexture {
   textureCache.set('sun_corona', texture);
   return texture;
 }
+
+/**
+ * Procedural Photorealistic Milky Way Skybox Panorama Texture (2048x1024)
+ * Generates an authentic deep-space panoramic cosmos:
+ *  - Infinite cosmic dark velvet base (#010206)
+ *  - Tilted galactic plane (~60.2° inclination)
+ *  - Radiant golden-pearl galactic core bulge (Sagittarius A*)
+ *  - Diffuse star clouds (Scutum, Cygnus, Carina)
+ *  - Interstellar dark dust absorption lanes (The Great Rift)
+ *  - 25,000 microscopic embedded background stars
+ */
+export function getMilkyWaySkyboxTexture(): THREE.CanvasTexture {
+  if (textureCache.has('milkyway')) return textureCache.get('milkyway')!;
+
+  if (typeof document === 'undefined') {
+    return new THREE.Texture() as THREE.CanvasTexture;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d')!;
+
+  // 1. Deepest Cosmic Black Base with faint ambient starlight
+  ctx.fillStyle = '#010206';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 2. Faint cosmic infrared / cosmic dust background glow
+  const baseGrad = ctx.createRadialGradient(
+    canvas.width * 0.45,
+    canvas.height * 0.5,
+    50,
+    canvas.width * 0.45,
+    canvas.height * 0.5,
+    canvas.width * 0.5
+  );
+  baseGrad.addColorStop(0.0, 'rgba(18, 24, 45, 0.4)');
+  baseGrad.addColorStop(0.4, 'rgba(8, 12, 25, 0.2)');
+  baseGrad.addColorStop(1.0, 'rgba(1, 2, 6, 0.0)');
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 3. Galactic Plane Spline Curve (Sinusoidal projection of the inclined galactic disk)
+  const getGalacticY = (x: number) => {
+    return canvas.height * 0.5 + Math.sin((x / canvas.width) * Math.PI * 2 - 0.7) * (canvas.height * 0.28);
+  };
+
+  // 4. Paint Broad Diffuse Galactic Star Cloud Band
+  const steps = 120;
+  for (let i = 0; i <= steps; i++) {
+    const x = (i / steps) * canvas.width;
+    const y = getGalacticY(x);
+
+    // Distance to Galactic Core (centered near x = 0.46 * width)
+    const distToCore = Math.abs(x - canvas.width * 0.46);
+    const coreFactor = Math.max(0, 1.0 - distToCore / (canvas.width * 0.35));
+
+    const cloudRadius = 70 + coreFactor * 90;
+    const grad = ctx.createRadialGradient(x, y, 5, x, y, cloudRadius);
+    const coreAlpha = (0.16 + coreFactor * 0.35).toFixed(3);
+    const midAlpha = (0.08 + coreFactor * 0.18).toFixed(3);
+    grad.addColorStop(0.0, `rgba(${Math.round(210 + coreFactor * 45)}, ${Math.round(215 + coreFactor * 30)}, ${Math.round(245 - coreFactor * 35)}, ${coreAlpha})`);
+    grad.addColorStop(0.5, `rgba(160, 180, 225, ${midAlpha})`);
+    grad.addColorStop(1.0, 'rgba(1, 2, 6, 0)');
+
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(x, y, cloudRadius * 1.6, cloudRadius, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 5. Galactic Bulge (The Golden Core in Sagittarius)
+  const coreX = canvas.width * 0.46;
+  const coreY = getGalacticY(coreX);
+  const coreGrad = ctx.createRadialGradient(coreX, coreY, 10, coreX, coreY, 180);
+  coreGrad.addColorStop(0.0, 'rgba(255, 245, 220, 0.75)');
+  coreGrad.addColorStop(0.2, 'rgba(255, 225, 175, 0.55)');
+  coreGrad.addColorStop(0.5, 'rgba(210, 185, 145, 0.28)');
+  coreGrad.addColorStop(0.8, 'rgba(120, 130, 180, 0.10)');
+  coreGrad.addColorStop(1.0, 'rgba(1, 2, 6, 0.0)');
+
+  ctx.save();
+  ctx.translate(coreX, coreY);
+  ctx.rotate(0.35);
+  ctx.scale(2.2, 1.0);
+  ctx.beginPath();
+  ctx.arc(0, 0, 120, 0, Math.PI * 2);
+  ctx.fillStyle = coreGrad;
+  ctx.fill();
+  ctx.restore();
+
+  // 6. Interstellar Dark Dust Absorption Lanes (The Great Rift)
+  ctx.fillStyle = 'rgba(1, 2, 6, 0.72)';
+  for (let i = 0; i < 70; i++) {
+    const x = canvas.width * 0.32 + (i / 70) * (canvas.width * 0.38);
+    const gy = getGalacticY(x);
+    const yOffset = (Math.sin(i * 0.4) * 18) + (Math.sin(i * 1.1) * 8);
+    const rx = 18 + Math.sin(i) * 10;
+    const ry = 8 + Math.cos(i * 0.8) * 5;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(x, gy + yOffset, rx, ry, 0.25, 0, Math.PI * 2);
+    ctx.filter = 'blur(6px)';
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.filter = 'none';
+
+  // 7. Subtle Hydrogen-Alpha Emission Nebulae (Carina / Orion / Cygnus)
+  const nebulae = [
+    { x: canvas.width * 0.28, y: getGalacticY(canvas.width * 0.28) + 15, color: 'rgba(230, 60, 110, 0.18)', r: 45 },
+    { x: canvas.width * 0.65, y: getGalacticY(canvas.width * 0.65) - 20, color: 'rgba(215, 50, 95, 0.16)', r: 55 },
+    { x: canvas.width * 0.42, y: getGalacticY(canvas.width * 0.42) - 30, color: 'rgba(50, 150, 220, 0.15)', r: 40 },
+  ];
+  for (const n of nebulae) {
+    const nGrad = ctx.createRadialGradient(n.x, n.y, 2, n.x, n.y, n.r);
+    nGrad.addColorStop(0.0, n.color);
+    nGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = nGrad;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 8. Scatter 22,000 Microscopic Stellar Points
+  const starCount = 22000;
+  for (let i = 0; i < starCount; i++) {
+    let sx: number;
+    let sy: number;
+    const inGalacticBand = i < 16000;
+
+    if (inGalacticBand) {
+      sx = Math.random() * canvas.width;
+      const gy = getGalacticY(sx);
+      const gOffset = (Math.random() + Math.random() + Math.random() - 1.5) * 60;
+      sy = gy + gOffset;
+      if (sy < 0) sy += canvas.height;
+      if (sy >= canvas.height) sy -= canvas.height;
+    } else {
+      sx = Math.random() * canvas.width;
+      sy = Math.random() * canvas.height;
+    }
+
+    const bright = Math.random();
+    const alpha = (0.2 + bright * 0.75).toFixed(2);
+    const size = bright > 0.98 ? 1.5 : bright > 0.85 ? 1.0 : 0.6;
+
+    let starColor = `rgba(255, 255, 255, ${alpha})`;
+    if (bright < 0.15) starColor = `rgba(180, 210, 255, ${alpha})`;
+    else if (bright > 0.95) starColor = `rgba(255, 220, 170, ${alpha})`;
+
+    ctx.fillStyle = starColor;
+    ctx.fillRect(sx, sy, size, size);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  textureCache.set('milkyway', texture);
+  return texture;
+}
