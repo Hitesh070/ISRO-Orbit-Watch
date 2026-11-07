@@ -98,14 +98,6 @@ export function createApplicationMenu(
           },
         },
         {
-          label: '&ISRO / HAL Technical Interview Simulator',
-          accelerator: 'CmdOrCtrl+I',
-          click: () => {
-            mainWindow.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'i' });
-            mainWindow.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'i' });
-          },
-        },
-        {
           label: 'System &Settings',
           accelerator: 'CmdOrCtrl+,',
           click: () => {

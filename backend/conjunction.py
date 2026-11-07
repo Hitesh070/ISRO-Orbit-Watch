@@ -172,7 +172,7 @@ class ConjunctionDetector:
     ) -> List[Dict[str, Any]]:
         """
         Ensure realistic conjunction predictions exist with countdowns for UI demonstration
-        and interview presentation (e.g. CARTOSAT vs Fengyun debris, ISS vs Cosmos debris).
+        and operational presentation (e.g. CARTOSAT vs Fengyun debris, ISS vs Cosmos debris).
         """
         scenarios = [
             {

@@ -13,7 +13,6 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import PerformanceHUD from './components/common/PerformanceHUD';
 import HelpModal from './components/common/HelpModal';
 import SettingsDrawer from './components/common/SettingsDrawer';
-import InterviewTrainer from './features/interview/InterviewTrainer';
 import OnboardingModal from './components/common/OnboardingModal';
 import StartupCalibrationModal from './components/common/StartupCalibrationModal';
 import { platform } from './platform';
@@ -52,9 +51,6 @@ const AppContent = () => {
   const isSettingsOpen = useOrbitStore((state) => state.isSettingsOpen);
   const setSettingsOpen = useOrbitStore((state) => state.setSettingsOpen);
   const toggleSettings = useOrbitStore((state) => state.toggleSettings);
-  const isTrainerOpen = useOrbitStore((state) => state.isTrainerOpen);
-  const setTrainerOpen = useOrbitStore((state) => state.setTrainerOpen);
-  const toggleTrainer = useOrbitStore((state) => state.toggleTrainer);
   const isOnboardingOpen = useOrbitStore((state) => state.isOnboardingOpen);
   const setOnboardingOpen = useOrbitStore((state) => state.setOnboardingOpen);
   const isStartupCalibrationOpen = useOrbitStore((state) => state.isStartupCalibrationOpen);
@@ -147,15 +143,12 @@ const AppContent = () => {
         toggleHelp();
       } else if (e.key === '`' || e.key === '~') {
         toggleHud();
-      } else if (e.key === 'i' || e.key === 'I') {
-        toggleTrainer();
       } else if (e.key === ',') {
         toggleSettings();
       } else if (e.key === 'Escape') {
         selectSatellite(null);
         setHelpOpen(false);
         setSettingsOpen(false);
-        setTrainerOpen(false);
         setOnboardingOpen(false);
       } else if (e.key === '1') {
         setSimulationSpeed(1);
@@ -171,12 +164,10 @@ const AppContent = () => {
   }, [
     toggleHelp,
     toggleHud,
-    toggleTrainer,
     toggleSettings,
     selectSatellite,
     setHelpOpen,
     setSettingsOpen,
-    setTrainerOpen,
     setOnboardingOpen,
     setSimulationSpeed,
     catalog,
@@ -194,7 +185,6 @@ const AppContent = () => {
       <PerformanceHUD />
       <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
       <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
-      <InterviewTrainer isOpen={isTrainerOpen} onClose={() => setTrainerOpen(false)} />
       <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setOnboardingOpen(false)} />
       <StartupCalibrationModal isOpen={isStartupCalibrationOpen} onClose={handleCloseStartupCalibration} />
       <main className={`flex-1 relative ${isHomePage ? 'overflow-hidden h-full min-h-0' : ''}`}>

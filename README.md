@@ -23,7 +23,6 @@
 - **Windows Hardware & Serial Setup Guide**: [`docs/hardware/WINDOWS_SERIAL_SETUP.md`](docs/hardware/WINDOWS_SERIAL_SETUP.md)
 - **Windows Testing & Verification Matrix**: [`docs/WINDOWS_TESTING.md`](docs/WINDOWS_TESTING.md)
 - **ADR 003 (Electron Architecture Choice)**: [`docs/adr/003-electron-over-tauri.md`](docs/adr/003-electron-over-tauri.md)
-- **Technical Interview Notes**: [`docs/INTERVIEW_NOTES.md`](docs/INTERVIEW_NOTES.md)
 - **90-Second Demo Presentation Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
 ---

@@ -21,7 +21,6 @@ import {
   Share2,
   Check,
   Settings,
-  GraduationCap,
 } from 'lucide-react';
 import { useOrbitStore, getShareableUrl } from '../../store/useOrbitStore';
 import { LocationModal } from '../common/LocationModal';
@@ -40,7 +39,6 @@ export const Navbar = () => {
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
   const toggleHelp = useOrbitStore((state) => state.toggleHelp);
   const toggleSettings = useOrbitStore((state) => state.toggleSettings);
-  const toggleTrainer = useOrbitStore((state) => state.toggleTrainer);
   const settings = useOrbitStore((state) => state.settings);
   const filters = useOrbitStore((state) => state.filters);
 
@@ -269,18 +267,6 @@ export const Navbar = () => {
               }`}
             >
               {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-            </button>
-
-            {/* ISRO & HAL Interview Trainer */}
-            <button
-              onClick={toggleTrainer}
-              title="Launch ISRO & HAL Technical Interview Simulator (I)"
-              className="p-1.5 rounded-lg bg-space-900 border border-slate-700 hover:border-amber-400 text-amber-300 hover:text-amber-100 transition shadow-sm relative group"
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span className="hidden lg:group-hover:block absolute top-full mt-2 right-0 z-50 bg-space-950 border border-amber-500/40 text-[10px] text-amber-300 font-mono px-2 py-0.5 rounded whitespace-nowrap shadow-2xl">
-                ISRO / HAL Simulator (I)
-              </span>
             </button>
 
             {/* Performance HUD Toggle */}

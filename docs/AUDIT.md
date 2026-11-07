@@ -2,7 +2,7 @@
 **Document Version:** 1.0.0  
 **Date:** November 2026  
 **Author:** OrbitGuard Aerospace Software & Systems Engineering Team  
-**Evaluation Target:** Technical Interview Rigor (ISRO / HAL / Satellite Ground Operations)  
+**Evaluation Target:** Aerospace Industry Standards (Satellite Ground Operations)  
 **Status:** Audit Complete — Pending Approval (Zero Code Modified)
 
 ---
@@ -11,7 +11,7 @@
 
 OrbitGuard is currently at release **v2.1**, deployed on Vercel at [https://orbit-guard-tan.vercel.app](https://orbit-guard-tan.vercel.app). The application provides an interactive 3D Earth globe, real-time SGP4 propagation for a curated catalog of ~30 satellites and space debris objects, conjunction alerts, ground station pass predictions, and space debris analytics.
 
-While the existing application demonstrates a visually appealing UI and functional end-to-end integration, this technical audit reveals critical architectural bottlenecks, astrodynamic coordinate frame inconsistencies, serverless runtime constraints, and heuristic approximations that must be overhauled to meet aerospace industry standards and withstand rigorous technical scrutiny at organizations such as **ISRO** (ISTRAC/SDSC) and **HAL**.
+While the existing application demonstrates a visually appealing UI and functional end-to-end integration, this technical audit reveals critical architectural bottlenecks, astrodynamic coordinate frame inconsistencies, serverless runtime constraints, and heuristic approximations that must be overhauled to meet aerospace industry standards and withstand rigorous technical scrutiny in professional aerospace satellite operations.
 
 ### Core Audit Verdicts
 1. **APScheduler on Vercel is Ineffective:** Background threads cannot persist on serverless platforms. Ingestion must transition to a dedicated CI/CD pipeline (GitHub Actions cron).
@@ -281,7 +281,7 @@ Where:
    - Positional error covariance matrices $\mathbf{C}_1, \mathbf{C}_2$ projected onto the B-plane / encounter plane.
    - Combined hard-body radius (HBR).
    - Integration of the 2-D bivariate normal distribution over the collision cross-section (Foster 1992 method).
-3. **Interview Vulnerability:** Presenting the current score as "Collision Probability" in an ISRO or HAL interview will result in immediate disqualification of credibility.
+3. **Operational Vulnerability:** Presenting heuristic scores as physical Collision Probability undermines operational credibility.
 4. **Resolution (Phase 3):**
    - Explicitly rename the heuristic metric to **"Congestion Index"** in the UI.
    - Implement industry-standard **Foster-1992 2-D $P_c$** and **Akella-Alfriend Maximum $P_c$** in the pipeline using synthetic Radial-Transverse-Normal (RTN) error models.
@@ -298,7 +298,7 @@ flowchart LR
     P2 --> P3["Phase 3: Astrodynamics\nConjunction Engine (Foster Pc)"]
     P3 --> P4["Phase 4: EEE/RF Ground Station\n(Doppler & Link Budget)"]
     P4 --> P5["Phase 5: Antenna Rotator\nHardware & ESP32 Controller"]
-    P5 --> P6["Phase 6: Polish, Verification\n& Interview Dossier"]
+    P5 --> P6["Phase 6: Polish, Verification\n& Verification"]
 ```
 
 | Phase | Core Objective | Key Deliverables | Risk / Complexity |
@@ -306,9 +306,9 @@ flowchart LR
 | **Phase 1** | **Architecture & Data Pipeline** | • GitHub Actions cron (`refresh-data.yml`) every 6h<br>• CelesTrak OMM/GP JSON ingestion<br>• Vallado SGP4 verification test suite (`SGP4-VER.TLE`)<br>• TypeScript strict migration baseline<br>• Decayed object & stale TLE epoch flagging | Low risk, foundational |
 | **Phase 2** | **25,000+ Objects at 60 FPS** | • Web Worker propagator with transferable `Float32Array` ping-pong buffers<br>• Single `THREE.Points` draw call with vertex shader extrapolation<br>• Inertial TEME/ECI frame + GMST Earth rotation<br>• GPU Color-ID picking | High graphical complexity |
 | **Phase 3** | **Industry Conjunction Engine** | • Foster-1992 2-D $P_c$ & Akella-Alfriend Maximum $P_c$<br>• Synthetic RTN covariance generator with CDM parser stub<br>• B-plane / encounter-plane ellipse visualizer<br>• CelesTrak SOCRATES cross-validation suite | High mathematical depth |
-| **Phase 4** | **EEE/RF Ground Station Toolkit** | • Client-side topocentric pass predictor (`satellite.js`)<br>• Rigorous Doppler shift with Earth rotation velocity compensation ($\Delta f = -f_0 \dot{\rho}/c$)<br>• Dynamic link budget (FSPL, atmospheric absorption, $C/N_0$, $E_b/N_0$, margin)<br>• Polar sky plot & antenna tracking look angles | High domain relevance for ISRO/HAL EEE |
+| **Phase 4** | **EEE/RF Ground Station Toolkit** | • Client-side topocentric pass predictor (`satellite.js`)<br>• Rigorous Doppler shift with Earth rotation velocity compensation ($\Delta f = -f_0 \dot{\rho}/c$)<br>• Dynamic link budget (FSPL, atmospheric absorption, $C/N_0$, $E_b/N_0$, margin)<br>• Polar sky plot & antenna tracking look angles | High domain relevance for RF Ground Operations |
 | **Phase 5** | **Antenna Rotator Controller** | • Web Serial API & local WebSocket bridge (`orbitguard-bridge`)<br>• GS-232, Easycomm, and Hamlib `rotctld` protocol encoders<br>• Azimuth cable-unwrapping & zenith-keyhole avoidance<br>• Complete ESP32 dual-axis stepper driver firmware (`AccelStepper` + TMC2209) | Embedded / hardware showcase |
-| **Phase 6** | **Polish & Interview Release** | • URL state deep-linking & full responsive design<br>• Mathematical derivations in `docs/math/*.md`<br>• `docs/INTERVIEW_NOTES.md` with candidate Q&A for ISRO/HAL<br>• Git release tags (`v3.0` – `v3.4`) | High presentation polish |
+| **Phase 6** | **Polish & Verification Release** | • URL state deep-linking & full responsive design<br>• Mathematical derivations in `docs/math/*.md`<br>• Git release tags (`v3.0` – `v3.4`) | High presentation polish |
 
 ---
 

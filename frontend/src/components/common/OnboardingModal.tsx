@@ -15,7 +15,6 @@ import {
   Globe,
   Radio,
   ShieldAlert,
-  GraduationCap,
   Sparkles,
   ArrowRight,
   ArrowLeft,
@@ -78,16 +77,16 @@ const SLIDES = [
     ],
   },
   {
-    icon: GraduationCap,
+    icon: Sparkles,
     badge: 'Ready for Launch',
-    title: 'Essential Hotkeys & Interview Trainer',
+    title: 'Essential Hotkeys & Navigation',
     description:
-      'You are ready to explore! Use quick keyboard shortcuts to navigate efficiently, or launch the built-in Technical Interview Simulator to practice whiteboard defense for ISRO Scientist / Engineer panels.',
+      'You are ready to explore! Use quick keyboard shortcuts to navigate views efficiently, warp simulation speeds, and inspect orbital telemetry.',
     points: [
       'Press [ ? ] for full documentation & architectural reference.',
       'Press [ ~ ] or [ ` ] to toggle the real-time Performance & Worker Latency HUD.',
       'Press [ 1 ], [ 5 ], [ 6 ] to warp simulation time (1x, 5x, 60x fast-forward).',
-      'Press [ I ] or click the graduation cap icon to launch the Interview Simulator.',
+      'Press [ , ] to open Settings & Measurement Units.',
     ],
   },
 ];

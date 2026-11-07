@@ -40,7 +40,7 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
-## [v4.2] - 2026-11-06 (Phase 6 Final: Deep-Linking, Settings Drawer, Interview Trainer & Offline PWA)
+## [v4.2] - 2026-11-06 (Phase 6 Final: Deep-Linking, Settings Drawer, Offline PWA)
 ### Added
 - **State Deep-Linking & Share System**: URL query synchronization (`?norad=<id>&speed=<warp>`) with automatic state restoration on load, history push/replace, and one-click "Share State" button in the Navbar.
 - **Persistent Settings Drawer** (`SettingsDrawer.tsx`):
@@ -51,10 +51,6 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   - Synthetic covariance scaling multiplier ($k$).
   - LocalStorage persistence under `orbitguard_settings_v1`.
 - **Spacecraft Favourites & Starred Filter**: 1-click starring of satellites in the telemetry dossier, persistent storage in `orbitguard_favourites`, and dedicated "Starred Favourites Only" filter in the 3D viewport.
-- **Interactive ISRO & HAL Technical Interview Simulator** (`InterviewTrainer.tsx`):
-  - Interactive quiz covering 4 core domains: Astrodynamics & SGP4, Conjunction $P_c$ & Foster Math, EEE/RF Doppler & Link Budgets, and Antenna Rotator Kinematics.
-  - Scoring counter, immediate feedback with mathematical derivations, and "ISRO/HAL Panel Focus" tips.
-  - Whiteboard formula cheat sheet covering all 8 fundamental aerospace equations and physical constants.
   - Keyboard shortcut `I` for instantaneous launch.
 - **First-Visit Onboarding Tour** (`OnboardingModal.tsx`): 5-slide guided walkthrough of OrbitGuard's features, architecture, and controls for new visitors.
 - **90-Second Technical Demo Script** (`docs/DEMO_SCRIPT.md`): Professional timestamped script for portfolio video demonstrations and panel defense.
@@ -66,7 +62,6 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ## [v4.1] - 2026-11-06 (Phase 6: Release & Technical Polish)
 ### Added
 - **Global In-App Help & Shortcuts Modal** (`HelpModal.tsx`): Keyboard shortcuts (`~`, `?`, `Esc`, `1`, `5`, `6`), astrodynamics architecture summary, and operational scientific assumptions.
-- **Technical Interview Defense Guide** (`docs/INTERVIEW_NOTES.md`): Module-by-module equations, assumptions, limitations, validation records, and 15 model interview questions for ISRO Scientist/Engineer 'SC' and HAL positions.
 - **Security & Content Protection**: Content-Security-Policy headers in `vercel.json` and responsible disclosure guidelines in `SECURITY.md`.
 - **Global Keyboard Hotkeys**: Integrated listeners across all routes.
 
