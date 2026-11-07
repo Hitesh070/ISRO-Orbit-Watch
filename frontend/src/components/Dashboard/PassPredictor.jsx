@@ -106,7 +106,7 @@ export const PassPredictor = () => {
     );
   }, [allSatellites, searchTerm]);
 
-  // Auto-detect user's real location on load
+  // Auto-detect user's real location on load with smooth fallback
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -120,22 +120,60 @@ export const PassPredictor = () => {
           fetchPasses(`${lat},${lon}`, selectedNorad);
         },
         () => {
-          // Fallback to Bengaluru (ISRO Headquarters)
-          fetchPasses('bengaluru', selectedNorad);
+          applyFallbackLocation();
         },
-        { timeout: 8000 }
+        { timeout: 4000 }
       );
     } else {
-      fetchPasses('bengaluru', selectedNorad);
+      applyFallbackLocation();
     }
   }, []);
 
+  // Auto-dismiss geo status after 6 seconds
+  useEffect(() => {
+    if (!geoStatus) return;
+    const timer = setTimeout(() => setGeoStatus(null), 6000);
+    return () => clearTimeout(timer);
+  }, [geoStatus]);
+
+  const applyFallbackLocation = async () => {
+    // 1. Try fast IP-based geolocation fallback
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const ipData = await res.json();
+        if (ipData.latitude && ipData.longitude) {
+          const lat = Number(Number(ipData.latitude).toFixed(4));
+          const lon = Number(Number(ipData.longitude).toFixed(4));
+          const city = ipData.city || 'Local Station';
+          setCustomLat(String(lat));
+          setCustomLon(String(lon));
+          setIsCustom(true);
+          setGeoStatus(`Active Location: ${city} (${lat}°, ${lon}°)`);
+          fetchPasses(`${lat},${lon}`, selectedNorad);
+          return;
+        }
+      }
+    } catch {}
+
+    // 2. Fallback to active Ground Station from store (e.g. NRSC Hyderabad / ISRO HQ)
+    const obs = useOrbitStore.getState().observerLocation;
+    const fallbackLat = obs?.lat ?? 17.3850;
+    const fallbackLon = obs?.lon ?? 78.4867;
+    const fallbackName = obs?.name || 'NRSC Hyderabad (ISRO Ground Station)';
+    setCustomLat(String(fallbackLat));
+    setCustomLon(String(fallbackLon));
+    setIsCustom(true);
+    setGeoStatus(`Ground Station: ${fallbackName}`);
+    fetchPasses(`${fallbackLat},${fallbackLon}`, selectedNorad);
+  };
+
   const handleDetectLocation = () => {
     if (!('geolocation' in navigator)) {
-      setGeoStatus('Geolocation not supported by this browser.');
+      applyFallbackLocation();
       return;
     }
-    setGeoStatus('Acquiring GPS coordinates...');
+    setGeoStatus('Acquiring location...');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = Number(position.coords.latitude.toFixed(4));
@@ -143,13 +181,14 @@ export const PassPredictor = () => {
         setCustomLat(String(lat));
         setCustomLon(String(lon));
         setIsCustom(true);
-        setGeoStatus(`Acquired: ${lat}° N, ${lon}° E`);
+        setGeoStatus(`GPS Acquired: ${lat}° N, ${lon}° E`);
         fetchPasses(`${lat},${lon}`, selectedNorad);
       },
-      (err) => {
-        setGeoStatus(`Location access denied or timed out (${err.message}).`);
+      () => {
+        // Smoothly fall back without showing error banner
+        applyFallbackLocation();
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 4000 }
     );
   };
 
@@ -222,9 +261,19 @@ export const PassPredictor = () => {
       </div>
 
       {geoStatus && (
-        <div className="text-[11px] font-mono text-cyan-300 bg-cyan-950/40 px-3 py-1.5 rounded-lg border border-cyan-500/30 mb-3 flex items-center gap-2">
-          <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-          <span>{geoStatus}</span>
+        <div className="text-[11px] font-mono text-cyan-300 bg-cyan-950/50 px-3 py-1.5 rounded-lg border border-cyan-500/40 mb-3 flex items-center justify-between gap-2 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="truncate">{geoStatus}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGeoStatus(null)}
+            className="text-slate-400 hover:text-white p-0.5 rounded transition shrink-0"
+            title="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
