@@ -45,7 +45,7 @@ export function setupSessionSecurity(ses: Electron.Session = session.defaultSess
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://celestrak.org https://raw.githubusercontent.com ws://127.0.0.1:* ws://localhost:* wss:",
+      "connect-src 'self' https://celestrak.org https://raw.githubusercontent.com https://ipapi.co ws://127.0.0.1:* ws://localhost:* wss:",
       "frame-ancestors 'none'",
     ].join('; ');
 

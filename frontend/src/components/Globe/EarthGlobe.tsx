@@ -480,7 +480,7 @@ const GlobeScene = () => {
       )}
 
       {/* High-Performance 25,000+ Object Point Cloud (Single GPU Draw Call) */}
-      {catalog.length > 0 && posBuffer && (
+      {catalog.length > 0 && (
         <PointCloud
           catalog={catalog}
           posBuffer={posBuffer}

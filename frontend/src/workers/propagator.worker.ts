@@ -83,9 +83,9 @@ self.onmessage = (event: MessageEvent) => {
         const idx3 = i * 3;
 
         if (!satrec) {
-          positions[idx3] = NaN;
-          positions[idx3 + 1] = NaN;
-          positions[idx3 + 2] = NaN;
+          positions[idx3] = 0;
+          positions[idx3 + 1] = 0;
+          positions[idx3 + 2] = 0;
           velocities[idx3] = 0;
           velocities[idx3 + 1] = 0;
           velocities[idx3 + 2] = 0;
@@ -97,9 +97,9 @@ self.onmessage = (event: MessageEvent) => {
           const pv = satellite.propagate(satrec, date);
 
           if (!pv.position || typeof pv.position === 'boolean' || isNaN((pv.position as any).x)) {
-            positions[idx3] = NaN;
-            positions[idx3 + 1] = NaN;
-            positions[idx3 + 2] = NaN;
+            positions[idx3] = 0;
+            positions[idx3 + 1] = 0;
+            positions[idx3 + 2] = 0;
             velocities[idx3] = 0;
             velocities[idx3 + 1] = 0;
             velocities[idx3 + 2] = 0;
@@ -130,9 +130,12 @@ self.onmessage = (event: MessageEvent) => {
           statuses[i] = 1; // Valid operational state
           validCount++;
         } catch {
-          positions[idx3] = NaN;
-          positions[idx3 + 1] = NaN;
-          positions[idx3 + 2] = NaN;
+          positions[idx3] = 0;
+          positions[idx3 + 1] = 0;
+          positions[idx3 + 2] = 0;
+          velocities[idx3] = 0;
+          velocities[idx3 + 1] = 0;
+          velocities[idx3 + 2] = 0;
           statuses[i] = 0;
         }
       }

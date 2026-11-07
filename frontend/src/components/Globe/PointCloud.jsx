@@ -11,6 +11,7 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import * as satellite from 'satellite.js';
 import { useOrbitStore } from '../../store/useOrbitStore';
 
 // Custom GLSL Shaders for single-draw-call point cloud
@@ -45,7 +46,7 @@ const vertexShader = `
     // Crisp distance-attenuated point size (camera dist ~ 2.0 - 5.0)
     float dist = max(-mvPosition.z, 0.8);
     gl_PointSize = (aSize * 26.0 / dist) * uScale;
-    gl_PointSize = clamp(gl_PointSize, 2.0, 20.0);
+    gl_PointSize = clamp(gl_PointSize, 2.0, 24.0);
   }
 `;
 
@@ -61,9 +62,10 @@ const fragmentShader = `
     float r = length(coord);
     if (r > 0.5) discard;
 
-    float alpha = smoothstep(0.5, 0.15, r);
-    // Core specular glow
-    vec3 col = mix(vColor, vec3(1.0), smoothstep(0.18, 0.0, r) * 0.45);
+    // Strict GLSL edge0 < edge1 compliance
+    float alpha = 1.0 - smoothstep(0.15, 0.5, r);
+    float core = 1.0 - smoothstep(0.0, 0.18, r);
+    vec3 col = mix(vColor, vec3(1.0), core * 0.45);
     gl_FragColor = vec4(col, alpha);
   }
 `;
@@ -98,10 +100,33 @@ export const PointCloud = ({
     const sizes = new Float32Array(count);
     const visibilities = new Float32Array(count);
 
+    const now = new Date();
+    const KM_TO_SCENE = 1.0 / 6378.137;
+
     for (let i = 0; i < count; i++) {
       const item = catalog[i];
       const isISRO = item.is_isro || false;
       const isDebris = item.object_type === 'Debris' || item.object_type === 'Rocket Body';
+
+      // Immediate initial propagation so satellites render on frame 1 without waiting for worker
+      if (item.line1 && item.line2) {
+        try {
+          const satrec = satellite.twoline2satrec(item.line1, item.line2);
+          if (satrec && !satrec.error) {
+            const pv = satellite.propagate(satrec, now);
+            if (pv.position && typeof pv.position !== 'boolean' && !isNaN(pv.position.x)) {
+              positions[i * 3] = pv.position.x * KM_TO_SCENE;
+              positions[i * 3 + 1] = pv.position.z * KM_TO_SCENE;
+              positions[i * 3 + 2] = -pv.position.y * KM_TO_SCENE;
+              if (pv.velocity && typeof pv.velocity !== 'boolean') {
+                velocities[i * 3] = pv.velocity.x * KM_TO_SCENE;
+                velocities[i * 3 + 1] = pv.velocity.z * KM_TO_SCENE;
+                velocities[i * 3 + 2] = -pv.velocity.y * KM_TO_SCENE;
+              }
+            }
+          }
+        } catch {}
+      }
 
       // Colors: Saffron for ISRO (#FF9933), Cyan for active payloads, Rose for debris
       let r = 0.0, g = 0.94, b = 1.0;
@@ -136,8 +161,8 @@ export const PointCloud = ({
     geo.setAttribute('aSize', sAttr);
     geo.setAttribute('aVisible', vAttr);
 
-    // Initial dummy bounding sphere
-    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 10.0);
+    // Fixed generous bounding sphere
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 25.0);
 
     return { geometry: geo, colorAttr: cAttr, sizeAttr: sAttr, visibleAttr: vAttr };
   }, [count, catalog]);
@@ -165,9 +190,6 @@ export const PointCloud = ({
 
       posAttr.needsUpdate = true;
       velAttr.needsUpdate = true;
-
-      // Keep bounding sphere valid
-      geometry.computeBoundingSphere();
     }
   }, [posBuffer, velBuffer, geometry, count]);
 
