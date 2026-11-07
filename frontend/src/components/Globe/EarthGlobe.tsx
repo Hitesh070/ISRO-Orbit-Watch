@@ -17,7 +17,7 @@
  */
 
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import * as satellite from 'satellite.js';
@@ -250,6 +250,33 @@ const EarthFallback = () => (
  * Main Interactive Canvas Viewport Scene (Runs strictly within Canvas Context)
  */
 const GlobeScene = () => {
+  const cameraAction = useOrbitStore((state) => state.cameraAction);
+  const { camera } = useThree();
+  const controlsRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!cameraAction || !controlsRef.current) return;
+    const controls = controlsRef.current;
+    if (cameraAction.type === 'reset') {
+      controls.target.set(0.15, 0, 0);
+      camera.position.set(0.15, 0.55, 2.25);
+      controls.update();
+    } else if (cameraAction.type === 'zoomIn') {
+      const offset = camera.position.clone().sub(controls.target);
+      if (offset.length() > 1.2) {
+        offset.multiplyScalar(0.78);
+        camera.position.copy(controls.target).add(offset);
+        controls.update();
+      }
+    } else if (cameraAction.type === 'zoomOut') {
+      const offset = camera.position.clone().sub(controls.target);
+      if (offset.length() < 11.0) {
+        offset.multiplyScalar(1.28);
+        camera.position.copy(controls.target).add(offset);
+        controls.update();
+      }
+    }
+  }, [cameraAction, camera]);
   const catalog = useOrbitStore((state) => state.catalog);
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
   const selectSatellite = useOrbitStore((state) => state.selectSatellite);
@@ -346,15 +373,17 @@ const GlobeScene = () => {
 
       {/* Camera Orbit Controls (autoRotate disabled: deep space remains steady, globe rotates on its axis) */}
       <OrbitControls
+        ref={controlsRef}
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
         autoRotate={false}
-        minDistance={1.25}
-        maxDistance={8.5}
-        rotateSpeed={0.5}
-        zoomSpeed={0.8}
-        dampingFactor={0.08}
+        target={[0.15, 0, 0]}
+        minDistance={1.15}
+        maxDistance={11.0}
+        rotateSpeed={0.65}
+        zoomSpeed={1.2}
+        dampingFactor={0.06}
       />
     </>
   );
@@ -364,7 +393,7 @@ export const EarthGlobe = () => {
   return (
     <div className="relative w-full h-full bg-space-950 select-none">
       <Canvas
-        camera={{ position: [0, 1.8, 2.8], fov: 45 }}
+        camera={{ position: [0.15, 0.55, 2.25], fov: 42 }}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         dpr={[1, 2]}
       >

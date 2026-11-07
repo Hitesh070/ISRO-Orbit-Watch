@@ -112,8 +112,8 @@ export const FilterPanel = () => {
         }`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm">????</span>
-          <span className="text-[11px]">Indian Satellites Only (ISRO)</span>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">ISRO</span>
+          <span className="text-[11px] font-medium">Indian Satellites Only</span>
         </div>
         <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${filters.indianSatsOnly ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50' : 'bg-space-900 text-slate-400'}`}>
           {filters.indianSatsOnly ? 'Active (79)' : 'All Active'}

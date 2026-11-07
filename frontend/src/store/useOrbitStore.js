@@ -150,6 +150,10 @@ export const useOrbitStore = create((set, get) => ({
   setSimulatedTimeMs: (ms) => set({ simulatedTimeMs: ms }),
   setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
 
+  // 3D Viewport Camera Controls
+  cameraAction: null,
+  triggerCameraAction: (type) => set({ cameraAction: { type, id: Date.now() } }),
+
   // Observer Ground Station Geolocation Sync
   observerLocation: JSON.parse(localStorage.getItem('orbitguard_observer') || 'null') || {
     lat: 12.9716,
