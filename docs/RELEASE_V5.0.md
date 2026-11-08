@@ -25,6 +25,7 @@ The open v4.3 runtime was reviewed first, then the v5.0 packaged executable was 
 
 - Catalog-derived positions are SGP4 predictions from element sets. A changing clock or smooth animation does not make the source observations live.
 - The visible snapshot is over six hours old and therefore stale by the app's displayed threshold. It should be refreshed before use where newer catalog data is required.
+- A newer automated catalog refresh present on GitHub was not adopted into this release: its metadata reports a fetch time of `2026-11-08T13:06:11Z` but a newest element epoch of `2026-11-10T19:43:23Z`, later than the fetch time. That timestamp inconsistency needs validation against the source before the refreshed snapshot is used.
 - Seven records were omitted because their NORAD IDs could not be represented by the current TLE propagator.
 - Conjunction screening is unavailable in this snapshot. An empty/unavailable table is not a “clear orbit” result.
 - No collision probability is supported without measured covariance and physical hard-body data from an authoritative CDM. Synthetic covariance and random fallback values are not used for release output.
