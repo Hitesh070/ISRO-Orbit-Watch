@@ -326,11 +326,6 @@ export const RiskTable = () => {
     return <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-60" />;
   };
 
-  // Count active encounters crossing within 45 seconds
-  const activeEncounterCount = useMemo(() => {
-    return combinedRiskRows.filter((r: any) => r.live_telemetry?.isEncounterActive).length;
-  }, [combinedRiskRows]);
-
   return (
     <div className="glass-panel rounded-xl p-5 shadow-2xl">
       {/* Table Title & Filter */}
@@ -340,12 +335,9 @@ export const RiskTable = () => {
             <ShieldAlert className="w-5 h-5 text-rose-500" />
             Active Spacecraft Conjunction & Congestion Risk Audit
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Evaluated using Foster-1992 2-D collision probability (Pc) and secondary debris congestion index
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* ISRO Filter Button */}
           <button
             onClick={() => setIsroOnly(!isroOnly)}
@@ -360,29 +352,6 @@ export const RiskTable = () => {
           <span className="text-xs font-mono text-cyan-300 bg-cyan-950/40 px-3 py-1 rounded-lg border border-cyan-500/30">
             Synthetic RTN Covariance
           </span>
-        </div>
-      </div>
-
-      {/* ISRO/SSA Real-Time Advisory Banner */}
-      <div className="mb-4 p-3 rounded-lg bg-cyan-950/40 border border-cyan-500/30 text-xs font-mono text-cyan-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-lg">
-        <div className="flex items-center gap-2.5">
-          {activeEncounterCount > 0 ? (
-            <AlertTriangle className="w-4 h-4 text-rose-400 animate-ping shrink-0" />
-          ) : (
-            <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
-          )}
-          <div>
-            <span className="font-bold text-cyan-200">
-              {activeEncounterCount > 0 ? 'ISRO/SSA ACTIVE CONJUNCTION:' : 'ISRO/SSA Operational Status:'}
-            </span>{' '}
-            {activeEncounterCount > 0
-              ? `${activeEncounterCount} close approach encounter(s) currently crossing within screening threshold!`
-              : 'Nominal orbital stationkeeping; live astrodynamic proximity screening active across constellation.'}
-          </div>
-        </div>
-
-        {/* Live Auto-Sync / Clock Indicator */}
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold text-[10px] shadow-glow-emerald">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>REAL-TIME {simulationSpeed > 1 ? `${simulationSpeed}x` : 'LIVE'}</span>
