@@ -48,8 +48,12 @@ function getLiveEncounterTelemetry(conj: any, nowMs: number) {
   const missDist = typeof conj.miss_distance_km === 'number' ? conj.miss_distance_km : 5.0;
   const relSpeed = typeof conj.relative_speed_kms === 'number' ? conj.relative_speed_kms : 10.0;
 
-  // Instantaneous 3D separation in km
-  const currentSeparationKm = Math.min(12800, Math.sqrt(missDist * missDist + Math.pow(relSpeed * Math.abs(dtSec), 2)));
+  // Closed-orbit relative separation D(t): varies smoothly and continuously every second between d_miss and D_max (~12,742 km)
+  const periodSec = 95 * 60;
+  const D_max = 12742.0;
+  const currentSeparationKm = Math.sqrt(
+    missDist * missDist + (D_max * D_max - missDist * missDist) * Math.pow(Math.sin((Math.PI * dtSec) / periodSec), 2)
+  );
 
   let statusText = 'CLOSING';
   let statusColor = 'text-cyan-400';

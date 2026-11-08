@@ -74,23 +74,25 @@ function getLiveConjunctionTelemetry(conj: any, nowMs: number) {
 
   let effectiveTcaMs = Number(conj.tca_timestamp_ms) || (nowMs + 12 * 3600 * 1000);
 
-  // If initial TCA has passed by > 20 mins, roll to next synodic orbital pass
-
-  while (effectiveTcaMs < nowMs - 20 * 60 * 1000) {
-
+  // If initial TCA has passed by > 60s, roll forward into active upcoming synodic orbital pass
+  if (effectiveTcaMs < nowMs - 60 * 1000) {
+    const elapsedCycles = Math.ceil((nowMs - effectiveTcaMs) / periodMs);
+    effectiveTcaMs += elapsedCycles * periodMs;
+  }
+  if (effectiveTcaMs < nowMs - 60 * 1000) {
     effectiveTcaMs += periodMs;
-
   }
 
   const dtSec = (effectiveTcaMs - nowMs) / 1000;
 
   const missDist = typeof conj.miss_distance_km === 'number' ? conj.miss_distance_km : 5.0;
 
-  const relSpeed = typeof conj.relative_speed_kms === 'number' ? conj.relative_speed_kms : 10.0;
-
-  // Instantaneous 3D separation in km
-
-  const currentSeparationKm = Math.min(12800, Math.sqrt(missDist * missDist + Math.pow(relSpeed * Math.abs(dtSec), 2)));
+  // Closed-orbit relative separation D(t): varies smoothly and continuously every second between d_miss and D_max (~12,742 km)
+  const periodSec = 95 * 60;
+  const D_max = 12742.0;
+  const currentSeparationKm = Math.sqrt(
+    missDist * missDist + (D_max * D_max - missDist * missDist) * Math.pow(Math.sin((Math.PI * dtSec) / periodSec), 2)
+  );
 
   let statusText = 'CLOSING';
 
@@ -132,19 +134,25 @@ function getLiveConjunctionTelemetry(conj: any, nowMs: number) {
 
 }
 
-function formatCountdown(targetTimestampMs: number): string {
+function formatCountdown(targetTimestampMs: number, nowMs: number): string {
 
-  const now = Date.now();
+  let diffSec = Math.floor((targetTimestampMs - nowMs) / 1000);
 
-  let diffSec = Math.floor((targetTimestampMs - now) / 1000);
+  if (Math.abs(diffSec) <= 45) {
 
-  if (diffSec <= 0) {
+    return 'ENCOUNTER ACTIVE';
 
-    // If just passed within 15 mins
+  }
 
-    if (diffSec > -900) return 'TCA IN PROGRESS';
+  if (diffSec < 0 && diffSec >= -90) {
 
-    return 'CYCLE COMPLETED';
+    return `RECEDING (${Math.abs(diffSec)}s)`;
+
+  }
+
+  if (diffSec < 0) {
+
+    diffSec = Math.max(0, diffSec + 95 * 60);
 
   }
 
@@ -179,6 +187,8 @@ export const ConjunctionPanel = () => {
   const selectSatellite = useOrbitStore((state: any) => state.selectSatellite);
 
   const settings = useOrbitStore((state: any) => state.settings);
+
+  const simulatedTimeMs = useOrbitStore((state: any) => state.simulatedTimeMs);
 
   const navigate = useNavigate();
 
@@ -620,11 +630,11 @@ export const ConjunctionPanel = () => {
 
                 filteredEvents.map((conj: any) => {
 
-                  const now = Date.now();
+                  const now = simulatedTimeMs || Date.now();
 
                   const live = getLiveConjunctionTelemetry(conj, now);
 
-                  const countdown = formatCountdown(live.effectiveTcaMs);
+                  const countdown = formatCountdown(live.effectiveTcaMs, now);
 
                   const isCritical = conj.risk_level === 'CRITICAL';
 
@@ -784,7 +794,7 @@ export const ConjunctionPanel = () => {
 
                       <td className="py-2.5 px-3 font-mono">
 
-                        <div className="text-slate-200 text-[11px]">{conj.tca_utc?.replace('T', ' ').slice(0, 19)} UTC</div>
+                        <div className="text-slate-200 text-[11px]">{new Date(live.effectiveTcaMs).toISOString().replace('T', ' ').slice(0, 19)} UTC</div>
 
                         <div className="text-cyan-400 font-bold text-[10px] flex items-center gap-1 mt-0.5">
 
