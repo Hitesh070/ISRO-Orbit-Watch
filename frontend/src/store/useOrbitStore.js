@@ -672,9 +672,17 @@ export const useOrbitStore = create((set, get) => ({
  * Returns current deep-linkable URL encoding active norad selection and simulation speed.
  */
 export const getShareableUrl = () => {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === 'undefined') return 'https://orbit-guard-tan.vercel.app';
   const state = useOrbitStore.getState();
-  const url = new URL(window.location.href);
+
+  const isDesktopOrFile =
+    typeof window !== 'undefined' &&
+    (window.location.protocol === 'file:' || Boolean(window.orbitguardPlatform?.isDesktop));
+
+  const baseOrigin = isDesktopOrFile ? 'https://orbit-guard-tan.vercel.app' : window.location.origin;
+  const basePath = isDesktopOrFile ? '/' : window.location.pathname;
+
+  const url = new URL(basePath, baseOrigin);
 
   if (state.selectedSatellite?.norad_id) {
     url.searchParams.set('norad', String(state.selectedSatellite.norad_id));

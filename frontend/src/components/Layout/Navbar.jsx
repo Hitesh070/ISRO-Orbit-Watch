@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { useOrbitStore, getShareableUrl } from '../../store/useOrbitStore';
 import { LocationModal } from '../common/LocationModal';
+import { ShareModal } from '../common/ShareModal';
+import { copyTextToClipboard } from '../../utils/clipboard';
 
 export const Navbar = () => {
   const satellites = useOrbitStore((state) => state.satellites);
@@ -47,14 +49,15 @@ export const Navbar = () => {
   const [timeZoneLabel, setTimeZoneLabel] = useState('LOC');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
+    setIsShareModalOpen(true);
     const url = getShareableUrl();
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-      });
+    const success = await copyTextToClipboard(url);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
     }
   };
 
@@ -315,6 +318,7 @@ export const Navbar = () => {
         </div>
       </div>
       <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
+      <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
     </header>
   );
 };

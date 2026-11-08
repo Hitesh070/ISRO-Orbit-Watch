@@ -82,6 +82,28 @@ const AppContent = () => {
     return () => clearInterval(interval);
   }, [fetchInitialData, detectUserLocation]);
 
+  // Deep-link query parameters (?norad=... & ?speed=...) initialization
+  useEffect(() => {
+    if (!catalog || !catalog.length) return;
+    try {
+      const queryStr = window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+      const searchParams = new URLSearchParams(queryStr);
+      const noradId = Number(searchParams.get('norad'));
+      if (noradId && !isNaN(noradId)) {
+        const found = catalog.find((s) => s.norad_id === noradId);
+        if (found) {
+          selectSatellite(found);
+        }
+      }
+      const speed = Number(searchParams.get('speed'));
+      if (speed && [0, 1, 5, 60].includes(speed)) {
+        setSimulationSpeed(speed);
+      }
+    } catch (e) {
+      console.warn('Failed parsing deep-link parameters:', e);
+    }
+  }, [catalog, selectSatellite, setSimulationSpeed]);
+
   // Enforce zero window scrollbars when on the Home 3D viewport
   useEffect(() => {
     if (isHomePage) {
