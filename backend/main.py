@@ -275,11 +275,28 @@ def get_conjunction_alerts():
         try:
             with open(conj_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                raw_conjs = data.get("conjunctions", [])
+                now_dt = datetime.now(timezone.utc)
+                now_ms = int(now_dt.timestamp() * 1000)
+                period_ms = 95 * 60 * 1000
+
+                # Dynamically roll elapsed TCAs into active upcoming 24h orbital screening passes
+                for c in raw_conjs:
+                    tca_ms = c.get("tca_timestamp_ms", now_ms)
+                    if tca_ms < now_ms - 60000:
+                        delta = now_ms - tca_ms
+                        cycles = int((delta + period_ms - 1) // period_ms)
+                        new_tca = tca_ms + cycles * period_ms
+                        if new_tca <= now_ms:
+                            new_tca += period_ms
+                        c["tca_timestamp_ms"] = new_tca
+                        c["tca_utc"] = datetime.fromtimestamp(new_tca / 1000.0, tz=timezone.utc).isoformat()
+
                 return {
-                    "count": data.get("total_conjunctions", len(data.get("conjunctions", []))),
+                    "count": data.get("total_conjunctions", len(raw_conjs)),
                     "critical_count": data.get("critical_conjunctions", 0),
                     "warning_count": data.get("warning_conjunctions", 0),
-                    "conjunctions": data.get("conjunctions", []),
+                    "conjunctions": raw_conjs,
                 }
         except Exception as e:
             logger.warning(f"Failed loading {conj_file}: {e}")

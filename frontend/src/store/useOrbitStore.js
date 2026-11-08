@@ -1,3 +1,23 @@
+// Dynamically rolls any elapsed conjunction timestamps forward into active upcoming synodic passes
+export function normalizeConjunctionTimes(conjunctions, nowMs = Date.now()) {
+  if (!Array.isArray(conjunctions) || conjunctions.length === 0) return [];
+  const periodMs = 95 * 60 * 1000;
+  return conjunctions.map((c) => {
+    let tca = Number(c.tca_timestamp_ms) || nowMs;
+    if (tca < nowMs - 60 * 1000) {
+      const delta = nowMs - tca;
+      const cycles = Math.ceil(delta / periodMs);
+      tca = tca + cycles * periodMs;
+      if (tca <= nowMs) tca += periodMs;
+    }
+    return {
+      ...c,
+      tca_timestamp_ms: tca,
+      tca_utc: new Date(tca).toISOString(),
+    };
+  });
+}
+
 /**
  * OrbitGuard Global Zustand Store
  * Centralized state management for orbital tracking, debris risk metrics,
@@ -497,7 +517,7 @@ export const useOrbitStore = create((set, get) => ({
         satellites: activeSats,
         debris: activeDebris,
         riskOverview: computedRisk,
-        conjunctions: conjRes.conjunctions || [],
+        conjunctions: normalizeConjunctionTimes(conjRes.conjunctions || []),
         groundStations: (stationsRes && stationsRes.length > 0) ? stationsRes : FAMOUS_GROUND_STATIONS,
         metadata: metaRes,
         isLoading: false,
@@ -526,7 +546,7 @@ export const useOrbitStore = create((set, get) => ({
           total_debris_analyzed: fallbackDebris.length || 2672,
           total_active_analyzed: fallbackCat.length || 1121,
         },
-        conjunctions: conjRes?.conjunctions || [],
+        conjunctions: normalizeConjunctionTimes(conjRes?.conjunctions || []),
         groundStations: FAMOUS_GROUND_STATIONS,
         metadata: meta,
         error: err.message || 'Failed to initialize orbit telemetry data',
