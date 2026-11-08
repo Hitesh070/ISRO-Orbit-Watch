@@ -143,7 +143,7 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
       if (isCancelled) return;
 
       const totalCount = currentState.catalog?.length || 3794;
-      const isroCount = (currentState.satellites || []).filter((s) => s.is_isro).length || 80;
+      const isroCount = (currentState.satellites || []).filter((s: any) => s.is_isro).length || 80;
       const debrisCount = currentState.debris?.length || 2673;
 
       addLog(`AGENCY: Ingested ${totalCount.toLocaleString()} orbital element sets (TLEs).`);
@@ -313,7 +313,7 @@ export const StartupCalibrationModal: React.FC<StartupCalibrationModalProps> = (
                 {catalog.length > 0 ? `${catalog.length.toLocaleString()} Assets` : '3,794 Assets'}
               </div>
               <div className="text-[10px] text-slate-300">
-                {satellites.filter((s) => s.is_isro).length || 80} ISRO Spacecraft
+                {satellites.filter((s: any) => s.is_isro).length || 80} ISRO Spacecraft
               </div>
               <div className="text-[9px] text-slate-400">CelesTrak / ISTRAC / SSN</div>
             </div>
