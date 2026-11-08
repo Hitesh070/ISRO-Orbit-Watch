@@ -68,9 +68,16 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
   const rtnNormal = Number(conjunction.miss_vector_rtn_m?.normal ?? 0);
   const totalMissMeters = missDist > 0 ? missDist * 1000 : Math.sqrt(rtnRadial * rtnRadial + rtnTransverse * rtnTransverse + rtnNormal * rtnNormal) || 1;
 
-  const rPct = Math.min(100, (Math.abs(rtnRadial) / totalMissMeters) * 100);
-  const tPct = Math.min(100, (Math.abs(rtnTransverse) / totalMissMeters) * 100);
-  const nPct = Math.min(100, (Math.abs(rtnNormal) / totalMissMeters) * 100);
+  // Energy / Variance Contribution (% of Euclidean norm squared) strictly summing to 100.0%
+  const normSq = totalMissMeters * totalMissMeters || 1;
+  const rVarPct = Math.min(100, ((rtnRadial * rtnRadial) / normSq) * 100);
+  const tVarPct = Math.min(100, ((rtnTransverse * rtnTransverse) / normSq) * 100);
+  const nVarPct = Math.min(100, ((rtnNormal * rtnNormal) / normSq) * 100);
+
+  // Unit vector directional cosines (signed projection along unit axes)
+  const uR = rtnRadial / totalMissMeters;
+  const uT = rtnTransverse / totalMissMeters;
+  const uN = rtnNormal / totalMissMeters;
 
   // Compute 2x2 covariance eigenvalues and tilt angle for ellipse rendering
   const { semiMajor, semiMinor, angleDeg } = useMemo(() => {
@@ -279,7 +286,7 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                     cy={center}
                     rx={semiMajor * 3.0 * pxPerKm}
                     ry={semiMinor * 3.0 * pxPerKm}
-                    transform={`rotate(${angleDeg}, ${center}, ${center})`}
+                    transform={`rotate(${-angleDeg}, ${center}, ${center})`}
                     fill="none"
                     stroke="#0284c7"
                     strokeWidth={1}
@@ -292,7 +299,7 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                     cy={center}
                     rx={semiMajor * 2.0 * pxPerKm}
                     ry={semiMinor * 2.0 * pxPerKm}
-                    transform={`rotate(${angleDeg}, ${center}, ${center})`}
+                    transform={`rotate(${-angleDeg}, ${center}, ${center})`}
                     fill="none"
                     stroke="#06b6d4"
                     strokeWidth={1.2}
@@ -304,7 +311,7 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                     cy={center}
                     rx={semiMajor * 1.0 * pxPerKm}
                     ry={semiMinor * 1.0 * pxPerKm}
-                    transform={`rotate(${angleDeg}, ${center}, ${center})`}
+                    transform={`rotate(${-angleDeg}, ${center}, ${center})`}
                     fill="url(#encGlow)"
                     stroke="#22d3ee"
                     strokeWidth={1.8}
@@ -432,16 +439,19 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                 {/* Radial Bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[11px]">
-                    <span className="text-cyan-400 font-semibold">Radial Component (R):</span>
+                    <span className="text-cyan-400 font-semibold">
+                      Radial Component (R):{' '}
+                      <span className="text-slate-400 font-normal">û_R = {uR >= 0 ? `+${uR.toFixed(3)}` : uR.toFixed(3)}</span>
+                    </span>
                     <span className="font-bold text-slate-200">
-                      {rtnRadial.toLocaleString()} m{' '}
-                      <span className="text-cyan-400 font-normal">({rPct.toFixed(1)}%)</span>
+                      {rtnRadial.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m{' '}
+                      <span className="text-cyan-400 font-normal">({rVarPct.toFixed(1)}% energy)</span>
                     </span>
                   </div>
                   <div className="w-full h-3 rounded bg-slate-800 overflow-hidden p-0.5">
                     <div
                       className="h-full bg-cyan-400 rounded-sm transition-all duration-300"
-                      style={{ width: `${rPct.toFixed(1)}%` }}
+                      style={{ width: `${rVarPct.toFixed(1)}%` }}
                     />
                   </div>
                 </div>
@@ -449,16 +459,19 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                 {/* Transverse / In-Track Bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[11px]">
-                    <span className="text-emerald-400 font-semibold">Transverse / In-Track (T):</span>
+                    <span className="text-emerald-400 font-semibold">
+                      Transverse / In-Track (T):{' '}
+                      <span className="text-slate-400 font-normal">û_T = {uT >= 0 ? `+${uT.toFixed(3)}` : uT.toFixed(3)}</span>
+                    </span>
                     <span className="font-bold text-slate-200">
-                      {rtnTransverse.toLocaleString()} m{' '}
-                      <span className="text-emerald-400 font-normal">({tPct.toFixed(1)}%)</span>
+                      {rtnTransverse.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m{' '}
+                      <span className="text-emerald-400 font-normal">({tVarPct.toFixed(1)}% energy)</span>
                     </span>
                   </div>
                   <div className="w-full h-3 rounded bg-slate-800 overflow-hidden p-0.5">
                     <div
                       className="h-full bg-emerald-400 rounded-sm transition-all duration-300"
-                      style={{ width: `${tPct.toFixed(1)}%` }}
+                      style={{ width: `${tVarPct.toFixed(1)}%` }}
                     />
                   </div>
                 </div>
@@ -466,25 +479,34 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                 {/* Normal / Cross-Track Bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[11px]">
-                    <span className="text-amber-400 font-semibold">Normal / Cross-Track (N):</span>
+                    <span className="text-amber-400 font-semibold">
+                      Normal / Cross-Track (N):{' '}
+                      <span className="text-slate-400 font-normal">û_N = {uN >= 0 ? `+${uN.toFixed(3)}` : uN.toFixed(3)}</span>
+                    </span>
                     <span className="font-bold text-slate-200">
-                      {rtnNormal.toLocaleString()} m{' '}
-                      <span className="text-amber-400 font-normal">({nPct.toFixed(1)}%)</span>
+                      {rtnNormal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} m{' '}
+                      <span className="text-amber-400 font-normal">({nVarPct.toFixed(1)}% energy)</span>
                     </span>
                   </div>
                   <div className="w-full h-3 rounded bg-slate-800 overflow-hidden p-0.5">
                     <div
                       className="h-full bg-amber-400 rounded-sm transition-all duration-300"
-                      style={{ width: `${nPct.toFixed(1)}%` }}
+                      style={{ width: `${nVarPct.toFixed(1)}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Mathematical Identity Card */}
-                <div className="p-3 rounded-lg bg-space-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1">
-                  <div className="text-slate-400 font-semibold">Euclidean Norm Verification:</div>
+                <div className="p-3 rounded-lg bg-space-900/60 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
+                  <div className="text-slate-400 font-semibold flex items-center justify-between">
+                    <span>Euclidean Norm Verification:</span>
+                    <span className="text-emerald-400 text-[10px] font-mono">Σ(Energy Share) = {(rVarPct + tVarPct + nVarPct).toFixed(1)}%</span>
+                  </div>
                   <div className="text-cyan-300 font-mono text-[10.5px]">
-                    ‖m‖ = √(R² + T² + N²) = √({rtnRadial.toFixed(0)}² + {rtnTransverse.toFixed(0)}² + {rtnNormal.toFixed(0)}²) = {totalMissMeters.toFixed(1)} m
+                    ‖m‖ = √(R² + T² + N²) = √({rtnRadial >= 0 ? rtnRadial.toFixed(0) : `(${rtnRadial.toFixed(0)})`}² + {rtnTransverse >= 0 ? rtnTransverse.toFixed(0) : `(${rtnTransverse.toFixed(0)})`}² + {rtnNormal >= 0 ? rtnNormal.toFixed(0) : `(${rtnNormal.toFixed(0)})`}²) = {totalMissMeters.toFixed(1)} m
+                  </div>
+                  <div className="text-slate-400 font-mono text-[10px]">
+                    Direction cosines: û = [{uR >= 0 ? `+${uR.toFixed(3)}` : uR.toFixed(3)}, {uT >= 0 ? `+${uT.toFixed(3)}` : uT.toFixed(3)}, {uN >= 0 ? `+${uN.toFixed(3)}` : uN.toFixed(3)}] | ‖û‖ = 1.000
                   </div>
                 </div>
 
@@ -497,10 +519,10 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
             {activeTab === 'sensitivity' && (
               <div className="w-full p-4 font-mono text-xs space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-300 font-bold">
+                  <span className="text-slate-300 font-bold whitespace-nowrap">
                     Akella-Alfriend Pc Sensitivity vs Scale Factor (k):
                   </span>
-                  <span className="text-rose-400 text-[11px] font-bold">
+                  <span className="text-rose-400 text-[11px] font-bold whitespace-nowrap">
                     Pc_max: {formatPc(pcMax, 3)} (at {kOpt}x)
                   </span>
                 </div>
@@ -585,9 +607,15 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
                   </svg>
                 </div>
 
-                <div className="flex justify-between text-[11px] text-slate-400 pt-1">
-                  <span>Nominal Covariance (1.0x): <strong className="text-cyan-300">{formatPc(pcFoster, 3)}</strong></span>
-                  <span>Akella Pc_max ({kOpt}x): <strong className="text-rose-400">{formatPc(pcMax, 3)}</strong></span>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 pt-1">
+                  <span className="whitespace-nowrap">
+                    Nominal Covariance (1.0x):{' '}
+                    <strong className="text-cyan-300 whitespace-nowrap">{formatPc(pcFoster, 3)}</strong>
+                  </span>
+                  <span className="whitespace-nowrap">
+                    Akella Pc_max ({kOpt}x):{' '}
+                    <strong className="text-rose-400 whitespace-nowrap">{formatPc(pcMax, 3)}</strong>
+                  </span>
                 </div>
               </div>
             )}
@@ -601,11 +629,11 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Foster-1992 Pc:</span>
-                <span className="font-bold text-rose-400">{formatPc(pcFoster, 4)}</span>
+                <span className="font-bold text-rose-400 whitespace-nowrap">{formatPc(pcFoster, 4)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Akella-Alfriend Pc_max:</span>
-                <span className="font-bold text-amber-400">{formatPc(pcMax, 4)}</span>
+                <span className="font-bold text-amber-400 whitespace-nowrap">{formatPc(pcMax, 4)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Optimal Scale Factor (k*):</span>

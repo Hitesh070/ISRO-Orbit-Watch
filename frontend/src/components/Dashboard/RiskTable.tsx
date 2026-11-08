@@ -552,7 +552,7 @@ export const RiskTable = () => {
                   <td className="py-3 px-3 text-slate-300">{formatSpeed(sat.relative_speed_kms, settings?.units, 2)}</td>
 
                   {/* Foster Pc */}
-                  <td className="py-3 px-3 font-bold">
+                  <td className="py-3 px-3 font-bold whitespace-nowrap">
                     <span
                       className={
                         isCriticalPc ? 'text-rose-400 font-extrabold' : isWarningPc ? 'text-amber-400' : 'text-slate-400'
@@ -563,7 +563,7 @@ export const RiskTable = () => {
                   </td>
 
                   {/* Pc Max */}
-                  <td className="py-3 px-3 text-cyan-300 font-bold">
+                  <td className="py-3 px-3 text-cyan-300 font-bold whitespace-nowrap">
                     {formatPc(sat.pc_max, 3)}
                   </td>
 

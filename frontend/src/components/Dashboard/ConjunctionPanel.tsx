@@ -776,7 +776,7 @@ export const ConjunctionPanel = () => {
 
                         >
 
-                          {formatPc(conj.pc_foster, 3)}
+                          <span className="whitespace-nowrap">{formatPc(conj.pc_foster, 3)}</span>
 
                         </span>
 
@@ -784,7 +784,7 @@ export const ConjunctionPanel = () => {
 
                       {/* Akella Pc_max */}
 
-                      <td className="py-2.5 px-3 font-mono font-bold text-cyan-300">
+                      <td className="py-2.5 px-3 font-mono font-bold text-cyan-300 whitespace-nowrap">
 
                         {formatPc(conj.pc_max, 3)}
 
