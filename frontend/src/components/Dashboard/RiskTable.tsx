@@ -512,7 +512,7 @@ export const RiskTable = () => {
               const pc = sat.pc_foster;
               const isCriticalPc = pc >= 1e-4;
               const isWarningPc = pc >= 1e-7;
-              const live = sat.live_telemetry || getLiveEncounterTelemetry(sat, currentNowMs);
+              const live = getLiveEncounterTelemetry(sat.conjunction || sat, currentNowMs);
               const countdown = formatTcaCountdown(live.dtSec);
 
               return (
