@@ -21,9 +21,9 @@
 
 ## Manual desktop check
 
-The rebuilt portable app was opened on this Windows device and checked with mouse input. The NASA Earth texture and stars rendered; mouse drag rotated the globe; mouse-wheel zoom changed its framing; search and spacecraft selection worked; AstroSat and NISAR mission profiles displayed their official images, launch dates, purpose and data archive links; GSAT-30 displayed a geostationary radius and its verified mission profile; Overview, Passes and About tabs worked. AstroSat next-pass prediction over Bengaluru returned a pass with a 16.7° maximum elevation.
+The rebuilt portable app was opened on this Windows device and checked with mouse input. The NASA Earth texture and stars rendered; mouse drag rotated the globe; mouse-wheel zoom changed its framing; search and spacecraft selection worked; AstroSat and NISAR mission profiles displayed their official images, launch dates, purpose and data archive links; GSAT-30 displayed a geostationary radius and its verified mission profile; Overview, Passes and About tabs worked. AstroSat next-pass prediction over Bengaluru returned a pass with a 16.7° maximum elevation. Satellite locations now use small 3D spacecraft icons instead of dots, with selection glow and amber stale-data coloring.
 
-During this manual run the app correctly remained in offline-cache mode: the existing public `main` branch still contains the former Orbit Guard catalog, so its manifest/catalog fails the India-only validation. Once this replacement is published to `main`, the app's one-minute checker can begin loading its India-only public catalog. This is not a live ISRO telemetry stream.
+The first manual run happened before the replacement was published and therefore used its bundled snapshot. After publication, the GitHub `main` manifest and catalog endpoints were verified to return the 77-record India-only snapshot. The already-open desktop window had not yet visibly confirmed its next scheduled online refresh when the UI check ended. The app does not provide live ISRO telemetry.
 
 ## Accuracy limits
 

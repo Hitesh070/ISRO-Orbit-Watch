@@ -8,7 +8,7 @@ The app opens to a 3D Earth and the catalog of public Indian-owner payloads. At 
 
 - Drag to rotate, scroll to zoom, and click a marker to select it.
 - The orange line shows one propagated orbital period for the selected spacecraft.
-- Cyan markers are records with recent elements; amber markers have elements older than seven days.
+- Spacecraft-shaped markers use cyan solar-panel wings for current elements and amber for elements older than seven days. The selected craft gets a pale body and glow.
 - The globe uses NASA Blue Marble Earth, cloud, night-lights, and ocean textures over a deterministic starfield. These are static global composites, not live imagery.
 - Altitude is plotted linearly: 1 globe radius is 6,378.137 km. Selecting a geostationary object zooms the camera out to keep it visible, so Earth appears smaller while the orbit stays at its true plotted radius.
 

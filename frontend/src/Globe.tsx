@@ -101,10 +101,11 @@ export default function Globe({ positions, selectedId, orbitTrack, onSelect }: P
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects([...pickMapRef.current.values()], false);
+      const hits = raycaster.intersectObjects([...pickMapRef.current.values()], true);
       if (hits.length) {
-        const match = [...pickMapRef.current.entries()].find(([, object]) => object === hits[0].object);
-        if (match) onSelectRef.current(match[0]);
+        let marker: THREE.Object3D | null = hits[0].object;
+        while (marker && typeof marker.userData.noradId !== 'number') marker = marker.parent;
+        if (marker) onSelectRef.current(marker.userData.noradId);
       }
     };
     renderer.domElement.addEventListener('click', handleClick);
@@ -147,10 +148,13 @@ export default function Globe({ positions, selectedId, orbitTrack, onSelect }: P
     const previous = earthGroup.children.filter((child: THREE.Object3D) => child.userData.dynamicLayer);
     previous.forEach((object: THREE.Object3D) => {
       earthGroup.remove(object);
-      const mesh = object as THREE.Mesh;
-      mesh.geometry?.dispose();
-      const material = (object as any).material;
-      if (Array.isArray(material)) material.forEach((item: THREE.Material) => item.dispose()); else material?.dispose();
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+          child.geometry.dispose();
+          const material = child.material;
+          if (Array.isArray(material)) material.forEach((item) => item.dispose()); else material.dispose();
+        }
+      });
     });
 
     pickMapRef.current.clear();
@@ -158,9 +162,29 @@ export default function Globe({ positions, selectedId, orbitTrack, onSelect }: P
     for (const position of visible) {
       const selected = position.record.NORAD_CAT_ID === selectedId;
       const point = spherePoint(position.longitude, position.latitude, position.altitudeKm);
-      const marker = new THREE.Mesh(new THREE.SphereGeometry(selected ? 0.045 : 0.027, 12, 10), new THREE.MeshBasicMaterial({ color: position.staleElements ? 0xf2a65a : selected ? 0xffffff : 0x52d9f2 }));
+      const marker = new THREE.Group();
+      const panelColor = position.staleElements ? 0xb86d2d : selected ? 0xffd16a : 0x45c6e5;
+      const panelMaterial = new THREE.MeshBasicMaterial({ color: panelColor });
+      const bodyMaterial = new THREE.MeshBasicMaterial({ color: position.staleElements ? 0xffc17a : selected ? 0xffffff : 0xdaf9ff });
+      const scale = selected ? 1.35 : 1;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.034 * scale, 0.034 * scale, 0.046 * scale), bodyMaterial);
+      body.userData.dynamicLayer = true;
+      marker.add(body);
+      for (const side of [-1, 1]) {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(0.047 * scale, 0.026 * scale, 0.009 * scale), panelMaterial);
+        wing.position.x = side * 0.046 * scale;
+        wing.userData.dynamicLayer = true;
+        marker.add(wing);
+      }
+      if (selected) {
+        const halo = new THREE.Mesh(new THREE.SphereGeometry(0.079, 16, 12), new THREE.MeshBasicMaterial({ color: 0x7ceaff, transparent: true, opacity: 0.22, depthWrite: false }));
+        halo.userData.dynamicLayer = true;
+        marker.add(halo);
+      }
       marker.position.copy(point);
+      marker.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), point.clone().normalize());
       marker.userData.dynamicLayer = true;
+      marker.userData.noradId = position.record.NORAD_CAT_ID;
       earthGroup.add(marker);
       pickMapRef.current.set(position.record.NORAD_CAT_ID, marker);
     }
