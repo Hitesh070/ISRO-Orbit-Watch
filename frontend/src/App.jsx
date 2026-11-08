@@ -4,7 +4,7 @@
  * Permanent Space Dark Theme applied.
  */
 
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, lazy, Suspense, useCallback } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Layout/Navbar';
 import Home from './pages/Home';
