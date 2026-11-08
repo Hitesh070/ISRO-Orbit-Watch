@@ -125,7 +125,7 @@ export const FilterPanel = () => {
           <div className="mt-2 z-30 bg-space-950/95 border border-cyan-500/50 rounded-xl shadow-2xl backdrop-blur-md max-h-56 overflow-y-auto p-1 divide-y divide-slate-800">
             {searchResults.length > 0 ? (
               searchResults.map((item) => {
-                const isDebris = item.object_type !== 'Satellite';
+                const isDebris = item.object_type === 'Debris';
                 const isSelected = selectedSatellite?.norad_id === item.norad_id;
                 const alt = item.alt_km || (item.semi_major_axis_km ? item.semi_major_axis_km - 6378.137 : 600);
                 const regime = item.regime || (alt < 2000 ? 'LEO' : alt < 35000 ? 'MEO' : 'GEO');
@@ -325,7 +325,7 @@ export const FilterPanel = () => {
       <div className="mt-3.5 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center">
         <span>Tracking:</span>
         <span className="text-cyan-300 font-bold">
-          {filters.indianSatsOnly ? `${satellites.filter(s => s.is_isro).length || 80} ISRO Active` : `${satellites.length} Active`} | {debris.length || 2673} Debris
+          {filters.indianSatsOnly ? `${satellites.filter(s => s.is_isro).length} ISRO Active` : `${satellites.length} Active`} | {debris.length} Debris
         </span>
       </div>
     </div>

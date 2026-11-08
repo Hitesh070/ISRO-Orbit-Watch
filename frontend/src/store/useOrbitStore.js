@@ -1,19 +1,13 @@
-// Dynamically rolls any elapsed conjunction timestamps forward into active upcoming synodic passes
 export function normalizeConjunctionTimes(conjunctions, nowMs = Date.now()) {
   if (!Array.isArray(conjunctions) || conjunctions.length === 0) return [];
-  const periodMs = 95 * 60 * 1000;
   return conjunctions.map((c) => {
-    let tca = Number(c.tca_timestamp_ms) || nowMs;
-    if (tca < nowMs - 60 * 1000) {
-      const delta = nowMs - tca;
-      const cycles = Math.ceil(delta / periodMs);
-      tca = tca + cycles * periodMs;
-      if (tca <= nowMs) tca += periodMs;
-    }
+    const raw = Number(c.tca_timestamp_ms);
+    const parsed = c.tca_utc ? Date.parse(c.tca_utc) : NaN;
+    const tca = Number.isFinite(raw) && raw > 0 ? raw : parsed;
     return {
       ...c,
-      tca_timestamp_ms: tca,
-      tca_utc: new Date(tca).toISOString(),
+      tca_timestamp_ms: Number.isFinite(tca) ? tca : null,
+      tca_utc: Number.isFinite(tca) ? new Date(tca).toISOString() : null,
     };
   });
 }
@@ -89,15 +83,13 @@ const getInitialTheme = () => {
 const getInitialObserver = () => {
   try {
     const saved = localStorage.getItem('orbitguard_observer');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const location = JSON.parse(saved);
+      if (Number.isFinite(location?.lat) && Number.isFinite(location?.lon) && Number.isFinite(location?.alt_m) && location?.altitude_source === 'user_supplied_msl') return location;
+      localStorage.removeItem('orbitguard_observer');
+    }
   } catch {}
-  return {
-    lat: 12.9716,
-    lon: 77.5946,
-    alt_m: 920,
-    name: 'Bengaluru, India',
-    isLive: false,
-  };
+  return null;
 };
 
 export const useOrbitStore = create((set, get) => ({
@@ -113,8 +105,11 @@ export const useOrbitStore = create((set, get) => ({
   // Dashboard & Risk analytics
   riskOverview: null,
   conjunctions: [],
+  conjunctionsScreenTime: null,
+  conjunctionsScreenScope: null,
   passesData: null,
   passesError: null,
+  passesLoading: false,
   analytics: null,
   groundStations: FAMOUS_GROUND_STATIONS,
   metadata: null,
@@ -219,7 +214,7 @@ export const useOrbitStore = create((set, get) => ({
   setSimulationSpeed: (speed) => {
     const numericSpeed = Number(speed);
     if (numericSpeed === 1) {
-      // 1x represents Real-Time Live status: always snap simulated time back to actual current clock
+      // 1x follows the current UTC clock; higher speeds advance the simulation clock faster.
       const realNow = Date.now();
       set({ simulationSpeed: 1, simulatedTimeMs: realNow });
     } else {
@@ -245,54 +240,24 @@ export const useOrbitStore = create((set, get) => ({
         (pos) => {
           const lat = Number(pos.coords.latitude.toFixed(4));
           const lon = Number(pos.coords.longitude.toFixed(4));
-          const alt = pos.coords.altitude ? Math.round(pos.coords.altitude) : 100;
-
-          // Attempt timezone name extraction
-          let tzCity = 'My Station';
-          try {
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            tzCity = tz.split('/')[1]?.replace(/_/g, ' ') || 'My Station';
-          } catch {}
+          // Browser GPS altitude is ellipsoidal, not mean-sea-level station elevation.
+          const alt = null;
 
           const loc = {
             lat,
             lon,
             alt_m: alt,
-            name: `${tzCity} (${Math.abs(lat)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon)}°${lon >= 0 ? 'E' : 'W'})`,
+            altitude_source: null,
+            name: `GPS location (${lat}, ${lon})`,
             isLive: true,
           };
           localStorage.setItem('orbitguard_observer', JSON.stringify(loc));
           set({ observerLocation: loc });
           console.log('[OrbitGuard] Synced observer location:', loc);
-          get().fetchPasses(loc.name, 25544);
+          if (alt !== null) get().fetchPasses(`${lat},${lon},${alt}`, 25544);
         },
         (err) => {
-          console.warn('[OrbitGuard] Geolocation notice:', err.message);
-          // Set timezone-inferred location as friendly default
-          try {
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
-            const parts = tz.split('/');
-            const city = parts[parts.length - 1]?.replace(/_/g, ' ') || 'Bengaluru';
-            let lat = 12.9716;
-            let lon = 77.5946;
-            let alt_m = 920;
-
-            if (tz.includes('New_York') || tz.includes('America/Eastern')) { lat = 40.7128; lon = -74.0060; alt_m = 10; }
-            else if (tz.includes('Chicago') || tz.includes('Central')) { lat = 41.8781; lon = -87.6298; alt_m = 180; }
-            else if (tz.includes('Los_Angeles') || tz.includes('Pacific')) { lat = 34.0522; lon = -118.2437; alt_m = 71; }
-            else if (tz.includes('London') || tz.includes('Europe/London')) { lat = 51.5074; lon = -0.1278; alt_m = 25; }
-            else if (tz.includes('Paris') || tz.includes('Berlin')) { lat = 48.8566; lon = 2.3522; alt_m = 35; }
-            else if (tz.includes('Tokyo')) { lat = 35.6762; lon = 139.6503; alt_m = 40; }
-            else if (tz.includes('Sydney')) { lat = -33.8688; lon = 151.2093; alt_m = 19; }
-            else if (tz.includes('Dubai')) { lat = 25.2048; lon = 55.2708; alt_m = 16; }
-            else if (tz.includes('Singapore')) { lat = 1.3521; lon = 103.8198; alt_m = 15; }
-            else { lat = 12.9716; lon = 77.5946; alt_m = 920; } // Default: ISRO HQ Bengaluru
-
-            const loc = { lat, lon, alt_m, name: `${city} (Inferred GPS)`, isLive: true };
-            localStorage.setItem('orbitguard_observer', JSON.stringify(loc));
-            set({ observerLocation: loc });
-            get().fetchPasses(loc.name, 25544);
-          } catch {}
+          console.warn('[OrbitGuard] Location unavailable; no inferred coordinates were used:', err.message);
         },
         { timeout: 8000, enableHighAccuracy: true }
       );
@@ -472,23 +437,7 @@ export const useOrbitStore = create((set, get) => ({
       let activeDebris =
         debrisRes.debris && debrisRes.debris.length > 0
           ? debrisRes.debris
-          : activeCatalog.filter((d) => d.object_type !== 'Satellite');
-
-      // Guarantee debris objects are always loaded from static snapshot if activeCatalog lacks them
-      if (activeDebris.length === 0) {
-        try {
-          const bundledRes = await fetch('/data/catalog.json');
-          if (bundledRes.ok) {
-            const bundledData = await bundledRes.json();
-            activeDebris = bundledData.filter((d) => d.object_type !== 'Satellite');
-          }
-        } catch {}
-      }
-
-      // If activeCatalog was missing debris, merge them together
-      if (activeDebris.length > 0 && activeCatalog.filter((d) => d.object_type !== 'Satellite').length === 0) {
-        activeCatalog = [...activeCatalog, ...activeDebris];
-      }
+          : activeCatalog.filter((d) => d.object_type === 'Debris');
 
       let computedRisk = riskRes;
       if (!computedRisk && activeCatalog && activeCatalog.length > 0) {
@@ -496,19 +445,20 @@ export const useOrbitStore = create((set, get) => ({
         let meoCount = 0;
         let geoCount = 0;
         for (const o of activeCatalog) {
-          const alt = o.perigee_km || o.alt_km || 600;
+          const alt = o.perigee_km ?? o.alt_km;
+          if (!Number.isFinite(alt)) continue;
           if (alt < 2000) leoCount++;
           else if (alt < 35786) meoCount++;
           else geoCount++;
         }
         computedRisk = {
           shell_stats: [
-            { shell: 'LEO (<2000 km)', count: leoCount || 18450, density: 'Critical' },
-            { shell: 'MEO (2000-35786 km)', count: meoCount || 820, density: 'Moderate' },
-            { shell: 'GEO (≥35786 km)', count: geoCount || 2150, density: 'High' },
+            { shell: 'LEO (<2000 km)', count: leoCount, density: 'Catalog count' },
+            { shell: 'MEO (2000-35786 km)', count: meoCount, density: 'Catalog count' },
+            { shell: 'GEO (≥35786 km)', count: geoCount, density: 'Catalog count' },
           ],
-          total_debris_analyzed: activeDebris.length || 2673,
-          total_active_analyzed: activeSats.length || 1121,
+          total_debris_analyzed: activeDebris.length,
+          total_active_analyzed: activeSats.length,
         };
       }
 
@@ -518,6 +468,8 @@ export const useOrbitStore = create((set, get) => ({
         debris: activeDebris,
         riskOverview: computedRisk,
         conjunctions: normalizeConjunctionTimes(conjRes.conjunctions || []),
+        conjunctionsScreenTime: conjRes.screen_time_utc || null,
+        conjunctionsScreenScope: conjRes.screening_scope || null,
         groundStations: (stationsRes && stationsRes.length > 0) ? stationsRes : FAMOUS_GROUND_STATIONS,
         metadata: metaRes,
         isLoading: false,
@@ -532,21 +484,15 @@ export const useOrbitStore = create((set, get) => ({
         orbitApi.getConjunctions(),
       ]);
       const fallbackCat = staticCatalog || [];
-      const fallbackDebris = fallbackCat.filter((d) => d.object_type !== 'Satellite');
+      const fallbackDebris = fallbackCat.filter((d) => d.object_type === 'Debris');
       set({
         catalog: fallbackCat,
         satellites: fallbackCat.filter((s) => s.object_type === 'Satellite'),
-        debris: fallbackDebris.length > 0 ? fallbackDebris : fallbackCat.slice(0, 500),
-        riskOverview: {
-          shell_stats: [
-            { shell: 'LEO (<2000 km)', count: 18450, density: 'Critical' },
-            { shell: 'MEO (2000-35786 km)', count: 820, density: 'Moderate' },
-            { shell: 'GEO (≥35786 km)', count: 2150, density: 'High' },
-          ],
-          total_debris_analyzed: fallbackDebris.length || 2673,
-          total_active_analyzed: fallbackCat.length || 1121,
-        },
+        debris: fallbackDebris,
+        riskOverview: null,
         conjunctions: normalizeConjunctionTimes(conjRes?.conjunctions || []),
+        conjunctionsScreenTime: conjRes?.screen_time_utc || null,
+        conjunctionsScreenScope: conjRes?.screening_scope || null,
         groundStations: FAMOUS_GROUND_STATIONS,
         metadata: meta,
         error: err.message || 'Failed to initialize orbit telemetry data',
@@ -564,8 +510,8 @@ export const useOrbitStore = create((set, get) => ({
     }
   },
 
-  fetchPasses: async (city = 'bengaluru', noradId = 25544) => {
-    set({ passesError: null });
+  fetchPasses: async (city, noradId, altitudeM = null) => {
+    set({ passesError: null, passesLoading: true, passesData: null });
 
     // Parse coordinates if city is formatted as "lat,lon"
     let lat = null;
@@ -573,11 +519,12 @@ export const useOrbitStore = create((set, get) => ({
     const rawCity = String(city || '').trim();
     if (rawCity.includes(',')) {
       const parts = rawCity.split(',');
-      const pLat = parseFloat(parts[0]);
-      const pLon = parseFloat(parts[1]);
-      if (!isNaN(pLat) && !isNaN(pLon)) {
+      const pLat = Number(parts[0]);
+      const pLon = Number(parts[1]);
+      if (Number.isFinite(pLat) && Number.isFinite(pLon) && pLat >= -90 && pLat <= 90 && pLon >= -180 && pLon <= 180) {
         lat = pLat;
         lon = pLon;
+        if (parts.length > 2 && Number.isFinite(Number(parts[2]))) altitudeM = Number(parts[2]);
       }
     }
 
@@ -585,12 +532,12 @@ export const useOrbitStore = create((set, get) => ({
     try {
       let res = null;
       if (lat !== null && lon !== null) {
-        res = await orbitApi.getPasses({ lat, lon, norad_id: noradId });
+        res = await orbitApi.getPasses({ lat, lon, alt_m: altitudeM, norad_id: noradId });
       } else {
         res = await orbitApi.getPasses({ city: rawCity, norad_id: noradId });
       }
       if (res && res.passes && res.passes.length > 0) {
-        set({ passesData: res, passesError: null });
+        set({ passesData: res, passesError: null, passesLoading: false });
         return;
       }
     } catch {
@@ -613,11 +560,12 @@ export const useOrbitStore = create((set, get) => ({
         set({
           passesData: null,
           passesError: `Satellite NORAD #${noradId} not available in catalog for propagation`,
+          passesLoading: false,
         });
         return;
       }
 
-      const station = resolveLocationClient(rawCity, lat, lon);
+      const station = resolveLocationClient(rawCity, lat, lon, altitudeM);
       const clientPasses = predictPassesClient(l1, l2, station, 5, 10.0, 10);
       const groundTrack = computeGroundTrackClient(l1, l2, 45, 45, 2);
 
@@ -637,12 +585,14 @@ export const useOrbitStore = create((set, get) => ({
           clientPasses.length === 0
             ? 'No pass opportunities exceeding 10° elevation detected in the next 5 days for this location.'
             : null,
+        passesLoading: false,
       });
     } catch (clientErr) {
       console.error('Client-side pass prediction failed:', clientErr);
       set({
         passesData: null,
         passesError: 'Failed to evaluate pass predictions for this location',
+        passesLoading: false,
       });
     }
   },
@@ -656,16 +606,6 @@ export const useOrbitStore = create((set, get) => ({
     }
   },
 
-  triggerRefreshTLE: async () => {
-    set({ isLoading: true });
-    try {
-      await orbitApi.refreshTLE();
-      await get().fetchInitialData();
-    } catch (err) {
-      console.error('Error refreshing TLE:', err);
-      set({ isLoading: false });
-    }
-  },
 }));
 
 /**

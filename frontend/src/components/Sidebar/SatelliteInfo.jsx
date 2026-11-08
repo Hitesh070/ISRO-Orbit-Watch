@@ -1,7 +1,6 @@
 /**
  * SatelliteInfo Component
- * Detailed telemetry and orbital risk dossier for the currently selected spacecraft.
- * Features live sub-second continuous telemetry propagation.
+ * Detailed catalog and SGP4-predicted orbital state for the selected spacecraft.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -22,7 +21,7 @@ export const SatelliteInfo = () => {
   const conjunctions = useOrbitStore((state) => state.conjunctions);
   const navigate = useNavigate();
 
-  // Real-time sub-second continuous live position state
+  // SGP4-predicted position from catalog elements at the simulation time.
   const [liveTelemetry, setLiveTelemetry] = useState(null);
 
   useEffect(() => {
@@ -70,16 +69,24 @@ export const SatelliteInfo = () => {
   const isDebris = data.object_type === 'Debris' || data.object_type === 'Rocket Body';
   const risk = data.risk || {};
 
-  // Current values: prefer live sub-second telemetry if available
+  // Current values are propagated from catalog elements at the simulation time.
   const currentAlt = liveTelemetry?.alt_km ?? data.alt_km ?? '---';
   const currentVel = liveTelemetry?.velocity_km_s ?? data.velocity_km_s ?? '---';
-  const currentLat = liveTelemetry?.lat ?? data.lat ?? 0;
-  const currentLon = liveTelemetry?.lon ?? data.lon ?? 0;
+  const currentLat = liveTelemetry?.lat ?? data.lat;
+  const currentLon = liveTelemetry?.lon ?? data.lon;
 
   const observerLocation = useOrbitStore((state) => state.observerLocation);
 
   const handlePredictPasses = () => {
-    fetchPasses(observerLocation?.name || 'Observer Station', data.norad_id);
+    const hasValidObserver = Number.isFinite(observerLocation?.lat) &&
+      Number.isFinite(observerLocation?.lon) &&
+      Number.isFinite(observerLocation?.alt_m) &&
+      ['station_preset', 'user_supplied_msl'].includes(observerLocation?.altitude_source);
+    if (!hasValidObserver) {
+      navigate('/dashboard');
+      return;
+    }
+    fetchPasses(`${observerLocation.lat},${observerLocation.lon},${observerLocation.alt_m}`, data.norad_id);
     navigate('/dashboard');
   };
 
@@ -107,7 +114,7 @@ export const SatelliteInfo = () => {
               NORAD: <span className="text-cyan-200 font-semibold">{data.norad_id}</span>
             </span>
             <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-              <Activity className="w-3 h-3 animate-pulse" /> LIVE TRACKING
+              <Activity className="w-3 h-3" /> SGP4 PREDICTION
             </span>
           </div>
         </div>
@@ -138,9 +145,9 @@ export const SatelliteInfo = () => {
         <div className="p-2 rounded-lg bg-space-900/80 border border-slate-800">
           <div className="flex items-center justify-between text-slate-400 text-[10px]">
             <div className="flex items-center gap-1.5">
-              <Gauge className="w-3 h-3 text-cyan-400" /> Real-Time Altitude
+              <Gauge className="w-3 h-3 text-cyan-400" /> Predicted Altitude
             </div>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" title="Live continuous propagation feed" />
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" title="SGP4 prediction from catalog orbital elements" />
           </div>
           <div className="text-sm font-mono font-bold text-slate-100 mt-0.5">
             {formatDistance(currentAlt, settings?.units, 3)}
@@ -191,23 +198,23 @@ export const SatelliteInfo = () => {
         </div>
       </div>
 
-      {/* Real-time Subpoint Coordinates */}
+      {/* SGP4-predicted subpoint coordinates */}
       <div className="p-2 rounded-lg bg-space-900/80 border border-slate-800 text-[11px] space-y-1 mb-2.5 font-mono">
         <div className="flex justify-between">
           <span className="text-slate-400">Sub-satellite Position:</span>
           <span className="text-cyan-300 font-semibold">
-            {typeof currentLat === 'number'
+            {typeof currentLat === 'number' && typeof currentLon === 'number'
               ? `${Math.abs(currentLat).toFixed(4)}°${currentLat >= 0 ? 'N' : 'S'}, ${Math.abs(currentLon).toFixed(4)}°${currentLon >= 0 ? 'E' : 'W'}`
               : '---'}
           </span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">Operating Agency:</span>
-          <span className="text-slate-200 truncate max-w-[150px]">{data.country || 'International'}</span>
+          <span className="text-slate-200 truncate max-w-[150px]">{data.country || 'Unavailable'}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">Orbital Regime:</span>
-          <span className="text-amber-300">{data.regime || 'LEO'}</span>
+          <span className="text-amber-300">{data.regime || 'Unavailable'}</span>
         </div>
 
       </div>
@@ -216,18 +223,13 @@ export const SatelliteInfo = () => {
       {!isDebris && (
         <div className="border-t border-cyan-500/20 pt-2.5">
           {(() => {
-            const matched = (conjunctions || []).find(
+            const matches = (conjunctions || []).filter(
               (c) => c.object1?.norad_id === data.norad_id || c.object2?.norad_id === data.norad_id
             );
+            const matched = matches[0];
             const isCritical = matched?.risk_level === 'CRITICAL';
             const isWarning = matched?.risk_level === 'WARNING';
-            const threatScore = matched
-              ? (isCritical ? 92.5 : isWarning ? 68.0 : 38.0)
-              : Math.min(22.0, Math.max(6.0, 8.5 + ((Number(data.norad_id) || 0) % 11) * 0.8));
-
-            const threatBadge = matched
-              ? (isCritical ? 'HIGH RISK' : isWarning ? 'CAUTION' : 'MONITORED')
-              : 'NOMINAL';
+            const threatBadge = matched ? matched.risk_level : 'NO MATCHING EVENT';
 
             return (
               <>
@@ -240,7 +242,7 @@ export const SatelliteInfo = () => {
                     ) : (
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                     )}
-                    Conjunction Threat Score
+                    Conjunction screening record
                   </span>
                   <span
                     className={`text-[11px] px-2 py-0.5 rounded-full font-bold font-mono ${
@@ -251,31 +253,27 @@ export const SatelliteInfo = () => {
                         : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     }`}
                   >
-                    {threatScore.toFixed(1)} / 100
+                    {matches.length} event{matches.length === 1 ? '' : 's'}
                   </span>
                 </div>
 
                 <div className="space-y-1 text-[11px] text-slate-300 bg-space-950/60 p-2 rounded-lg border border-slate-800 font-mono">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Nearby Debris (&lt;80 km):</span>
-                    <span className="text-amber-400 font-bold">
-                      {matched ? (isCritical ? '14 objects' : '4 objects') : '0 objects'}
-                    </span>
+                    <span className="text-slate-400">Screened event:</span>
+                    <span className="text-amber-400 font-bold">{matched ? matched.id : 'None in loaded snapshot'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Closest Approach:</span>
                     <span className="text-cyan-300">
                       {matched
-                        ? `${formatDistance(matched.miss_distance_km, settings?.units, 2)} (${matched.object2?.name || 'Threat'})`
-                        : '> 250 km'}
+                        ? `${formatDistance(matched.miss_distance_km, settings?.units, 2)} (${matched.object1?.norad_id === data.norad_id ? matched.object2?.name : matched.object1?.name})`
+                        : 'Unavailable; absence of a record is not a clearance'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Collision Probability:</span>
                     <span className="text-rose-400 font-semibold">
-                      {matched
-                        ? `${(matched.pc_foster * 100).toExponential(3)}% (Pc: ${matched.pc_foster.toExponential(2)})`
-                        : '< 1.000e-7% (Nominal)'}
+                        Unavailable without measured covariance
                     </span>
                   </div>
                 </div>

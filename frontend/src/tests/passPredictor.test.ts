@@ -54,7 +54,7 @@ describe('Client-Side Topocentric Pass Predictor', () => {
   });
 
   it('computes topocentric passes for ISRO RESOURCESAT-2A over custom coordinates (Bengaluru)', () => {
-    const customStation = resolveLocationClient('12.9716,77.5946');
+    const customStation = resolveLocationClient('12.9716,77.5946,920');
     expect(customStation.lat).toBeCloseTo(12.9716, 3);
     expect(customStation.lon).toBeCloseTo(77.5946, 3);
 
@@ -76,13 +76,12 @@ describe('Client-Side Topocentric Pass Predictor', () => {
     expect(midPoint!.lon).toBeLessThanOrEqual(180);
   });
 
-  it('resolves named cities and fallback ground stations accurately', () => {
-    const bgl = resolveLocationClient('bengaluru');
-    expect(bgl.city).toBe('Bengaluru');
-    expect(bgl.lat).toBeCloseTo(12.9716, 2);
-
-    const fallback = resolveLocationClient('unknown_place');
-    expect(fallback.name).toBe(FAMOUS_GROUND_STATIONS[1].name);
+  it('requires explicit coordinates and altitude instead of unverified station presets', () => {
+    expect(FAMOUS_GROUND_STATIONS).toEqual([]);
+    expect(() => resolveLocationClient('bengaluru')).toThrow(/Unknown ground station/);
+    expect(() => resolveLocationClient('unknown_place')).toThrow(/Unknown ground station/);
+    expect(() => resolveLocationClient('12.9716,77.5946')).toThrow(/Unknown ground station/);
+    expect(resolveLocationClient('12.9716,77.5946,920').altM).toBe(920);
   });
 
   it('gracefully returns empty array for corrupt or decayed element sets', () => {

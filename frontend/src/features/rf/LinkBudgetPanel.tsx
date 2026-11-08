@@ -30,14 +30,14 @@ interface LinkBudgetPanelProps {
 }
 
 export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierFreqHz }) => {
-  const [selectedPresetKey, setSelectedPresetKey] = useState<keyof typeof LINK_BUDGET_PRESETS>('UHF_CUBESAT');
+  const [selectedPresetKey, setSelectedPresetKey] = useState<keyof typeof LINK_BUDGET_PRESETS | null>(null);
 
   // Link budget input state initialized from preset
   const [inputs, setInputs] = useState<LinkBudgetInputs>({
     ...LINK_BUDGET_PRESETS.UHF_CUBESAT,
-    carrierFreqHz: carrierFreqHz || 437.5e6,
-    slantRangeKm: pass?.minRangeKm || 850.0,
-    elevationDeg: pass?.maxElevationDeg || 45.0,
+    carrierFreqHz,
+    slantRangeKm: 0,
+    elevationDeg: 0,
   });
 
   // Switch preset
@@ -47,25 +47,30 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
     setInputs((prev) => ({
       ...prev,
       ...preset,
-      carrierFreqHz: preset.carrierFreqHz,
-      slantRangeKm: pass?.minRangeKm || prev.slantRangeKm,
-      elevationDeg: pass?.maxElevationDeg || prev.elevationDeg,
+      carrierFreqHz: carrierFreqHz > 0 ? carrierFreqHz : preset.carrierFreqHz,
+      slantRangeKm: pass?.minRangeKm ?? prev.slantRangeKm,
+      elevationDeg: pass?.maxElevationDeg ?? prev.elevationDeg,
     }));
   };
 
+  const canCalculate = Boolean(
+    selectedPresetKey && pass?.samples?.length && Number.isFinite(carrierFreqHz) && carrierFreqHz > 0,
+  );
+
   // Compute link budget at TCA (closest approach / highest elevation)
   const tcaResult = useMemo(() => {
+    if (!canCalculate || !pass) return null;
     return computeLinkBudget({
       ...inputs,
-      carrierFreqHz: inputs.carrierFreqHz,
-      slantRangeKm: pass?.minRangeKm || inputs.slantRangeKm,
-      elevationDeg: pass?.maxElevationDeg || inputs.elevationDeg,
+      carrierFreqHz,
+      slantRangeKm: pass.minRangeKm,
+      elevationDeg: pass.maxElevationDeg,
     });
-  }, [inputs, pass]);
+  }, [canCalculate, carrierFreqHz, inputs, pass]);
 
   // Compute margin time series along the pass
   const marginTimeSeries = useMemo(() => {
-    if (!pass || !pass.samples || pass.samples.length === 0) return [];
+    if (!canCalculate || !pass || !pass.samples || pass.samples.length === 0) return [];
 
     return pass.samples.map((s) => {
       const res = computeLinkBudget({
@@ -87,7 +92,7 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
         prDbm: res.prDbm,
       };
     });
-  }, [inputs, pass]);
+  }, [canCalculate, inputs, pass]);
 
   return (
     <div className="flex flex-col gap-3 font-mono text-xs">
@@ -114,7 +119,14 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
         </div>
       </div>
 
+      {!tcaResult && (
+        <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-200 text-[11px]" role="status">
+          Select a mission link preset and provide a predicted pass with a verified carrier frequency to calculate an estimated link budget. Preset values are model inputs, not measured RF telemetry.
+        </div>
+      )}
+
       {/* Main Verdict Banner */}
+      {tcaResult && <>
       <div
         className={`p-3 rounded-xl border flex items-center justify-between ${
           tcaResult.verdict === 'CLOSED'
@@ -134,7 +146,7 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
           )}
           <div>
             <div className="text-sm font-bold tracking-tight">
-              LINK {tcaResult.verdict}: {tcaResult.marginDb >= 0 ? '+' : ''}{tcaResult.marginDb} dB Margin at TCA
+              ESTIMATED LINK {tcaResult.verdict}: {tcaResult.marginDb >= 0 ? '+' : ''}{tcaResult.marginDb} dB Margin at TCA
             </div>
             <div className="text-[10px] text-slate-300 opacity-90 mt-0.5">
               Target Margin: 3.0 dB | Max Supportable Rate: {(tcaResult.maxSupportableDataRateBps / 1000).toFixed(1)} kbps
@@ -167,6 +179,7 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
           <div className="text-emerald-400 font-bold mt-0.5">{tcaResult.cNoDbHz} dB-Hz</div>
         </div>
       </div>
+      </>}
 
       {/* Margin Trajectory Chart across the Pass */}
       {marginTimeSeries.length > 0 && (

@@ -5,18 +5,18 @@ from backend.main import app
 client = TestClient(app)
 
 
-def test_api_passes_default_omitted_norad():
-    """Omitting norad_id should default to ISS (25544) without throwing 404."""
-    response = client.get("/api/passes?city=Bengaluru")
-    assert response.status_code == 200
-    data = response.json()
-    assert "passes" in data
-    assert data["satellite"]["norad_id"] == 25544
+def test_api_passes_require_norad_and_explicit_site():
+    """Pass predictions require an ID plus coordinates and MSL altitude."""
+    missing_norad = client.get("/api/passes?lat=13.7&lon=80.2&alt_m=10")
+    assert missing_norad.status_code == 422
+
+    missing_site = client.get("/api/passes?city=Bengaluru&norad_id=25544")
+    assert missing_site.status_code == 422
 
 
 def test_api_passes_valid_norad():
     """Providing a valid NORAD ID should return pass predictions for that satellite."""
-    response = client.get("/api/passes?city=Bengaluru&norad_id=25544&days=3")
+    response = client.get("/api/passes?lat=13.7&lon=80.2&alt_m=10&norad_id=25544&days=1")
     assert response.status_code == 200
     data = response.json()
     assert data["satellite"]["norad_id"] == 25544
@@ -25,7 +25,7 @@ def test_api_passes_valid_norad():
 
 def test_api_passes_unknown_norad_returns_404():
     """An unknown NORAD ID must return 404 instead of silently falling back."""
-    response = client.get("/api/passes?city=Bengaluru&norad_id=99999999")
+    response = client.get("/api/passes?lat=13.7&lon=80.2&alt_m=10&norad_id=99999999")
     assert response.status_code == 404
     assert "99999999" in response.json()["detail"]
 

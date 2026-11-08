@@ -9,7 +9,7 @@ OrbitGuard requires a native desktop application for Windows operators that brid
 The architecture was evaluated against key criteria:
 1. **Single Codebase**: Must preserve 100% compatibility with the existing React 18, Vite, Three.js, and Web Worker codebase deployed to Vercel.
 2. **Serial Hardware Interfacing**: Direct Windows COM port communications requiring native C++ bindings for deterministic 5 Hz motor control and sub-millisecond I/O latency.
-3. **WebGL & Shader Performance**: Heavy 3D orbital rendering (3,789 active satellites and space debris objects with custom GLSL shaders, instancing, and bloom passes).
+3. **WebGL & Shader Performance**: Heavy 3D orbital rendering; catalog size is determined by the timestamped snapshot bundled with each build (3,782 records in the v5.0 snapshot), with custom GLSL shaders and point rendering.
 4. **Offline Resilience & Data Integrity**: High-throughput file system access with atomic writes, ETag caching, and DPAPI credential protection.
 
 Two primary desktop frameworks were evaluated: **Electron** and **Tauri v2**.

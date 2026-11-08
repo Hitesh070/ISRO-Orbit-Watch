@@ -10,6 +10,7 @@ import { useOrbitStore } from '../store/useOrbitStore';
 
 export const Conjunctions = () => {
   const conjunctions = useOrbitStore((state) => state.conjunctions);
+  const screenTime = useOrbitStore((state) => state.conjunctionsScreenTime);
   const criticalCount = conjunctions.filter((c) => c.risk_level === 'CRITICAL' && (c.object1?.is_isro || c.object2?.is_isro)).length;
 
   return (
@@ -24,8 +25,8 @@ export const Conjunctions = () => {
 
         <div className="flex items-center gap-2">
           <span className="px-3 py-1.5 rounded-lg bg-rose-950/60 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-glow-rose">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            {criticalCount} Critical Conjunctions
+            {screenTime && <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
+            {screenTime ? `${criticalCount} Critical Conjunctions` : 'Screening unavailable'}
           </span>
         </div>
       </div>

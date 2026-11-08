@@ -123,18 +123,33 @@ def derive_orbital_metrics(mean_motion_rev_day: float, eccentricity: float) -> T
 def parse_omm_to_catalog_item(omm: Dict[str, Any], default_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Parse raw CCSDS OMM JSON object into normalized schema."""
     try:
+        required_fields = (
+            "NORAD_CAT_ID", "OBJECT_NAME", "EPOCH", "MEAN_MOTION", "ECCENTRICITY",
+            "INCLINATION", "RA_OF_ASC_NODE", "ARG_OF_PERICENTER", "MEAN_ANOMALY",
+            "MEAN_MOTION_DOT", "BSTAR", "ELEMENT_SET_NO", "REV_AT_EPOCH",
+        )
+        missing = [field for field in required_fields if field not in omm or omm[field] in (None, "")]
+        if missing:
+            logger.debug("Skipping OMM record with missing required fields: %s", ", ".join(missing))
+            return None
         norad_id = int(omm["NORAD_CAT_ID"])
-        name = str(omm.get("OBJECT_NAME", f"OBJECT-{norad_id}")).strip()
+        name = str(omm["OBJECT_NAME"]).strip()
+        if not name:
+            return None
         intl_des = str(omm.get("OBJECT_ID", "UNKNOWN")).strip()
         epoch_str = str(omm.get("EPOCH", "")).strip()
 
-        mm = float(omm.get("MEAN_MOTION", 0.0))
-        ecc = float(omm.get("ECCENTRICITY", 0.0))
-        inc = round(float(omm.get("INCLINATION", 0.0)), 4)
-        raan = round(float(omm.get("RA_OF_ASC_NODE", 0.0)), 4)
-        argp = round(float(omm.get("ARG_OF_PERICENTER", 0.0)), 4)
-        ma = round(float(omm.get("MEAN_ANOMALY", 0.0)), 4)
-        bstar = float(omm.get("BSTAR", 0.0))
+        mm = float(omm["MEAN_MOTION"])
+        ecc = float(omm["ECCENTRICITY"])
+        inc = round(float(omm["INCLINATION"]), 4)
+        raan = round(float(omm["RA_OF_ASC_NODE"]), 4)
+        argp = round(float(omm["ARG_OF_PERICENTER"]), 4)
+        ma = round(float(omm["MEAN_ANOMALY"]), 4)
+        bstar = float(omm["BSTAR"])
+        if not all(math.isfinite(value) for value in (mm, ecc, inc, raan, argp, ma, bstar)):
+            return None
+        if not 0 < mm or not 0 <= ecc < 1 or not 0 <= inc <= 180:
+            return None
 
         sma_km, perigee_km, apogee_km, period_min, regime = derive_orbital_metrics(mm, ecc)
 
@@ -145,27 +160,25 @@ def parse_omm_to_catalog_item(omm: Dict[str, Any], default_type: Optional[str] =
             status = "operational"
 
         # TLE Age check
-        is_stale = False
-        tle_age_days = 0.0
-        if epoch_str:
-            try:
-                # Format: 2026-11-05T20:28:36.809184
-                epoch_clean = epoch_str.replace("Z", "")
-                epoch_dt = datetime.fromisoformat(epoch_clean).replace(tzinfo=timezone.utc)
-                now_dt = datetime.now(timezone.utc)
-                tle_age_days = round(max(0.0, (now_dt - epoch_dt).total_seconds() / 86400.0), 2)
-                if tle_age_days > 14.0:
-                    is_stale = True
-            except Exception:
-                pass
+        if not epoch_str:
+            return None
+        epoch_clean = epoch_str.replace("Z", "+00:00")
+        epoch_dt = datetime.fromisoformat(epoch_clean)
+        if epoch_dt.tzinfo is None:
+            epoch_dt = epoch_dt.replace(tzinfo=timezone.utc)
+        now_dt = datetime.now(timezone.utc)
+        tle_age_days = round(max(0.0, (now_dt - epoch_dt).total_seconds() / 86400.0), 2)
+        is_stale = tle_age_days > 14.0
 
         obj_type = default_type or classify_object_type(name, omm.get("OBJECT_TYPE"))
-        country = classify_country(name, norad_id)
-        is_isro = "ISRO" in country or "India" in country
+        country = str(omm.get("COUNTRY_CODE") or "Unknown").strip()
+        is_isro = country.strip().upper() in {"IND", "INDIA", "INDIA (ISRO)"}
 
         # Format 2-line elements for SGP4 propagators
         # Many client components use twoline2satrec
         line1, line2 = omm_to_tle_strings(omm)
+        if not line1 or not line2:
+            return None
 
         return {
             "norad_id": norad_id,
@@ -229,21 +242,28 @@ def omm_to_tle_strings(omm: Dict[str, Any]) -> Tuple[str, str]:
         satnum = int(omm["NORAD_CAT_ID"])
         if satnum > 99999:
             raise ValueError("NORAD id exceeds the 5-digit TLE range; use OMM-based propagation")
-        class_char = str(omm.get("CLASSIFICATION_TYPE", "U"))[0]
+        class_value = str(omm["CLASSIFICATION_TYPE"]).strip()
+        if not class_value:
+            raise ValueError("Missing classification type")
+        class_char = class_value[0]
         intldesg = _tle_intl_designator(str(omm.get("OBJECT_ID", "")))
 
-        epoch_str = str(omm.get("EPOCH", "2026-01-01T00:00:00")).replace("Z", "")
+        epoch_str = str(omm["EPOCH"]).replace("Z", "+00:00")
         dt = datetime.fromisoformat(epoch_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
         epochyr = dt.year % 100
-        day_of_year = (dt - datetime(dt.year, 1, 1)).total_seconds() / 86400.0 + 1.0
+        day_of_year = (dt - datetime(dt.year, 1, 1, tzinfo=timezone.utc)).total_seconds() / 86400.0 + 1.0
         epoch_field = f"{epochyr:02d}{day_of_year:012.8f}"
 
-        mm_dot = float(omm.get("MEAN_MOTION_DOT", 0.0))
+        mm_dot = float(omm["MEAN_MOTION_DOT"])
         mm_dot_str = f"{min(abs(mm_dot), 0.99999999):.8f}"  # "0.00014285"
         mm_dot_field = ("-" if mm_dot < 0 else " ") + mm_dot_str[1:]  # 10 chars: sign + ".00014285"
 
         # BSTAR formatting
-        bstar = float(omm.get("BSTAR", 0.0))
+        bstar = float(omm["BSTAR"])
         if bstar == 0.0:
             bstar_field = " 00000+0"
         else:
@@ -256,20 +276,20 @@ def omm_to_tle_strings(omm: Dict[str, Any]) -> Tuple[str, str]:
             exp_sign = "+" if exp >= 0 else "-"
             bstar_field = f"{sign}{abs(mantissa):05d}{exp_sign}{abs(exp)}"
 
-        elnum = int(omm.get("ELEMENT_SET_NO", 999)) % 1000
+        elnum = int(omm["ELEMENT_SET_NO"]) % 1000
 
         line1_raw = f"1 {satnum:05d}{class_char} {intldesg} {epoch_field} {mm_dot_field}  00000-0 {bstar_field} 0 {elnum:4d}"
         c1 = tle_checksum(line1_raw[:68])
         line1 = f"{line1_raw[:68]}{c1}"
 
-        inc = float(omm.get("INCLINATION", 0.0))
-        raan = float(omm.get("RA_OF_ASC_NODE", 0.0))
-        ecc = float(omm.get("ECCENTRICITY", 0.0))
+        inc = float(omm["INCLINATION"])
+        raan = float(omm["RA_OF_ASC_NODE"])
+        ecc = float(omm["ECCENTRICITY"])
         ecc_int = int(round(ecc * 1e7))
-        argp = float(omm.get("ARG_OF_PERICENTER", 0.0))
-        ma = float(omm.get("MEAN_ANOMALY", 0.0))
-        mm = float(omm.get("MEAN_MOTION", 1.0))
-        rev = int(omm.get("REV_AT_EPOCH", 0)) % 100000
+        argp = float(omm["ARG_OF_PERICENTER"])
+        ma = float(omm["MEAN_ANOMALY"])
+        mm = float(omm["MEAN_MOTION"])
+        rev = int(omm["REV_AT_EPOCH"]) % 100000
 
         line2_raw = f"2 {satnum:05d} {inc:8.4f} {raan:8.4f} {ecc_int:07d} {argp:8.4f} {ma:8.4f} {mm:11.8f}{rev:5d}"
         c2 = tle_checksum(line2_raw[:68])
@@ -378,16 +398,10 @@ class CatalogPipeline:
             logger.error(f"HTTP fetch pipeline encountered error: {exc}")
 
         total_fetched = len(active_list) + len(debris_list)
-        logger.info(f"Total objects fetched from live sources: {total_fetched} (Active: {len(active_list)}, Debris: {len(debris_list)})")
-
-        # Fallback to high-fidelity seed catalog if network was blocked
-        if total_fetched == 0:
-            if (self.output_dir / "catalog.json").exists():
-                # Do NOT overwrite a good catalog with illustrative seed data.
-                logger.error("Live sources unavailable; keeping existing catalog artifacts.")
-                raise SystemExit(1)
-            logger.warning("Live sources unavailable. Compiling pipeline from baseline seed catalog.")
-            active_list, debris_list = self._compile_fallback_seed()
+        logger.info(f"Objects fetched from live sources: {total_fetched} (Active: {len(active_list)}, Debris: {len(debris_list)})")
+        if not active_list or not debris_list:
+            logger.error("A complete live catalog was not fetched; refusing to publish incomplete or seed data.")
+            raise SystemExit(1)
 
         # Combine catalog
         catalog = active_list + debris_list
@@ -448,69 +462,6 @@ class CatalogPipeline:
         uncompressed_kb = cat_json_path.stat().st_size / 1024.0
         compressed_kb = cat_gz_path.stat().st_size / 1024.0
         logger.info(f"Artifact sizes: catalog.json: {uncompressed_kb:.1f} KB | catalog.json.gz: {compressed_kb:.1f} KB ({(compressed_kb/uncompressed_kb)*100:.1f}%)")
-
-    def _compile_fallback_seed(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """High-fidelity curated seed for offline resilience."""
-        # Reads backend/data/active_sats.tle and debris.tle
-        active = []
-        debris = []
-        from backend.tle_fetcher import SEED_ACTIVE_TLE, SEED_DEBRIS_TLE
-
-        for line_block, group, t_label in [(SEED_ACTIVE_TLE, active, "Satellite"), (SEED_DEBRIS_TLE, debris, "Debris")]:
-            lines = [line_str.strip() for line_str in line_block.strip().split("\n") if line_str.strip()]
-            i = 0
-            while i < len(lines):
-                if lines[i].startswith("1 ") and i + 1 < len(lines):
-                    name = f"OBJECT-{lines[i][2:7].strip()}"
-                    l1 = lines[i]
-                    l2 = lines[i + 1]
-                    i += 2
-                elif i + 2 < len(lines) and lines[i + 1].startswith("1 "):
-                    name = lines[i]
-                    l1 = lines[i + 1]
-                    l2 = lines[i + 2]
-                    i += 3
-                else:
-                    i += 1
-                    continue
-
-                nid = int(l1[2:7])
-                mm = float(l2[52:63])
-                ecc = float("0." + l2[26:33].strip())
-                inc = float(l2[8:16].strip())
-                epoch_dt = _tle_epoch(l1)
-                age_days = round(max(0.0, (datetime.now(timezone.utc) - epoch_dt).total_seconds() / 86400.0), 2)
-                sma_km, perigee_km, apogee_km, period_min, regime = derive_orbital_metrics(mm, ecc)
-                country = classify_country(name, nid)
-                group.append({
-                    "norad_id": nid,
-                    "name": name,
-                    "intl_des": l1[9:17].strip(),
-                    "object_type": t_label,
-                    "country": country,
-                    "is_isro": "ISRO" in country or "India" in country,
-                    "epoch": epoch_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-                    "tle_age_days": age_days,
-                    "is_stale": age_days > 14.0,
-                    "status": "operational",
-                    "mean_motion": mm,
-                    "eccentricity": ecc,
-                    "inclination": inc,
-                    "raan": float(l2[17:25].strip()),
-                    "arg_perigee": float(l2[34:42].strip()),
-                    "mean_anomaly": float(l2[43:51].strip()),
-                    "bstar": _tle_bstar(l1),
-                    "semi_major_axis_km": sma_km,
-                    "perigee_km": perigee_km,
-                    "apogee_km": apogee_km,
-                    "period_min": period_min,
-                    "regime": regime,
-                    "line1": l1,
-                    "line2": l2,
-                })
-
-        return active, debris
-
 
 if __name__ == "__main__":
     pipeline = CatalogPipeline()

@@ -1,7 +1,7 @@
 /**
  * OrbitGuard Share State & Deep-Link Modal
  * ========================================
- * Provides instant sharing of real-time telemetry state, active satellite selection,
+ * Provides instant sharing of catalog-based orbit view state and active satellite selection,
  * simulation speed, and view route across web and desktop platforms.
  * Portaled to document.body with z-[9999] to prevent clipping from parent sticky/filter containers.
  */
@@ -62,7 +62,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
       try {
         await navigator.share({
           title: selectedSatellite?.name ? `OrbitGuard - ${selectedSatellite.name}` : 'OrbitGuard Satellite Tracker',
-          text: `Track ${selectedSatellite?.name || 'real-time orbital telemetry'} on OrbitGuard`,
+          text: `View ${selectedSatellite?.name || 'an orbital prediction'} on OrbitGuard`,
           url: shareUrl,
         });
       } catch (err) {
@@ -137,7 +137,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
                 <Compass className="w-3.5 h-3.5 text-emerald-400" /> Simulation Clock:
               </span>
               <span className="font-bold text-emerald-300">
-                {simulationSpeed > 1 ? `${simulationSpeed}x Speed` : '1x Real-Time Live'}
+                {simulationSpeed > 1 ? `${simulationSpeed}x Speed` : '1x Current UTC Clock'}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">

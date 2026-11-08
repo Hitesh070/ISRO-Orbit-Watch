@@ -4,16 +4,16 @@ The **OrbitGuard Frontend** is a high-performance, responsive Single-Page Applic
 
 ---
 
-## 🚀 Key Highlights & v4.3 Features
+## 🚀 Key Highlights & v5.0
 
 1. **Curvature-Preserving Spherical Shell Extrapolation**:
    - Eliminates tangential blowout during time-acceleration ($5\times, 15\times, 60\times$) by projecting linear velocity steps back onto the sphere radius:
      $$\mathbf{r}_{\text{curved}}(t) = \|\mathbf{r}_0\| \frac{\mathbf{r}_0 + \mathbf{v}_0 \Delta t}{\|\mathbf{r}_0 + \mathbf{v}_0 \Delta t\|}$$
-   - Proven **$0.000000\text{ m}$ radial error** at $60\times$ speed across continuous motion.
+   - The projection preserves the position vector's radial magnitude between worker updates; it does not replace SGP4 propagation or guarantee an exact future orbital position.
 2. **Adaptive Worker Tick Rate**:
    - Dynamically scales propagation refresh intervals based on simulation speed ($60\text{ms}$ at $60\times$, $100\text{ms}$ at $15\times$, $150\text{ms}$ at $5\times$, $500\text{ms}$ at $1\times$) to prevent temporal lag or GC pauses.
-3. **Dynamic Real-Time Conjunction Telemetry**:
-   - `ConjunctionPanel.tsx` and `RiskTable.tsx` compute live separation $D(t)$, real-time relative velocity $v_{\text{rel}}(t)$, and dynamic Akella-Alfriend $P_{c,\text{max}}(t)$ on every frame with smooth animations and numerical sanitization (`< 1e-9`).
+3. **Conjunction Data Transparency**:
+   - The UI shows source timestamp, screening availability and coverage. No event snapshot is presented as clearance, and collision probability is unavailable without measured covariance and hard-body data from an authoritative CDM.
 4. **4K Ultra-HD NASA Blue Marble & Continuous Alpha Clouds**:
    - 4096×2048 high-resolution day map, golden night lights, specular ocean reflection, and smooth feathered cloud deck.
 5. **Portal-Mounted Share Modal (`ShareModal.tsx`)**:
@@ -33,7 +33,7 @@ frontend/
 │   ├── data/               # Bundled catalog snapshot (catalog.json, meta.json, etc.)
 │   ├── textures/           # 4K Blue Marble day/night, specular, clouds_hd, skybox
 │   ├── manifest.json       # Progressive Web App manifest
-│   └── sw.js               # Service Worker with offline caching (v4.3)
+│   └── sw.js               # Service Worker with offline caching
 ├── src/
 │   ├── api/                # Data fetching and offline fallback client
 │   ├── components/

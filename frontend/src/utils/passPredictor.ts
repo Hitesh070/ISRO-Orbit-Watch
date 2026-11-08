@@ -61,18 +61,7 @@ export interface GroundTrackPoint {
 }
 
 // Predefined global space centers & ground stations
-export const FAMOUS_GROUND_STATIONS: GroundStation[] = [
-  { name: 'Satish Dhawan Space Centre (SDSC SHAR)', city: 'Sriharikota', country: 'India', lat: 13.7199, lon: 80.2304, altM: 10 },
-  { name: 'ISTRAC Ground Station', city: 'Bengaluru', country: 'India', lat: 12.9716, lon: 77.5946, altM: 920 },
-  { name: 'New Delhi Earth Station', city: 'New Delhi', country: 'India', lat: 28.6139, lon: 77.2090, altM: 216 },
-  { name: 'Mumbai Marine Gateway', city: 'Mumbai', country: 'India', lat: 19.0760, lon: 72.8777, altM: 14 },
-  { name: 'Cape Canaveral Space Force Station', city: 'Cape Canaveral', country: 'USA', lat: 28.3922, lon: -80.6077, altM: 3 },
-  { name: 'Johnson Space Center (NASA JSC)', city: 'Houston', country: 'USA', lat: 29.5593, lon: -95.0900, altM: 6 },
-  { name: 'London Ground Station', city: 'London', country: 'UK', lat: 51.5074, lon: -0.1278, altM: 35 },
-  { name: 'Tsukuba Space Center (JAXA)', city: 'Tokyo', country: 'Japan', lat: 36.0667, lon: 140.1264, altM: 25 },
-  { name: 'Sydney Ground Terminal', city: 'Sydney', country: 'Australia', lat: -33.8688, lon: 151.2093, altM: 19 },
-  { name: 'Guiana Space Centre (CSG)', city: 'Kourou', country: 'French Guiana', lat: 5.2390, lon: -52.7680, altM: 15 },
-];
+export const FAMOUS_GROUND_STATIONS: GroundStation[] = [];
 
 const COMPASS_POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'];
 
@@ -96,13 +85,18 @@ export function azimuthToCompass(azDeg: number): string {
 export function resolveLocationClient(
   cityOrCoord?: string,
   explicitLat?: number | null,
-  explicitLon?: number | null
+  explicitLon?: number | null,
+  explicitAlt?: number | null
 ): GroundStation {
   if (
     typeof explicitLat === 'number' &&
     !isNaN(explicitLat) &&
     typeof explicitLon === 'number' &&
-    !isNaN(explicitLon)
+    !isNaN(explicitLon) &&
+    typeof explicitAlt === 'number' && Number.isFinite(explicitAlt) &&
+    explicitLat >= -90 && explicitLat <= 90 &&
+    explicitLon >= -180 && explicitLon <= 180 &&
+    explicitAlt >= -500 && explicitAlt <= 10000
   ) {
     return {
       name: `Custom Ground Station (${explicitLat.toFixed(2)}°, ${explicitLon.toFixed(2)}°)`,
@@ -110,40 +104,32 @@ export function resolveLocationClient(
       country: 'User Coordinates',
       lat: explicitLat,
       lon: explicitLon,
-      altM: 100,
+      altM: explicitAlt,
     };
   }
 
   const raw = (cityOrCoord || '').trim();
   if (raw.includes(',')) {
     const parts = raw.split(',');
-    const pLat = parseFloat(parts[0]);
-    const pLon = parseFloat(parts[1]);
-    if (!isNaN(pLat) && !isNaN(pLon)) {
+    const pLat = Number(parts[0]);
+    const pLon = Number(parts[1]);
+    const pAlt = Number(parts[2]);
+    if (Number.isFinite(pLat) && Number.isFinite(pLon) && parts.length >= 3 && Number.isFinite(pAlt) && pLat >= -90 && pLat <= 90 && pLon >= -180 && pLon <= 180 && pAlt >= -500 && pAlt <= 10000) {
       return {
         name: `Custom Ground Station (${pLat.toFixed(2)}°, ${pLon.toFixed(2)}°)`,
         city: 'Custom GPS',
         country: 'User Coordinates',
         lat: pLat,
         lon: pLon,
-        altM: 100,
+        altM: pAlt,
       };
     }
   }
 
   const q = raw.toLowerCase();
-  for (const st of FAMOUS_GROUND_STATIONS) {
-    if (
-      st.city.toLowerCase() === q ||
-      st.city.toLowerCase().includes(q) ||
-      st.name.toLowerCase().includes(q)
-    ) {
-      return st;
-    }
-  }
-
-  // Default to ISTRAC Ground Station (Bengaluru, ISRO HQ)
-  return FAMOUS_GROUND_STATIONS[1];
+  const exact = FAMOUS_GROUND_STATIONS.find((st) => st.city.toLowerCase() === q || st.name.toLowerCase() === q);
+  if (exact) return exact;
+  throw new Error(`Unknown ground station "${raw}". Select a listed station or enter coordinates and altitude.`);
 }
 
 /**
@@ -177,7 +163,7 @@ export function predictPassesClient(
   const observerGd: satellite.GeodeticLocation = {
     longitude: degreesToRadians(observer.lon),
     latitude: degreesToRadians(observer.lat),
-    height: (observer.altM || 100) / 1000.0, // km
+    height: observer.altM / 1000.0, // km
   };
 
   const startTimeMs = Date.now();

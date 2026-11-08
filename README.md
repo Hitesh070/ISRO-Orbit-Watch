@@ -1,16 +1,18 @@
 # OrbitGuard 🛰️
-### Real-Time Space Situational Awareness, Conjunction Assessment & Ground Station Toolkit
+### Catalog-Based Orbit Predictions, Conjunction Screening & Ground Station Toolkit
 
-[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20v4.3-000000.svg?style=flat&logo=vercel)](https://orbit-guard-tan.vercel.app)
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Production-000000.svg?style=flat&logo=vercel)](https://orbit-guard-tan.vercel.app)
 [![Windows Desktop](https://img.shields.io/badge/Windows%20App-Electron%2031%20%7C%20x64-0078D6.svg?style=flat&logo=windows)](https://github.com/Hitesh070/Orbit-Guard/releases)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Hitesh070%2FOrbit--Guard-181717.svg?style=flat&logo=github)](https://github.com/Hitesh070/Orbit-Guard)
 [![Astrodynamics](https://img.shields.io/badge/Astrodynamics-SGP4%20%7C%20Vallado%20Verified-009688.svg?style=flat)](https://celestrak.org)
 [![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-61DAFB.svg?style=flat&logo=react)](https://reactjs.org/)
 [![Three.js](https://img.shields.io/badge/3D%20Graphics-Three.js%20%7C%20GPU%20Shader-black.svg?style=flat&logo=three.js)](https://threejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-77%20Vitest%20%2B%2015%20Pytest%20(92%20Total)-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
+[![Tests](https://img.shields.io/badge/Tests-78%20Vitest%20%2B%20Pytest-brightgreen.svg?style=flat)](https://github.com/Hitesh070/Orbit-Guard)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**OrbitGuard** is an advanced, production-grade Space Situational Awareness (SSA) and RF ground-station operations platform. It propagates thousands of active spacecraft and space debris fragments in real time, evaluates bivariate collision probabilities ($P_c$) via 2-D encounter plane integration, estimates RF Doppler shifts with Earth-rotation tangential velocity compensation, computes pass-resolved link budgets, and drives dual-axis antenna rotators.
+**OrbitGuard** propagates catalog GP/TLE orbital elements with SGP4 to show model-predicted positions and pass opportunities. Its catalog is a timestamped snapshot refreshed by scheduled pipeline runs and desktop fetch attempts; “real time” describes the simulation clock and derived predictions, not live sensor telemetry. Interpret each view using the displayed source timestamp and freshness state. Conjunction coverage is displayed only when a verified screening snapshot is loaded; collision probability is unavailable without measured covariance and hard-body data from an authoritative CDM. RF outputs require a known station location, selected pass, and verified mission inputs.
+
+The packaged catalog snapshot currently contains 3,782 records (1,109 active satellites and 2,673 debris/rocket bodies) and was generated at `2026-11-08 04:16:07 UTC`. It is a fixed release asset and will age until refreshed; the app marks snapshots older than six hours as stale. Counts and availability vary with each accepted source snapshot.
 
 ---
 
@@ -26,6 +28,7 @@
 - **Windows Testing & Verification Matrix**: [`docs/WINDOWS_TESTING.md`](docs/WINDOWS_TESTING.md)
 - **ADR 003 (Electron Architecture Choice)**: [`docs/adr/003-electron-over-tauri.md`](docs/adr/003-electron-over-tauri.md)
 - **90-Second Demo Presentation Script**: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+- **v5.0 Manual Review & Validation Report**: [`docs/RELEASE_V5.0.md`](docs/RELEASE_V5.0.md)
 
 ---
 
@@ -36,8 +39,8 @@ flowchart TD
     subgraph Data_Pipeline ["Data Pipeline (GitHub Actions Cron / CelesTrak)"]
         CT["CelesTrak CCSDS OMM/GP API"] -->|"GP JSON (Active + Debris)"| Pipe["scripts/pipeline/fetch_catalog.py"]
         Pipe -->|"cKDTree (40km Ball)"| Screen["scripts/pipeline/screen_conjunctions.py"]
-        Screen -->|"Foster-1992 Pc + Akella Pc_max"| Conj["conjunction_engine.py"]
-        Conj -->|"Compressed Output"| Artifacts["data/catalog.json.gz<br/>data/conjunctions.json"]
+        Screen -->|"Miss distance / relative speed; Pc unavailable without CDM covariance"| Conj["data/conjunctions.json"]
+        Pipe -->|"Catalog snapshot + provenance"| Artifacts["data/catalog.json.gz"]
     end
 
     subgraph Client_Core ["Client-Side High-Performance Architecture"]
@@ -62,7 +65,7 @@ flowchart TD
 
 ### 1. High-Performance GPU Point Cloud & Curvature-Preserving Extrapolation
 - **Propagation Offloading**: SGP4 math is offloaded to a dedicated Web Worker (`propagator.worker.ts`) using double-buffered transferable typed arrays (`Float32Array`), completely eliminating Garbage Collection (GC) pauses on the main thread.
-- **Single Draw Call GPU Point-Sprite Shader**: All 25,000+ objects render in exactly one `THREE.Points` draw call with distance-attenuated point sizing.
+- **Single Draw Call GPU Point-Sprite Shader**: Loaded catalog records with valid element sets render in one `THREE.Points` draw call.
 - **Curvature-Preserving Spherical Shell Extrapolation**:
   At accelerated simulation speeds ($5\times, 15\times, 60\times$), naive linear extrapolation causes tangential blowout because straight-line steps diverge outward from circular orbit curvature:
   $$\|\mathbf{r}_{\text{linear}}(t)\| = \sqrt{r_0^2 + (v_0 \Delta t)^2} = r_0 \sqrt{1 + \left(\frac{v_0 \Delta t}{r_0}\right)^2} > r_0$$
@@ -72,20 +75,10 @@ flowchart TD
 - **Adaptive Worker Tick Rate**: Worker tick rate scales adaptively ($60\text{ms}$ at $60\times$, $100\text{ms}$ at $15\times$, $150\text{ms}$ at $5\times$, $500\text{ms}$ at $1\times$), preventing temporal lag between thread boundaries.
 - **TEME Celestial Reference Frame**: Satellites propagate natively in the True Equator, Mean Equinox (TEME) inertial frame. Earth's surface rotates by Greenwich Mean Sidereal Time (GMST) with subsolar astronomical lighting.
 
-### 2. Industry-Grade Conjunction Assessment Engine ($P_c$) & Live Dynamic Telemetry
-- **Spatial Indexing**: 24-hour screening window on a 30s grid. A `scipy.spatial.cKDTree` ball query (radius sized to the distance travelled in half a step) is followed by a linearised time-of-closest-approach prefilter, then true-SGP4 TCA refinement via scalar minimization.
-- **Foster-1992 2-D Collision Probability ($P_c$)**: Evaluates collision probability by integrating bivariate Gaussian uncertainty over the hard-body circle on the encounter plane perpendicular to relative velocity:
-  $$P_c = \frac{1}{2\pi \sqrt{\det \mathbf{C}_{2D}}} \iint_{\text{Disk}(R_{\text{HBR}})} \exp\left(-\frac{1}{2}(\mathbf{r} - \mathbf{m})^T \mathbf{C}_{2D}^{-1} (\mathbf{r} - \mathbf{m})\right) d^2\mathbf{r}$$
-  using 64-point Gauss-Legendre quadrature in polar coordinates.
-- **Akella-Alfriend Maximum $P_{c,\text{max}}$**: Evaluates worst-case collision probability across covariance scaling factors $k \in [10^{-2}, 10^2]$.
-- **Dynamic Real-Time Conjunction Telemetry**:
-  Both the Conjunction Panel and Risk Table compute live encounter metrics in real time:
-  - Live separation distance: $D(t) = \|\mathbf{r}_1(t) - \mathbf{r}_2(t)\|$
-  - Live relative velocity: $v_{\text{rel}}(t) = \|\mathbf{v}_1(t) - \mathbf{v}_2(t)\|$
-  - Dynamic Akella-Alfriend maximum probability: $P_{c,\text{max}}(t) = \frac{1}{e}\left(\frac{R_{\text{HBR}}}{D(t)}\right)^2$
-  - Proximity-scaled Foster $P_c(t)$ with smooth real-time animation and infinitesimal sanitization (`< 1e-9`).
-- **RTN Decomposition**: Radial-Transverse-Normal miss vector breakdown with 100.0% variance partitioning:
-  $$\frac{R^2 + T^2 + N^2}{\|\mathbf{m}\|^2} = 1.000$$
+### 2. Conjunction Screening Status
+- The bundled v5.0 conjunction snapshot is explicitly withdrawn because its prior probability values relied on synthetic covariance. The app reports screening unavailable when no verified event snapshot is available.
+- A zero-event or unavailable result does not establish that an orbit is clear. GP/TLE propagation can support screening candidates only when event coverage, epoch, and target scope are recorded and current.
+- Collision probability is not reported without measured covariance and hard-body data from an authoritative CDM. No synthetic probability or risk score is substituted.
 
 ### 3. EEE/RF Ground Station Suite & Topocentric Doppler
 - **Diurnal Earth-Rotation Tangential Velocity Compensation**: Range rate $\dot{\rho}$ explicitly accounts for observer motion in the inertial frame:
@@ -120,8 +113,6 @@ flowchart TD
 | **GPU Velocity Extrapolation (0.5s)** | Position drift bound $< 5\text{ m}$ | **$1.09\text{ m}$** ($1.09 \times 10^{-3}\text{ km}$) | :white_check_mark: PASS |
 | **GPU Velocity Extrapolation (1.0s)** | Position drift bound $< 15\text{ m}$ | **$4.30\text{ m}$** ($4.30 \times 10^{-3}\text{ km}$) | :white_check_mark: PASS |
 | **Curvature Extrapolation Radial Error (60x)** | Zero radial blowout ($< 0.001\text{ m}$) | **$0.000000\text{ m}$** | :white_check_mark: PASS |
-| **Foster-1992 Analytic $P_c$ Check** | Zero-miss isotropic error $< 10^{-5}$ | **$2.14 \times 10^{-8}$** | :white_check_mark: PASS |
-| **RTN Variance Partitioning** | $(R^2+T^2+N^2)/\|\mathbf{m}\|^2 = 1.0$ | **$1.000000$** ($100.0\%$) | :white_check_mark: PASS |
 | **Earth Rotation Velocity Compensation** | Equatorial $v_{\text{obs}}$ detection | **$465.1\text{ m/s}$** ($\Delta f \approx 680\text{ Hz}$ at UHF) | :white_check_mark: PASS |
 | **FSPL 20·log10 Distance Scaling** | Doubling range adds $6.02\text{ dB}$ | **$6.0206\text{ dB}$** | :white_check_mark: PASS |
 | **Bisection AOS/LOS Refinement** | Temporal convergence $< 1.0\text{ s}$ | **$< 0.5\text{ s}$** (15 iterations) | :white_check_mark: PASS |
@@ -155,9 +146,9 @@ npm run dev:desktop
 npm run dist:win
 ```
 
-### 5. Run Test Suite (92 Total Automated Tests)
+### 5. Run Test Suite
 ```bash
-# Full Vitest Suite (77 tests: 46 frontend + 31 desktop)
+# Frontend + desktop suites (79 tests: 46 frontend + 33 desktop)
 npm test
 
 # Frontend Unit Tests (46 tests: SGP4, Extrapolation, Doppler, Link Budget)
@@ -166,7 +157,7 @@ npm run test:frontend
 # Desktop IPC & Hardware Safety Tests (31 tests: Zod contracts, Serial Failsafes)
 npm run test:desktop
 
-# Backend Astrodynamics & Conjunction Tests (15 tests: Pytest)
+# Backend tests (pytest reports the current count)
 npm run test:backend
 ```
 
@@ -180,7 +171,7 @@ Starts WebSocket server on `ws://127.0.0.1:8765` bridging to USB serial or inter
 
 ## ⚠️ Scientific Honesty & Operational Disclaimers
 1. **Screening-Grade Notice**: TLE element sets degrade by $1\text{--}3\text{ km/day}$ for LEO objects due to unmodeled atmospheric density fluctuations.
-2. **Synthetic Covariance**: Public element sets omit error covariance; OrbitGuard synthesizes an age-scaled RTN covariance model for method demonstration. OrbitGuard is **not an operational guidance system** and must not be used for actual satellite maneuver decisions without official Conjunction Data Messages (CDMs).
+2. **Covariance and Collision Probability**: Public element sets omit measured error covariance. OrbitGuard does not synthesize covariance or probability values. It is not an operational guidance system and must not be used for satellite maneuver decisions; use authoritative CDMs and operator procedures.
 3. **RF Frequency Disclaimer**: OrbitGuard does not invent satellite frequencies. Frequencies are drawn from public amateur radio coordination databases (IARU, ARISS) and marked with verification status badges.
 
 ---

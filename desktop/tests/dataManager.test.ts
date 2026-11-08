@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { DataManager } from '../main/dataManager';
+import { DataManager, ommToTle, normalizeCelestrakObjectType } from '../main/dataManager';
+import * as satellite from '../../frontend/node_modules/satellite.js';
 
 describe('Desktop DataManager Offline-First Caching', () => {
   let testDataDir: string;
@@ -35,7 +36,7 @@ describe('Desktop DataManager Offline-First Caching', () => {
     );
     fs.writeFileSync(
       path.join(testBundleDir, 'conjunctions.json'),
-      JSON.stringify({ highRiskEvents: [] })
+      JSON.stringify({ screen_time_utc: new Date().toISOString(), highRiskEvents: [], conjunctions: [] })
     );
 
     dataManager = new DataManager(testDataDir, testBundleDir);
@@ -46,6 +47,58 @@ describe('Desktop DataManager Offline-First Caching', () => {
       const parent = path.dirname(testDataDir);
       fs.rmSync(parent, { recursive: true, force: true });
     } catch (e) {}
+  });
+
+  it('converts complete OMM GP fields into a valid TLE and rejects unsupported IDs', () => {
+    const omm = {
+      OBJECT_ID: '1998-067A',
+      EPOCH: '2024-01-01T00:00:00.000Z',
+      CLASSIFICATION_TYPE: 'U',
+      MEAN_MOTION: 15.5,
+      MEAN_MOTION_DOT: 0.0001,
+      BSTAR: 0.0001,
+      ELEMENT_SET_NO: 999,
+      INCLINATION: 51.64,
+      RA_OF_ASC_NODE: 120.5,
+      ECCENTRICITY: 0.0005,
+      ARG_OF_PERICENTER: 80.25,
+      MEAN_ANOMALY: 210.75,
+      REV_AT_EPOCH: 12345,
+    };
+    const tle = ommToTle(omm, 25544);
+    expect(tle?.line1).toHaveLength(69);
+    expect(tle?.line2).toHaveLength(69);
+    expect(satellite.twoline2satrec(tle!.line1, tle!.line2).error).toBe(0);
+    expect(ommToTle(omm, 100000)).toBeNull();
+    expect(ommToTle({ ...omm, BSTAR: undefined }, 25544)).toBeNull();
+  });
+
+  it('maps official CelesTrak object types and repairs existing cache counts', () => {
+    expect(normalizeCelestrakObjectType('PAYLOAD')).toBe('Satellite');
+    expect(normalizeCelestrakObjectType('ROCKET BODY')).toBe('Debris');
+    expect(normalizeCelestrakObjectType('DEBRIS')).toBe('Debris');
+    expect(normalizeCelestrakObjectType('UNK')).toBe('Unknown');
+
+    fs.writeFileSync(path.join(testDataDir, 'catalog.json'), JSON.stringify([
+      { norad_id: 1, name: 'Payload', object_type: 'PAYLOAD' },
+      { norad_id: 2, name: 'Stage', object_type: 'ROCKET BODY' },
+      { norad_id: 3, name: 'Fragment', object_type: 'DEBRIS' },
+      { norad_id: 4, name: 'Unclassified', object_type: 'UNK' },
+    ]));
+    fs.writeFileSync(path.join(testDataDir, 'meta.json'), JSON.stringify({
+      fetchTime: '2026-11-08T12:00:00Z',
+      source: 'CelesTrak test cache',
+      satellitesCount: 4,
+      debrisCount: 0,
+      isOffline: false,
+    }));
+
+    const cached = dataManager.getCachedCatalog();
+    expect(cached?.map((item) => item.object_type)).toEqual(['Satellite', 'Debris', 'Debris', 'Unknown']);
+    const meta = dataManager.getCachedMetadata();
+    expect(meta?.satellitesCount).toBe(1);
+    expect(meta?.debrisCount).toBe(2);
+    expect(meta?.total_objects).toBe(4);
   });
 
   it('ensures cache directory is created', () => {

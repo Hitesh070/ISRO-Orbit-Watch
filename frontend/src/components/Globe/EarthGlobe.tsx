@@ -13,7 +13,7 @@
  *  - Solar System background: Mars, Jupiter (with Great Red Spot & Galilean moons),
  *    Saturn (with tilted 3D rings), and Venus.
  *  - 14,000+ Multi-temperature Stellar Skybox with Milky Way galactic density plane.
- *  - High-performance zero-copy Web Worker propagation for 25,000+ objects at 60 FPS.
+ *  - High-performance zero-copy Web Worker propagation for the loaded catalog.
  */
 
 import React, { useRef, useMemo, useEffect, Suspense } from 'react';
@@ -606,7 +606,7 @@ const GlobeScene = () => {
         />
       )}
 
-      {/* High-Performance 25,000+ Object Point Cloud (Single GPU Draw Call) */}
+      {/* Loaded catalog point cloud (single GPU draw call) */}
       {catalog.length > 0 && (
         <PointCloud
           catalog={catalog}

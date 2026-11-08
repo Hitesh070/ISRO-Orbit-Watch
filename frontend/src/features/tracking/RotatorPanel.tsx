@@ -343,10 +343,10 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
               <Compass className="w-3.5 h-3.5 text-cyan-400" /> Azimuth (0° - 360°)
             </span>
             <div className="text-2xl font-bold text-cyan-300 mt-2">
-              {rotStatus.actualAz.toFixed(1)}°
+              {rotStatus.connected ? `${rotStatus.actualAz.toFixed(1)}°` : 'Unavailable'}
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5">
-              Target: <strong className="text-slate-200">{rotStatus.commandedAz.toFixed(1)}°</strong>
+              Target: <strong className="text-slate-200">{rotStatus.connected ? `${rotStatus.commandedAz.toFixed(1)}°` : 'Unavailable'}</strong>
             </div>
 
             {/* Circular Azimuth Visualizer Dial */}
@@ -354,7 +354,7 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
               <svg width="96" height="96" className="overflow-visible">
                 <circle cx="48" cy="48" r="42" fill="none" stroke="#1e293b" strokeWidth="3" />
                 {/* Target needle (dotted) */}
-                <line
+                {rotStatus.connected && <line
                   x1="48"
                   y1="48"
                   x2={48 + 38 * Math.cos(((rotStatus.commandedAz - 90) * Math.PI) / 180)}
@@ -362,9 +362,9 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
                   stroke="#64748b"
                   strokeWidth="2"
                   strokeDasharray="2 2"
-                />
+                />}
                 {/* Actual needle (solid cyan) */}
-                <line
+                {rotStatus.connected && <line
                   x1="48"
                   y1="48"
                   x2={48 + 38 * Math.cos(((rotStatus.actualAz - 90) * Math.PI) / 180)}
@@ -372,8 +372,8 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
                   stroke="#22d3ee"
                   strokeWidth="3"
                   strokeLinecap="round"
-                />
-                <circle cx="48" cy="48" r="4" fill="#06b6d4" />
+                />}
+                {rotStatus.connected && <circle cx="48" cy="48" r="4" fill="#06b6d4" />}
               </svg>
             </div>
 
@@ -381,12 +381,14 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
             <div className="flex items-center gap-1 mt-1">
               <button
                 onClick={() => handleManualNudge(-5, 0)}
+                disabled={!rotStatus.connected}
                 className="px-2 py-0.5 rounded bg-space-950 border border-slate-700 hover:border-cyan-400 text-slate-300 text-[10px]"
               >
                 -5°
               </button>
               <button
                 onClick={() => handleManualNudge(+5, 0)}
+                disabled={!rotStatus.connected}
                 className="px-2 py-0.5 rounded bg-space-950 border border-slate-700 hover:border-cyan-400 text-slate-300 text-[10px]"
               >
                 +5°
@@ -400,10 +402,10 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
               <Activity className="w-3.5 h-3.5 text-emerald-400" /> Elevation (0° - 90°)
             </span>
             <div className="text-2xl font-bold text-emerald-300 mt-2">
-              {rotStatus.actualEl.toFixed(1)}°
+              {rotStatus.connected ? `${rotStatus.actualEl.toFixed(1)}°` : 'Unavailable'}
             </div>
             <div className="text-[10px] text-slate-400 mt-0.5">
-              Target: <strong className="text-slate-200">{rotStatus.commandedEl.toFixed(1)}°</strong>
+              Target: <strong className="text-slate-200">{rotStatus.connected ? `${rotStatus.commandedEl.toFixed(1)}°` : 'Unavailable'}</strong>
             </div>
 
             {/* Semi-Circle Elevation Arc Dial */}
@@ -417,7 +419,7 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
                   strokeWidth="3"
                 />
                 {/* Elevation needle */}
-                <line
+                {rotStatus.connected && <line
                   x1="48"
                   y1="80"
                   x2={48 + 36 * Math.cos(((180 - rotStatus.actualEl) * Math.PI) / 180)}
@@ -425,7 +427,7 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
                   stroke="#10b981"
                   strokeWidth="3"
                   strokeLinecap="round"
-                />
+                />}
                 <circle cx="48" cy="80" r="4" fill="#10b981" />
               </svg>
             </div>
@@ -434,12 +436,14 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
             <div className="flex items-center gap-1 mt-1">
               <button
                 onClick={() => handleManualNudge(0, -5)}
+                disabled={!rotStatus.connected}
                 className="px-2 py-0.5 rounded bg-space-950 border border-slate-700 hover:border-emerald-400 text-slate-300 text-[10px]"
               >
                 -5°
               </button>
               <button
                 onClick={() => handleManualNudge(0, +5)}
+                disabled={!rotStatus.connected}
                 className="px-2 py-0.5 rounded bg-space-950 border border-slate-700 hover:border-emerald-400 text-slate-300 text-[10px]"
               >
                 +5°
@@ -472,7 +476,7 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Instant Pointing Error:</span>
                 <span className={`font-bold ${rotStatus.pointingErrorDeg < 2.0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {rotStatus.pointingErrorDeg}°
+                  {rotStatus.connected ? `${rotStatus.pointingErrorDeg}°` : 'Unavailable'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -484,7 +488,7 @@ export const RotatorPanel: React.FC<RotatorPanelProps> = ({ pass }) => {
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Motor Motion:</span>
                 <span className={rotStatus.isMoving ? 'text-cyan-400 animate-pulse' : 'text-slate-500'}>
-                  {rotStatus.isMoving ? 'SLEWING AXES...' : 'STATIONARY'}
+                  {rotStatus.connected ? (rotStatus.isMoving ? 'SLEWING AXES...' : 'STATIONARY') : 'NO TELEMETRY'}
                 </span>
               </div>
             </div>

@@ -278,7 +278,7 @@ class CovarianceProvider:
         r_eci: np.ndarray,
         v_eci: np.ndarray,
         epoch_age_days: float = 0.0,
-    ) -> np.ndarray:
+    ) -> Optional[np.ndarray]:
         raise NotImplementedError
 
 
@@ -386,9 +386,7 @@ class CDMCovarianceProvider(CovarianceProvider):
         r_eci: np.ndarray,
         v_eci: np.ndarray,
         epoch_age_days: float = 0.0,
-    ) -> np.ndarray:
+    ) -> Optional[np.ndarray]:
         if norad_id in self.cdm_records:
             return self.cdm_records[norad_id]
-        # Fall back to synthetic RTN if no CDM record is registered
-        fallback = SyntheticRTNCovariance()
-        return fallback.get_covariance_eci(norad_id, r_eci, v_eci, epoch_age_days)
+        return None

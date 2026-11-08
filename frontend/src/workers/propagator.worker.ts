@@ -1,7 +1,7 @@
 /**
  * OrbitGuard High-Performance Web Worker Propagator (Phase 2)
  * ============================================================
- * Offloads SGP4 orbital propagation of 25,000+ objects from the main thread.
+ * Offloads SGP4 orbital propagation for loaded catalog objects from the main thread.
  * Uses ping-pong zero-copy transferable TypedArrays (Float32Array) for maximum throughput.
  *
  * All coordinates are computed in TEME (Earth-Centered Inertial) and normalized to scene units

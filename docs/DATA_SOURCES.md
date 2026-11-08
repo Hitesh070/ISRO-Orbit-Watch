@@ -1,6 +1,6 @@
 # OrbitGuard Data Sources, Provenance & Attribution
 
-This document details all upstream orbital data sources, ephemerides, coordinate references, and graphical textures utilized across OrbitGuard, including licensing, update cadences, and terms of use.
+This document describes upstream orbital data used by OrbitGuard and the limits of the packaged snapshot. The application does not receive live tracking telemetry. Its displayed positions are SGP4 predictions from timestamped catalog elements.
 
 ---
 
@@ -21,7 +21,7 @@ This document details all upstream orbital data sources, ephemerides, coordinate
   - `cosmos-2251-debris`: Debris fragments from the 2009 Cosmos-2251 / Iridium-33 collision.
   - `iridium-33-debris`: Fragments from the Iridium-33 collision.
   - `INTDES=1999-025`: 1,900+ tracked fragments from the 2007 Fengyun-1C ASAT event.
-* **Update Frequency:** Processed every 6 hours by OrbitGuard data pipeline.
+* **Update Frequency:** The repository's scheduled pipeline is configured to run periodically (see `.github/workflows/refresh-data.yml`); a schedule is an attempted refresh, not a freshness guarantee. Desktop builds and offline installs use the bundled snapshot until a valid refresh succeeds. The app displays the snapshot timestamp and marks data older than six hours as stale.
 * **Citation & Attribution:**
   > Kelso, T.S., "CelesTrak: Educational and Operational Astrodynamics Data", Center for Space Standards & Innovation (CSSI). Data redistributed under CelesTrak open educational and scientific terms.
 

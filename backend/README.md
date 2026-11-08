@@ -1,6 +1,6 @@
 # OrbitGuard Backend & Offline Screening Pipeline 🛰️
 
-The **OrbitGuard Backend** contains the Python-based astrodynamics computation routines, automated CelesTrak catalog ingestion pipeline, and high-precision conjunction screening engine.
+The **OrbitGuard Backend** contains Python astrodynamics routines and catalog/screening pipeline tools. Its outputs are only as current and complete as the source snapshots and declared processing coverage.
 
 ---
 
@@ -14,12 +14,11 @@ The **OrbitGuard Backend** contains the Python-based astrodynamics computation r
    - SGP4 propagation along a 24-hour temporal grid (30s time steps).
    - Spatial indexing using `scipy.spatial.cKDTree` with dynamic step-velocity ball radius bounding.
    - Linearized Time-of-Closest-Approach (TCA) filtering followed by continuous scalar minimization (`scipy.optimize.minimize_scalar`) on the SGP4 Euclidean separation function $f(t) = \|\mathbf{r}_1(t) - \mathbf{r}_2(t)\|$ to $< 0.05\text{ s}$ precision.
-3. **Conjunction Probability Engine (`scripts/pipeline/conjunction_engine.py`)**:
-   - Evaluates the **Foster-1992** 2-D collision probability integral over the combined hard-body radius on the encounter plane perpendicular to relative velocity:
-     $$P_c = \frac{1}{2\pi \sqrt{\det \mathbf{C}_{2D}}} \iint_{\text{Disk}(R_{\text{HBR}})} \exp\left(-\frac{1}{2}(\mathbf{r} - \mathbf{m})^T \mathbf{C}_{2D}^{-1} (\mathbf{r} - \mathbf{m})\right) d^2\mathbf{r}$$
-     using 64-point Gauss-Legendre quadrature.
-   - Evaluates **Akella-Alfriend (2000)** maximum probability $P_{c,\text{max}}$ across synthetic covariance scaling factors $k \in [10^{-2}, 10^2]$.
-   - Performs Radial-Transverse-Normal (RTN) miss vector decomposition with 100.0% variance partitioning: $(R^2 + T^2 + N^2) / \|\mathbf{m}\|^2 = 1.000$.
+3. **Conjunction screening and probability limits**:
+   - Public GP/TLE elements can be propagated to identify geometric close-approach candidates when source time and screening coverage are available.
+   - The bundled v5.0 event data was withdrawn because its former probability values depended on synthetic covariance. The UI reports screening unavailable when no verified snapshot is available.
+   - Collision probability requires measured covariance and hard-body data from an authoritative CDM. No synthetic covariance, probability, or risk classification is substituted.
+   - Pass predictions require explicit observer latitude, longitude, altitude, and usable element data.
 
 ---
 
@@ -42,7 +41,7 @@ backend/
 ## 🧪 Testing & Verification
 
 ```bash
-# Run backend Pytest suite (15 tests: SGP4 validation, Foster Pc, RTN decomposition)
+# Run the current backend Pytest suite
 pytest tests/ -v
 
 # Run Python code linting via Ruff

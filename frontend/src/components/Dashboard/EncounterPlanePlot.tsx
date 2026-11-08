@@ -5,9 +5,8 @@
  *  - 1-sigma, 2-sigma, and 3-sigma combined error covariance ellipses
  *  - 2-D miss distance vector point m = (x_m, y_m) with smart non-colliding labels
  *  - Hard-body radius circle (HBR) to scale
- *  - Mathematically accurate RTN miss vector breakdown (% of Euclidean norm)
- *  - Full SVG Akella-Alfriend Pc sensitivity curve with k* peak indicator
- *  - Screening-grade scientific honesty badges & disclaimers
+ *  - Measured covariance-based encounter plane, only when all required CDM fields exist
+ *  - Geometric RTN miss vector breakdown
  */
 
 import React, { useMemo, useState } from 'react';
@@ -20,9 +19,10 @@ interface EncounterPlanePlotProps {
 }
 
 function formatPc(val?: any, digits = 4): string {
-  if (val === undefined || val === null) return '< 1e-9';
+  if (val === undefined || val === null) return 'Unavailable';
   const num = Number(val);
-  if (isNaN(num) || num <= 0) return '< 1e-9';
+  if (!Number.isFinite(num)) return 'Unavailable';
+  if (num <= 0) return '< 1e-9';
   return num.toExponential(digits);
 }
 
@@ -37,38 +37,52 @@ function formatTca(tca?: string): string {
   }
 }
 
-export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
+export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = (props) => {
+  const event = props.conjunction;
+  const source = String(event?.covariance_source || '').toLowerCase();
+  const enc = event?.encounter_plane_2d;
+  const rtn = event?.miss_vector_rtn_m;
+  const hasRequiredInputs = source.includes('cdm') && !source.includes('synthetic') &&
+    enc && ['miss_x_km', 'miss_y_km', 'cov_xx', 'cov_xy', 'cov_yy'].every((key) => Number.isFinite(enc[key])) &&
+    Number.isFinite(event?.miss_distance_km) && Number.isFinite(event?.hbr_m) && event.hbr_m > 0 &&
+    Number.isFinite(event?.pc_foster) && Number.isFinite(event?.pc_max) && Number.isFinite(event?.k_at_pc_max) &&
+    rtn && ['radial', 'transverse', 'normal'].every((key) => Number.isFinite(rtn[key]));
+  if (!hasRequiredInputs) {
+    return (
+      <div className="p-6 rounded-xl border border-slate-700 bg-space-950 text-sm text-slate-300">
+        Encounter-plane analysis is unavailable. This view requires measured covariance, hard-body radius, miss geometry, and collision probability from a CDM.
+      </div>
+    );
+  }
+  return <EncounterPlanePlotContent {...props} />;
+};
+
+const EncounterPlanePlotContent: React.FC<EncounterPlanePlotProps> = ({
   conjunction,
   onClose,
   onVisualizeOnGlobe,
 }) => {
-  const [activeTab, setActiveTab] = useState<'plane' | 'sensitivity' | 'rtn'>('plane');
+  const [activeTab, setActiveTab] = useState<'plane' | 'rtn'>('plane');
 
   if (!conjunction) return null;
 
-  const enc = conjunction.encounter_plane_2d || {
-    miss_x_km: 0.5,
-    miss_y_km: 0.8,
-    cov_xx: 0.25,
-    cov_xy: 0.05,
-    cov_yy: 0.36,
-  };
+  const enc = conjunction.encounter_plane_2d;
 
-  const missX = typeof enc.miss_x_km === 'number' ? enc.miss_x_km : 0;
-  const missY = typeof enc.miss_y_km === 'number' ? enc.miss_y_km : 0;
-  const missDist = typeof conjunction.miss_distance_km === 'number' ? conjunction.miss_distance_km : Math.hypot(missX, missY);
-  const hbrKm = (conjunction.hbr_m || 12.0) / 1000.0;
-  const pcFoster = typeof conjunction.pc_foster === 'number' ? conjunction.pc_foster : 0;
-  const pcMax = typeof conjunction.pc_max === 'number' ? conjunction.pc_max : 0;
-  const kOpt = typeof conjunction.k_at_pc_max === 'number' ? conjunction.k_at_pc_max : 1.0;
+  const missX = enc.miss_x_km;
+  const missY = enc.miss_y_km;
+  const missDist = conjunction.miss_distance_km;
+  const hbrKm = conjunction.hbr_m / 1000.0;
+  const pcFoster = conjunction.pc_foster;
+  const pcMax = conjunction.pc_max;
+  const kOpt = conjunction.k_at_pc_max;
 
   // RTN Miss Vector components (meters)
-  const rtnRadial = Number(conjunction.miss_vector_rtn_m?.radial ?? 0);
-  const rtnTransverse = Number(conjunction.miss_vector_rtn_m?.transverse ?? 0);
-  const rtnNormal = Number(conjunction.miss_vector_rtn_m?.normal ?? 0);
-  const totalMissMeters = missDist > 0 ? missDist * 1000 : Math.sqrt(rtnRadial * rtnRadial + rtnTransverse * rtnTransverse + rtnNormal * rtnNormal) || 1;
+  const rtnRadial = conjunction.miss_vector_rtn_m.radial;
+  const rtnTransverse = conjunction.miss_vector_rtn_m.transverse;
+  const rtnNormal = conjunction.miss_vector_rtn_m.normal;
+  const totalMissMeters = missDist * 1000;
 
-  // Energy / Variance Contribution (% of Euclidean norm squared) strictly summing to 100.0%
+  // Squared miss-vector component as a share of squared miss distance (not an uncertainty variance).
   const normSq = totalMissMeters * totalMissMeters || 1;
   const rVarPct = Math.min(100, ((rtnRadial * rtnRadial) / normSq) * 100);
   const tVarPct = Math.min(100, ((rtnTransverse * rtnTransverse) / normSq) * 100);
@@ -124,62 +138,6 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
   const obj2Anchor: 'start' | 'end' = deltaPxX >= 0 ? 'start' : 'end';
   const obj2LabelX = deltaPxX >= 0 ? missPxX + 14 : missPxX - 14;
   const obj2LabelY = deltaPxY >= 0 ? missPxY + 16 : missPxY - 14;
-
-  // Generate sensitivity curve data for Pc vs covariance scale factor k
-  const sensitivityCurve = useMemo(() => {
-    const points: { k: number; pc: number }[] = [];
-    const ks = [0.05, 0.1, 0.2, 0.5, 0.8, 1.0, 1.5, 2.0, 2.76, 3.5, 5.0, 10.0, 20.0];
-    for (const k of ks) {
-      // Foster approximation scaled by k
-      const scaledPc = pcMax * Math.exp(-0.5 * Math.pow(Math.log10(k / kOpt), 2));
-      points.push({ k, pc: scaledPc });
-    }
-    return points;
-  }, [pcMax, kOpt]);
-
-  // SVG Sensitivity Chart Layout
-  const chartW = 430;
-  const chartH = 180;
-  const padL = 40;
-  const padR = 20;
-  const padT = 25;
-  const padB = 30;
-  const plotW = chartW - padL - padR;
-  const plotH = chartH - padT - padB;
-
-  // Sensitivity curve coordinates
-  const svgPathData = useMemo(() => {
-    if (!sensitivityCurve.length || pcMax <= 0) return { path: '', area: '', pts: [] };
-    const minLogK = Math.log10(0.05);
-    const maxLogK = Math.log10(20.0);
-
-    const pts = sensitivityCurve.map((pt) => {
-      const xPct = (Math.log10(pt.k) - minLogK) / (maxLogK - minLogK);
-      const x = padL + xPct * plotW;
-      const yPct = Math.max(0, Math.min(1, pt.pc / (pcMax * 1.15)));
-      const y = padT + (1 - yPct) * plotH;
-      return { x, y, k: pt.k, pc: pt.pc };
-    });
-
-    const pathStr = pts.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, '');
-    const areaStr = `${pathStr} L ${pts[pts.length - 1].x.toFixed(1)} ${(padT + plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`;
-
-    return { path: pathStr, area: areaStr, pts };
-  }, [sensitivityCurve, pcMax, plotW, plotH, padL, padT]);
-
-  // Coordinate for k = 1.0x (Nominal) and k = kOpt (Peak)
-  const nominalX = useMemo(() => {
-    const minLogK = Math.log10(0.05);
-    const maxLogK = Math.log10(20.0);
-    return padL + ((Math.log10(1.0) - minLogK) / (maxLogK - minLogK)) * plotW;
-  }, [plotW, padL]);
-
-  const peakX = useMemo(() => {
-    const minLogK = Math.log10(0.05);
-    const maxLogK = Math.log10(20.0);
-    const clampedK = Math.max(0.05, Math.min(20.0, kOpt));
-    return padL + ((Math.log10(clampedK) - minLogK) / (maxLogK - minLogK)) * plotW;
-  }, [plotW, padL, kOpt]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-space-950/85 backdrop-blur-md select-none">
@@ -243,16 +201,7 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
           >
             RTN Miss Breakdown
           </button>
-          <button
-            onClick={() => setActiveTab('sensitivity')}
-            className={`px-3 py-1.5 rounded-t-lg font-mono text-xs font-semibold border-b-2 transition ${
-              activeTab === 'sensitivity'
-                ? 'border-cyan-400 text-cyan-300 bg-space-900/60'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Pc Sensitivity Curve
-          </button>
+          <span className="px-3 py-1.5 font-mono text-xs text-slate-500">Sensitivity curve unavailable</span>
         </div>
 
         {/* Body View */}
@@ -516,109 +465,6 @@ export const EncounterPlanePlot: React.FC<EncounterPlanePlotProps> = ({
               </div>
             )}
 
-            {activeTab === 'sensitivity' && (
-              <div className="w-full p-4 font-mono text-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-300 font-bold whitespace-nowrap">
-                    Akella-Alfriend Pc Sensitivity vs Scale Factor (k):
-                  </span>
-                  <span className="text-rose-400 text-[11px] font-bold whitespace-nowrap">
-                    Pc_max: {formatPc(pcMax, 3)} (at {kOpt}x)
-                  </span>
-                </div>
-
-                {/* Robust Full SVG Sensitivity Curve Chart */}
-                <div className="w-full bg-space-950 rounded-xl border border-slate-850 p-2 shadow-inner">
-                  <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto">
-                    <defs>
-                      <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.45" />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.02" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Chart Grid Lines */}
-                    <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke="#334155" strokeWidth={1} />
-                    <line x1={padL} y1={padT} x2={padL} y2={padT + plotH} stroke="#334155" strokeWidth={1} />
-                    <line x1={padL} y1={padT + plotH * 0.5} x2={padL + plotW} y2={padT + plotH * 0.5} stroke="#1e293b" strokeDasharray="2 2" />
-
-                    {/* Shaded Area under Curve */}
-                    {svgPathData.area && (
-                      <path d={svgPathData.area} fill="url(#curveGradient)" />
-                    )}
-
-                    {/* Sensitivity Curve Line */}
-                    {svgPathData.path && (
-                      <path d={svgPathData.path} fill="none" stroke="#22d3ee" strokeWidth={2.2} />
-                    )}
-
-                    {/* Reference Line: Nominal Covariance (1.0x) */}
-                    <line
-                      x1={nominalX}
-                      y1={padT}
-                      x2={nominalX}
-                      y2={padT + plotH}
-                      stroke="#38bdf8"
-                      strokeWidth={1.2}
-                      strokeDasharray="3 3"
-                    />
-                    <text x={nominalX} y={padT - 6} fill="#38bdf8" fontSize="9" fontFamily="monospace" textAnchor="middle">
-                      Nominal (1x)
-                    </text>
-
-                    {/* Reference Line: Akella Peak (kOpt) */}
-                    <line
-                      x1={peakX}
-                      y1={padT}
-                      x2={peakX}
-                      y2={padT + plotH}
-                      stroke="#f43f5e"
-                      strokeWidth={1.5}
-                      strokeDasharray="4 2"
-                    />
-                    <circle cx={peakX} cy={padT + (1 - 1 / 1.15) * plotH} r={4} fill="#f43f5e" />
-                    <text x={peakX} y={padT - 6} fill="#fb7185" fontSize="9" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
-                      Peak ({kOpt}x)
-                    </text>
-
-                    {/* Data Points */}
-                    {svgPathData.pts.map((p, idx) => (
-                      <circle
-                        key={idx}
-                        cx={p.x}
-                        cy={p.y}
-                        r={2.5}
-                        fill="#06b6d4"
-                        stroke="#0f172a"
-                        strokeWidth={1}
-                      />
-                    ))}
-
-                    {/* X-Axis Tick Labels */}
-                    <text x={padL} y={padT + plotH + 16} fill="#64748b" fontSize="8.5" fontFamily="monospace">0.05x</text>
-                    <text x={padL + plotW * 0.3} y={padT + plotH + 16} fill="#64748b" fontSize="8.5" fontFamily="monospace">0.5x</text>
-                    <text x={padL + plotW * 0.55} y={padT + plotH + 16} fill="#64748b" fontSize="8.5" fontFamily="monospace">2x</text>
-                    <text x={padL + plotW * 0.8} y={padT + plotH + 16} fill="#64748b" fontSize="8.5" fontFamily="monospace">5x</text>
-                    <text x={padL + plotW} y={padT + plotH + 16} fill="#64748b" fontSize="8.5" fontFamily="monospace" textAnchor="end">20x</text>
-
-                    {/* Y-Axis Label */}
-                    <text x={padL - 6} y={padT + 4} fill="#64748b" fontSize="8" fontFamily="monospace" textAnchor="end">Pc</text>
-                    <text x={padL - 6} y={padT + plotH} fill="#64748b" fontSize="8" fontFamily="monospace" textAnchor="end">0</text>
-                  </svg>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 pt-1">
-                  <span className="whitespace-nowrap">
-                    Nominal Covariance (1.0x):{' '}
-                    <strong className="text-cyan-300 whitespace-nowrap">{formatPc(pcFoster, 3)}</strong>
-                  </span>
-                  <span className="whitespace-nowrap">
-                    Akella Pc_max ({kOpt}x):{' '}
-                    <strong className="text-rose-400 whitespace-nowrap">{formatPc(pcMax, 3)}</strong>
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Quantitative Risk Breakdown (Right 5 Cols) */}

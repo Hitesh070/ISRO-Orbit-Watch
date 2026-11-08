@@ -1,5 +1,7 @@
 # OrbitGuard System Architecture & Astrodynamics Pipeline
 
+> **v5.0 accuracy note:** This document includes historical frame-conversion and conjunction-analysis design notes. It is not evidence that collision probability is available in the current app. See [`VALIDATION.md`](VALIDATION.md) and [`RELEASE_V5.0.md`](RELEASE_V5.0.md) for current data and screening status. Public GP/TLE data does not supply measured covariance or physical hard-body data; probability must remain unavailable unless authoritative inputs are provided.
+
 ## 1. System Topology Overview
 
 OrbitGuard is structured as an end-to-end Space Situational Awareness (SSA) system that decouples scheduled heavy astrodynamic ingestion from low-latency interactive client rendering.

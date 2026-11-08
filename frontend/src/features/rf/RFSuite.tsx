@@ -46,7 +46,7 @@ export const RFSuite: React.FC = () => {
   const settings = useOrbitStore((state) => state.settings);
 
   // Elevation mask setting (degrees, 0 to 20)
-  const [elevationMask, setElevationMask] = useState(settings?.elevationMaskDeg || 5.0);
+  const [elevationMask, setElevationMask] = useState(settings?.elevationMaskDeg ?? 5.0);
 
   useEffect(() => {
     if (settings?.elevationMaskDeg !== undefined) {
@@ -55,8 +55,8 @@ export const RFSuite: React.FC = () => {
   }, [settings?.elevationMaskDeg]);
 
   // Active target satellite NORAD ID
-  const [targetNoradId, setTargetNoradId] = useState<number>(
-    selectedSatellite?.norad_id || 36795 // Default to ISRO CARTOSAT-2B
+  const [targetNoradId, setTargetNoradId] = useState<number | null>(
+    selectedSatellite?.norad_id ?? null
   );
   const [isroOnly, setIsroOnly] = useState<boolean>(true
   );
@@ -86,7 +86,7 @@ export const RFSuite: React.FC = () => {
 
   // Target satellite record
   const targetSat = useMemo(() => {
-    return catalog.find((s: any) => s.norad_id === targetNoradId) || catalog[0] || null;
+    return catalog.find((s: any) => s.norad_id === targetNoradId) || null;
   }, [catalog, targetNoradId]);
 
   // Target frequency profile
@@ -94,25 +94,29 @@ export const RFSuite: React.FC = () => {
     return (
       frequencies.find((f: any) => f.noradId === targetNoradId) || {
         noradId: targetNoradId,
-        name: targetSat?.name || 'Unknown Satellite',
-        band: 'VHF/UHF Standard',
-        downlinkHz: 437.5e6,
-        uplinkHz: 145.9e6,
-        mode: 'Telemetry / FM',
+        name: targetSat?.name || 'Frequency unavailable',
+        band: 'Unavailable',
+        downlinkHz: null,
+        uplinkHz: null,
         verified: false,
-        source: 'Standard Default (Unverified)',
+        source: 'No frequency record supplied',
       }
     );
   }, [frequencies, targetNoradId, targetSat]);
+  const carrierHz = targetFreq.verified === true && typeof targetFreq.downlinkHz === 'number' && Number.isFinite(targetFreq.downlinkHz)
+    ? targetFreq.downlinkHz
+    : null;
 
   // Observer coordinates
-  const observerSite: ObserverSite = useMemo(
-    () => ({
-      lat: observerLocation?.lat ?? 12.9716,
-      lon: observerLocation?.lon ?? 77.5946,
-      altM: observerLocation?.alt_m ?? 920,
-      name: observerLocation?.name ?? 'Bengaluru Ground Station',
-    }),
+  const observerSite: ObserverSite | null = useMemo(
+    () => observerLocation && Number.isFinite(observerLocation.lat) && Number.isFinite(observerLocation.lon) && Number.isFinite(observerLocation.alt_m)
+      ? {
+          lat: observerLocation.lat,
+          lon: observerLocation.lon,
+          altM: observerLocation.alt_m,
+          name: observerLocation.name || 'User station',
+        }
+      : null,
     [observerLocation]
   );
 
@@ -120,7 +124,7 @@ export const RFSuite: React.FC = () => {
   const passes: DetailedPass[] = useMemo(() => {
     const l1 = targetSat?.line1 || targetSat?.tle_line1;
     const l2 = targetSat?.line2 || targetSat?.tle_line2;
-    if (!l1 || !l2) return [];
+    if (!l1 || !l2 || !observerSite || carrierHz === null) return [];
 
     return predictDetailedPasses(
       l1,
@@ -128,12 +132,12 @@ export const RFSuite: React.FC = () => {
       targetSat.name,
       targetSat.norad_id,
       observerSite,
-      targetFreq.downlinkHz,
+      carrierHz,
       elevationMask,
       72, // 72-hour window
       8   // up to 8 passes
     );
-  }, [targetSat, observerSite, targetFreq.downlinkHz, elevationMask]);
+  }, [targetSat, observerSite, carrierHz, elevationMask]);
 
   // Default select first pass when passes recalculate
   useEffect(() => {
@@ -206,7 +210,7 @@ export const RFSuite: React.FC = () => {
             <MapPin className="w-4 h-4 text-emerald-400 animate-pulse" />
             <div>
               <div className="text-[10px] text-slate-400">Ground Station Site</div>
-              <div className="font-semibold text-slate-200 truncate max-w-[170px]">{observerSite.name}</div>
+              <div className="font-semibold text-slate-200 truncate max-w-[170px]">{observerSite?.name || 'Location unavailable'}</div>
             </div>
             <button
               onClick={detectUserLocation}
@@ -243,7 +247,7 @@ export const RFSuite: React.FC = () => {
             <Activity className="w-4 h-4 text-cyan-400" /> Target Satellite:
           </span>
           <select
-            value={targetNoradId}
+            value={targetNoradId ?? ''}
             onChange={(e) => {
               const id = Number(e.target.value);
               setTargetNoradId(id);
@@ -251,6 +255,7 @@ export const RFSuite: React.FC = () => {
             }}
             className="px-3 py-1.5 rounded-lg bg-space-950 border border-slate-700 text-cyan-300 font-semibold focus:outline-none focus:border-cyan-400"
           >
+            <option value="" disabled>Select a satellite</option>
             {availableSats.map((s: any) => (
               <option key={s.norad_id} value={s.norad_id}>
                 {s.name} (NORAD {s.norad_id}) {s.is_isro ? '🇮🇳 [ISRO]' : ''}
@@ -274,7 +279,7 @@ export const RFSuite: React.FC = () => {
         <div className="flex items-center gap-2 text-[11px]">
           <span className="text-slate-400">Carrier:</span>
           <span className="font-bold text-slate-200">
-            {(targetFreq.downlinkHz / 1e6).toFixed(3)} MHz
+            {carrierHz === null ? 'Unavailable' : `${(carrierHz / 1e6).toFixed(3)} MHz`}
           </span>
           <span
             className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${
@@ -288,7 +293,11 @@ export const RFSuite: React.FC = () => {
             ) : (
               <AlertTriangle className="w-3 h-3 text-amber-400" />
             )}
-            {targetFreq.verified ? 'Verified Coordination' : 'Screening Preset (Confirm before Tx)'}
+            {targetFreq.verified
+              ? 'Verified Coordination'
+              : typeof targetFreq.downlinkHz === 'number'
+                ? 'Unverified frequency not used'
+                : 'Frequency unavailable'}
           </span>
         </div>
       </div>
@@ -369,13 +378,13 @@ export const RFSuite: React.FC = () => {
             {activeSubTab === 'DOPPLER' ? (
               <DopplerCurveChart
                 pass={selectedPass}
-                carrierFreqHz={targetFreq.downlinkHz}
+                carrierFreqHz={carrierHz ?? 0}
                 onHoverSample={setHoveredSample}
               />
             ) : activeSubTab === 'LINK_BUDGET' ? (
               <LinkBudgetPanel
                 pass={selectedPass}
-                carrierFreqHz={targetFreq.downlinkHz}
+                carrierFreqHz={carrierHz ?? 0}
               />
             ) : (
               <RotatorPanel pass={selectedPass} />
@@ -384,7 +393,7 @@ export const RFSuite: React.FC = () => {
 
           <div className="text-[10px] text-slate-500 border-t border-slate-900 pt-2 mt-3 flex items-center justify-between">
             <span>Observer Earth rotation velocity compensation: <strong className="text-slate-400">v_obs = [-ω_E·y, ω_E·x, 0]</strong></span>
-            <span>Relativistic error bound: &lt; 1e-9</span>
+            <span>Doppler calculation uses the selected orbit, site, and carrier frequency.</span>
           </div>
         </div>
       </div>

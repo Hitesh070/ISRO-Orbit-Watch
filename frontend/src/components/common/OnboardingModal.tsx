@@ -3,7 +3,7 @@
  * ===============================================
  * Multi-slide interactive walkthrough introducing:
  * 1. Space Situational Awareness (SSA) mission overview
- * 2. High-performance 25,000+ GPU Point Cloud in TEME frame
+ * 2. Catalog-sized point cloud with propagated positions
  * 3. Conjunction Assessment Engine & Foster Pc screening
  * 4. EEE/RF Ground Station Suite & Antenna Tracking Controller
  * 5. Controls, Keyboard Shortcuts & Scientific Disclaimers
@@ -30,38 +30,38 @@ interface OnboardingModalProps {
 const SLIDES = [
   {
     icon: Sparkles,
-    badge: 'Welcome to OrbitGuard v4.3',
-    title: 'Real-Time Space Situational Awareness & Ground Station',
+    badge: 'Welcome to OrbitGuard v5.0',
+    title: 'Orbital catalog visualization and screening',
     description:
-      'OrbitGuard is a high-fidelity astrodynamics and RF engineering platform built for real-time satellite tracking, debris conjunction screening, and automated antenna tracking. Designed specifically for ISRO and aerospace engineering defense.',
+      'OrbitGuard propagates catalog orbital elements to a selected time and provides screening tools. Positions are model predictions from catalog data, not live sensor observations.',
     points: [
-      'Propagates 3,700+ active satellites and debris pieces directly in the browser.',
-      'Industry-standard Foster-1992 collision probability (Pc) and Akella Pc,max bounds.',
-      'Complete RF Ground Station: Doppler shift with Earth rotation, link budget, and antenna slewing.',
+      'Catalog totals and source timestamps reflect the loaded data snapshot.',
+      'Collision probability is not inferred from GP/TLE data. Screening is unavailable when no verified event snapshot is loaded.',
+      'RF tools calculate link and tracking values from the selected inputs and orbital elements.',
     ],
   },
   {
     icon: Globe,
     badge: '3D Celestial Globe & Point Cloud',
-    title: '25,000+ GPU Point Cloud at 60 FPS',
+    title: 'Catalog-sized orbit visualization',
     description:
-      'To prevent main-thread UI stutter, SGP4 propagation is offloaded to a dedicated Web Worker (propagator.worker.ts) using transferable Float32Array ping-pong buffers. A custom GLSL shader executes linear velocity extrapolation at 60 FPS.',
+      'To prevent main-thread UI stutter, SGP4 propagation is offloaded to a dedicated Web Worker (propagator.worker.ts) using transferable Float32Array ping-pong buffers. A custom GLSL shader extrapolates between worker updates at display refresh; this is a visual prediction, not live telemetry.',
     points: [
       'True Equator, Mean Equinox (TEME) celestial inertial reference frame.',
       'Earth mesh rotates under satellites by Greenwich Mean Sidereal Time (GMST).',
-      'Screen-space GPU picking allows clicking any satellite dot to inspect its real-time dossier.',
+      'Screen-space GPU picking allows clicking a catalog object to inspect its orbit prediction.',
     ],
   },
   {
     icon: ShieldAlert,
     badge: 'Conjunction Assessment Engine',
-    title: 'Screening-Grade Collision Risk & Encounter Plane',
+    title: 'Distance-based conjunction screening',
     description:
-      'Replaces heuristic risk scores with rigorous 2-D encounter-plane mathematics. Evaluates Mahalanobis distance and integrates the Gaussian probability density over the hard-body circle using 64-point Gauss-Legendre quadrature.',
+      'Close approaches are screened from propagated catalog elements. Public GP data does not include measured covariance or physical hard-body radii, so collision probability is left unavailable.',
     points: [
-      'Foster-1992 bivariate Gaussian integration over combined Hard Body Radius (HBR).',
-      'Akella-Alfriend maximum Pc (Pc,max) evaluates worst-case covariance scale factor k.',
-      'Scientific Honesty: Public TLEs lack covariance; all risk values are labeled screening-grade.',
+      'Miss distance and relative speed are predictions from the input element sets.',
+      'TCA values are not rolled forward to later orbits after they pass.',
+      'Use official Conjunction Data Messages for operational decisions.',
     ],
   },
   {

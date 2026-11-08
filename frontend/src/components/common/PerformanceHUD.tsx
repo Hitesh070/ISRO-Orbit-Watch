@@ -153,11 +153,11 @@ export const PerformanceHUD = () => {
 
           <div className="flex justify-between items-center text-[10px] pl-4">
             <span className="text-slate-500">• Active Spacecraft:</span>
-            <span className="text-slate-300">{satellites.length || 1116}</span>
+            <span className="text-slate-300">{satellites.length}</span>
           </div>
           <div className="flex justify-between items-center text-[10px] pl-4">
             <span className="text-slate-500">• Space Debris:</span>
-            <span className="text-slate-300">{debris.length || 2673}</span>
+            <span className="text-slate-300">{debris.length}</span>
           </div>
           {isroCount > 0 && (
             <div className="flex justify-between items-center text-[10px] pl-4">

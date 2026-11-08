@@ -74,7 +74,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose 
                 <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
                   System Settings & Units
                 </h2>
-                <p className="text-[11px] font-mono text-cyan-400">OrbitGuard v4.3 Preferences</p>
+                <p className="text-[11px] font-mono text-cyan-400">OrbitGuard v5.0 Preferences</p>
               </div>
             </div>
             <button

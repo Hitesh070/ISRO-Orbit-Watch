@@ -4,21 +4,14 @@
 
  * =================================================================
 
- * Industry-standard Conjunction Assessment (CA) dashboard table:
-
- *  - Foster-1992 2-D collision probability (Pc)
-
- *  - Akella & Alfriend (2000) maximum Pc bound (Pc_max)
-
- *  - Miss distance (km), relative speed (km/s), and Mahalanobis distance (d_M)
-
- *  - Live TCA countdown timers and element-set freshness badges
+ * Displays recorded GP-element screening results, miss distance, relative speed,
+ * and the recorded TCA. Collision probability remains unavailable without measured covariance.
 
  *  - Sortable columns, search filter, and ISRO asset filter
 
  *  - CSV and JSON export functions
 
- *  - Interactive 2D B-plane encounter plot drawer integration
+ *  - Covariance-dependent encounter plots remain disabled when those inputs are absent
 
  */
 
@@ -56,116 +49,30 @@ import { formatDistance, formatSpeed } from '../../utils/unitConversion';
 
 import { useNavigate } from 'react-router-dom';
 
-import EncounterPlanePlot from './EncounterPlanePlot';
 
 /**
 
- * Live In-Real-Time (IRT) Astrodynamic Encounter State Calculator.
-
- * Computes instantaneous 3D separation D(t) = sqrt(d_miss^2 + (v_rel * dt)^2)
-
- * updating live every second as spacecraft orbit Earth.
+ * Derive countdown text from the recorded TCA only. No orbit-cycle rollover or
+ * interpolation is used because the record does not contain a current pair state.
 
  */
 
 function getLiveConjunctionTelemetry(conj: any, nowMs: number) {
-  const periodMs = 95 * 60 * 1000; // ~95-min LEO orbital period
-
-  let effectiveTcaMs = Number(conj.tca_timestamp_ms) || (nowMs + 12 * 3600 * 1000);
-
-  // If initial TCA has passed by > 60s, roll forward into active upcoming synodic orbital pass
-  if (effectiveTcaMs < nowMs - 60 * 1000) {
-    const elapsedCycles = Math.ceil((nowMs - effectiveTcaMs) / periodMs);
-    effectiveTcaMs += elapsedCycles * periodMs;
-  }
-  if (effectiveTcaMs < nowMs - 60 * 1000) {
-    effectiveTcaMs += periodMs;
-  }
-
-  const dtSec = (effectiveTcaMs - nowMs) / 1000;
-  const missDist = typeof conj.miss_distance_km === 'number' ? conj.miss_distance_km : 5.0;
-  const relSpeedAtTca = typeof conj.relative_speed_kms === 'number' ? conj.relative_speed_kms : 10.0;
-  const pcFosterNominal = typeof conj.pc_foster === 'number' ? conj.pc_foster : 0;
-  const pcMaxNominal = typeof conj.pc_max === 'number' ? conj.pc_max : 0;
-  const hbrKm = (conj.hbr_m || 12.0) / 1000.0;
-
-  // Closed-orbit relative separation D(t): varies smoothly and continuously every second between d_miss and D_max (~12,742 km)
-  const periodSec = 95 * 60;
-  const D_max = 12742.0;
-  const phase = (Math.PI * dtSec) / periodSec;
-  const sinSq = Math.pow(Math.sin(phase), 2);
-  const cosSq = Math.pow(Math.cos(phase), 2);
-  const currentSeparationKm = Math.sqrt(
-    missDist * missDist + (D_max * D_max - missDist * missDist) * sinSq
-  );
-
-  // Live Instantaneous Relative Velocity (v_rel varies with orbital phase around Earth):
-  const vOrb = 7.55; // km/s typical circular LEO orbital speed
-  const vOpp = Math.sqrt(Math.max(1.0, 4 * vOrb * vOrb - relSpeedAtTca * relSpeedAtTca));
-  const currentRelSpeedKms = Math.sqrt(
-    relSpeedAtTca * relSpeedAtTca * cosSq + vOpp * vOpp * sinSq
-  );
-
-  // Akella-Alfriend dynamic maximum probability bound based on live separation:
-  // Pc_max(D) = (1/e) * (R_HBR / D(t))^2
-  const currentPcMax = (1.0 / Math.E) * Math.pow(hbrKm / Math.max(0.001, currentSeparationKm), 2);
-
-  // Live Foster-1992 encounter collision probability scaled by proximity to TCA:
-  // Reaches nominal Foster Pc at closest approach (TCA miss distance) and decays away smoothly
-  const currentPcFoster = pcFosterNominal > 0
-    ? Math.min(
-        currentPcMax,
-        pcFosterNominal * Math.pow(missDist / Math.max(missDist, currentSeparationKm), 2)
-      )
-    : 0;
-
-  let statusText = 'CLOSING';
-  let statusColor = 'text-cyan-400';
-
-  if (Math.abs(dtSec) <= 45) {
-    statusText = 'ENCOUNTER ACTIVE';
-    statusColor = 'text-rose-400 font-extrabold animate-pulse';
-  } else if (dtSec > 0) {
-    statusText = 'CLOSING IN';
-    statusColor = 'text-amber-400';
-  } else {
-    statusText = 'RECEDING';
-    statusColor = 'text-slate-400';
-  }
-
+  const rawTca = Number(conj.tca_timestamp_ms);
+  const effectiveTcaMs = Number.isFinite(rawTca) && rawTca > 0 ? rawTca : null;
+  const dtSec = effectiveTcaMs === null ? null : (effectiveTcaMs - nowMs) / 1000;
   return {
     effectiveTcaMs,
     dtSec,
-    currentSeparationKm,
-    currentRelSpeedKms,
-    currentPcFoster,
-    currentPcMax,
-    statusText,
-    statusColor,
+    statusText: dtSec === null ? 'TCA unavailable' : dtSec >= 0 ? 'Before recorded TCA' : 'Recorded TCA passed',
+    statusColor: dtSec === null ? 'text-slate-500' : dtSec >= 0 ? 'text-amber-400' : 'text-slate-400',
   };
 }
 
 function formatCountdown(targetTimestampMs: number, nowMs: number): string {
-
-  let diffSec = Math.floor((targetTimestampMs - nowMs) / 1000);
-
-  if (Math.abs(diffSec) <= 45) {
-
-    return 'ENCOUNTER ACTIVE';
-
-  }
-
-  if (diffSec < 0 && diffSec >= -90) {
-
-    return `RECEDING (${Math.abs(diffSec)}s)`;
-
-  }
-
-  if (diffSec < 0) {
-
-    diffSec = Math.max(0, diffSec + 95 * 60);
-
-  }
+  if (!Number.isFinite(targetTimestampMs)) return 'TCA unavailable';
+  const rawDiffSec = Math.floor((targetTimestampMs - nowMs) / 1000);
+  const diffSec = Math.abs(rawDiffSec);
 
   const hours = Math.floor(diffSec / 3600);
 
@@ -173,12 +80,13 @@ function formatCountdown(targetTimestampMs: number, nowMs: number): string {
 
   const seconds = diffSec % 60;
 
-  return `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  const duration = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  return rawDiffSec > 0 ? `TCA in ${duration}` : `TCA passed ${duration} ago`;
 
 }
 
 function formatPc(val?: any, digits = 3): string {
-  if (val === undefined || val === null) return '< 1e-9';
+  if (val === undefined || val === null) return 'Unavailable';
   const num = Number(val);
   if (isNaN(num) || num < 1e-9) return '< 1e-9';
   return num.toExponential(digits);
@@ -187,6 +95,7 @@ function formatPc(val?: any, digits = 3): string {
 export const ConjunctionPanel = () => {
 
   const conjunctions = useOrbitStore((state: any) => state.conjunctions);
+  const screenTime = useOrbitStore((state: any) => state.conjunctionsScreenTime);
 
   const selectConjunction = useOrbitStore((state: any) => state.selectConjunction);
 
@@ -199,8 +108,6 @@ export const ConjunctionPanel = () => {
   const navigate = useNavigate();
 
   // State
-
-  const [selectedForPlot, setSelectedForPlot] = useState<any>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -354,11 +261,11 @@ export const ConjunctionPanel = () => {
 
       c.relative_speed_kms,
 
-      c.pc_foster,
+      !String(c.covariance_source || '').toLowerCase().includes('cdm') || String(c.covariance_source || '').toLowerCase().includes('synthetic') ? null : c.pc_foster,
 
-      c.pc_max,
+      !String(c.covariance_source || '').toLowerCase().includes('cdm') || String(c.covariance_source || '').toLowerCase().includes('synthetic') ? null : c.pc_max,
 
-      c.mahalanobis_dist,
+      !String(c.covariance_source || '').toLowerCase().includes('cdm') || String(c.covariance_source || '').toLowerCase().includes('synthetic') ? null : c.mahalanobis_dist,
 
       c.risk_level,
 
@@ -390,7 +297,12 @@ export const ConjunctionPanel = () => {
 
     if (!filteredEvents.length) return;
 
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(filteredEvents, null, 2))}`;
+    const exportEvents = filteredEvents.map((event: any) => {
+      const source = String(event.covariance_source || '').toLowerCase();
+      if (source.includes('cdm') && !source.includes('synthetic')) return event;
+      return { ...event, pc_foster: null, pc_max: null, mahalanobis_dist: null, encounter_plane_2d: undefined };
+    });
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(exportEvents, null, 2))}`;
 
     const link = document.createElement('a');
 
@@ -444,13 +356,13 @@ export const ConjunctionPanel = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
 
-          {/* Live Auto-Sync 1s Badge */}
+          {/* The display clock updates; event data remains tied to its recorded screen time. */}
 
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold text-xs shadow-glow-emerald">
 
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
 
-            <span>Auto Sync</span>
+            <span>TCA clock</span>
 
           </div>
 
@@ -490,9 +402,9 @@ export const ConjunctionPanel = () => {
 
             <option value="ALL">All Risk Levels</option>
 
-            <option value="CRITICAL">Critical (Pc ≥ 1e-4 / &lt;1km)</option>
+            <option value="CRITICAL">Critical screening class (miss distance &lt;1 km)</option>
 
-            <option value="WARNING">Warning (Pc ≥ 1e-7 / &lt;5km)</option>
+            <option value="WARNING">Warning screening class (miss distance &lt;5 km)</option>
 
             <option value="MONITORED">Monitored</option>
 
@@ -582,7 +494,7 @@ export const ConjunctionPanel = () => {
 
                 <th className="py-3 px-3 text-cyan-300">
 
-                  <div className="flex items-center gap-1">Live Separation</div>
+                  <div className="flex items-center gap-1">Current Separation</div>
 
                 </th>
 
@@ -626,7 +538,9 @@ export const ConjunctionPanel = () => {
 
                   <td colSpan={10} className="py-8 text-center text-slate-400 font-mono">
 
-                    No conjunctions matching the selected filters.
+                    {screenTime
+                      ? 'No records match the selected filters in this screening snapshot. This does not establish that the orbit is clear.'
+                      : 'No verified conjunction screening snapshot is available. This does not establish that the orbit is clear.'}
 
                   </td>
 
@@ -640,7 +554,9 @@ export const ConjunctionPanel = () => {
 
                   const live = getLiveConjunctionTelemetry(conj, now);
 
-                  const countdown = formatCountdown(live.effectiveTcaMs, now);
+                  const countdown = formatCountdown(live.effectiveTcaMs ?? Number.NaN, now);
+                  const covarianceSource = String(conj.covariance_source || '').toLowerCase();
+                  const pcAvailable = covarianceSource.includes('cdm') && !covarianceSource.includes('synthetic');
 
                   const isCritical = conj.risk_level === 'CRITICAL';
 
@@ -734,57 +650,57 @@ export const ConjunctionPanel = () => {
 
                       </td>
 
-                      {/* Live In-Real-Time Separation */}
+                  {/* No current pair state is available in the screening record. */}
 
                       <td className="py-2.5 px-3 font-mono">
 
                         <div className="font-bold text-slate-100">
 
-                          {formatDistance(live.currentSeparationKm, settings?.units, 1)}
+                          Unavailable
 
                         </div>
 
                         <div className={`text-[10px] font-mono ${live.statusColor}`}>
 
-                          {live.statusText}
+                          Current two-object state was not supplied
 
                         </div>
 
                       </td>
 
-                      {/* Relative Velocity (Live Instantaneous + TCA Nominal) */}
+                  {/* Relative speed at the predicted TCA */}
                       <td className="py-2.5 px-3 font-mono">
                         <div className="font-bold text-slate-100">
-                          {formatSpeed(live.currentRelSpeedKms, settings?.units, 2)}
+                          {conj.relative_speed_kms == null ? 'Unavailable' : formatSpeed(conj.relative_speed_kms, settings?.units, 2)}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          TCA: {formatSpeed(conj.relative_speed_kms, settings?.units, 2)}
+                          At predicted TCA
                         </div>
                       </td>
 
-                      {/* Foster-1992 Pc (Live Proximity Scaled + Peak Nominal) */}
+                  {/* Probability is available only with measured covariance. */}
                       <td className="py-2.5 px-3 font-mono font-bold">
                         <div
                           className={
-                            (live.currentPcFoster || 0) >= 1e-4
+                            pcAvailable && (conj.pc_foster || 0) >= 1e-4
                               ? 'text-rose-400'
-                              : (live.currentPcFoster || 0) >= 1e-7
+                              : pcAvailable && (conj.pc_foster || 0) >= 1e-7
                               ? 'text-amber-400'
                               : 'text-slate-400'
                           }
                         >
-                          <span className="whitespace-nowrap">{formatPc(live.currentPcFoster, 3)}</span>
+                          <span className="whitespace-nowrap">{pcAvailable ? formatPc(conj.pc_foster, 3) : 'Unavailable: measured covariance not supplied'}</span>
                         </div>
                         <div className="text-[10px] text-slate-500 font-normal">
-                          Peak: {formatPc(conj.pc_foster, 2)}
+                          {pcAvailable ? 'Calculated using supplied covariance' : 'No measured covariance provided'}
                         </div>
                       </td>
 
-                      {/* Akella Pc_max (Live Instantaneous Upper Bound + Peak Bound) */}
+                  {/* Probability bound is unavailable without measured covariance. */}
                       <td className="py-2.5 px-3 font-mono font-bold text-cyan-300 whitespace-nowrap">
-                        <div>{formatPc(live.currentPcMax, 3)}</div>
+                        <div>{pcAvailable ? formatPc(conj.pc_max, 3) : 'Unavailable: measured covariance not supplied'}</div>
                         <div className="text-[10px] text-cyan-600 font-normal">
-                          Peak: {formatPc(conj.pc_max, 2)}
+                          {pcAvailable ? 'Calculated using supplied covariance' : 'No measured covariance provided'}
                         </div>
                       </td>
 
@@ -792,7 +708,7 @@ export const ConjunctionPanel = () => {
 
                       <td className="py-2.5 px-3 font-mono">
 
-                        <div className="text-slate-200 text-[11px]">{new Date(live.effectiveTcaMs).toISOString().replace('T', ' ').slice(0, 19)} UTC</div>
+                        <div className="text-slate-200 text-[11px]">{live.effectiveTcaMs === null ? 'TCA unavailable' : `${new Date(live.effectiveTcaMs).toISOString().replace('T', ' ').slice(0, 19)} UTC`}</div>
 
                         <div className="text-cyan-400 font-bold text-[10px] flex items-center gap-1 mt-0.5">
 
@@ -838,13 +754,15 @@ export const ConjunctionPanel = () => {
 
                         <button
 
-                          onClick={() => setSelectedForPlot(conj)}
+                          disabled={!pcAvailable || !conj.encounter_plane_2d}
 
-                          className="px-2 py-1 rounded bg-space-900 border border-slate-700 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono text-[11px] transition inline-flex items-center gap-1"
+                          title="Encounter-plane covariance is unavailable for these records."
+
+                          className="px-2 py-1 rounded bg-space-900 border border-slate-700 text-slate-500 font-mono text-[11px] transition inline-flex items-center gap-1 disabled:cursor-not-allowed"
 
                         >
 
-                          <Target className="w-3 h-3" /> 2D Plot
+                          <Target className="w-3 h-3" /> Plot unavailable
 
                         </button>
 
@@ -890,7 +808,7 @@ export const ConjunctionPanel = () => {
 
           <span>
 
-            Covariance Model: <strong>Synthetic RTN</strong> (Screening-Grade). Hard-Body Radius assumed = 12.0m.
+            Public GP elements do not provide object covariance or physical hard-body radii; collision probability is unavailable.
 
           </span>
 
@@ -903,22 +821,6 @@ export const ConjunctionPanel = () => {
         </div>
 
       </div>
-
-      {/* 2D Encounter Plane Modal */}
-
-      {selectedForPlot && (
-
-        <EncounterPlanePlot
-
-          conjunction={selectedForPlot}
-
-          onClose={() => setSelectedForPlot(null)}
-
-          onVisualizeOnGlobe={handleVisualize}
-
-        />
-
-      )}
 
     </div>
 

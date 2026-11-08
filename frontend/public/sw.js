@@ -7,7 +7,7 @@
  * - Offline cached orbital catalogs (data/catalog.json & data/meta.json)
  */
 
-const CACHE_NAME = 'orbitguard-cache-v4.3';
+const CACHE_NAME = 'orbitguard-cache-v5.0';
 
 const STATIC_ASSETS = [
   '/',

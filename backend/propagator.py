@@ -1,7 +1,7 @@
 """
 OrbitGuard SGP4 Propagator Engine
 ==================================
-Propagates Earth satellite and debris Two-Line Element (TLE) sets in real time using Skyfield
+Propagates Earth satellite and debris Two-Line Element (TLE) sets to a requested time using Skyfield
 and SGP4. Computes subpoints (latitude, longitude, altitude), velocity vectors, orbital elements,
 and generates 3D trajectory polylines normalized for Three.js rendering.
 """
@@ -22,23 +22,8 @@ MU_EARTH = 398600.4418  # km^3/s^2
 
 
 def classify_country(name: str, norad_id: int) -> str:
-    """Infer country or operating agency from satellite name and metadata."""
-    name_upper = name.upper()
-    if any(k in name_upper for k in ["ISRO", "CARTOSAT", "RISAT", "GSAT", "INSAT", "NAVIC", "IRNSS", "EOS-", "CHANDRAYAAN", "MOM"]):
-        return "India (ISRO)"
-    if any(k in name_upper for k in ["STARLINK", "USA", "GPS", "NOAA", "HST", "HUBBLE", "TERRA", "AQUA", "LANDSAT", "GOES", "ATLAS", "DELTA", "CYGNUS", "DRAGON"]):
-        return "United States"
-    if any(k in name_upper for k in ["COSMOS", "SOYUZ", "GLONASS", "PROGRESS", "SL-", "BREEZE", "MOLNIYA", "ZENIT"]):
-        return "Russia"
-    if any(k in name_upper for k in ["TIANGONG", "FENGYUN", "CZ-", "CHANG'E", "SHENZHOU", "BEIDOU", "YAOGAN", "GAOFEN"]):
-        return "China"
-    if any(k in name_upper for k in ["SENTINEL", "GALILEO", "ENVISAT", "METEOSAT", "ARIANE", "METOP", "SPOT"]):
-        return "ESA / Europe"
-    if any(k in name_upper for k in ["ONEWEB"]):
-        return "United Kingdom"
-    if any(k in name_upper for k in ["ALOS", "H-II", "H-2", "HIMAWARI", "QZS"]):
-        return "Japan"
-    return "International"
+    """Return unknown when the TLE name does not carry authoritative owner metadata."""
+    return "Unknown"
 
 
 def classify_object_type(name: str) -> str:
@@ -218,10 +203,9 @@ class SatellitePropagator:
         try:
             model = sat.model
             mean_motion_rev_day = float(model.no_kozai * 1440.0 / (2.0 * math.pi))
-            if mean_motion_rev_day <= 0:
-                period_days = 1.0 / 15.0  # fallback ~96 min
-            else:
-                period_days = 1.0 / mean_motion_rev_day
+            if not math.isfinite(mean_motion_rev_day) or mean_motion_rev_day <= 0:
+                return []
+            period_days = 1.0 / mean_motion_rev_day
 
             now_t = self.ts.now()
             # Generate sample time intervals over one period

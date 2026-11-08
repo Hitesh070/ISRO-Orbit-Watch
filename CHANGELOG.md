@@ -5,6 +5,27 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [v5.0] - 2026-11-08 (Data Integrity, Screening Safety & Verification)
+### Added
+- A release audit covering manual review of the 3D Globe, Analytics & Risk, Conjunctions, and RF Station sections, plus automated verification results in `docs/RELEASE_V5.0.md`.
+- Explicit snapshot provenance and stale-data reporting for the catalog and conjunction data.
+
+### Changed
+- Versioned the desktop package and in-app About/preferences surfaces as 5.0.0 / v5.0.
+- Corrected current documentation to distinguish SGP4 model predictions and cached catalog snapshots from live sensor telemetry.
+- Corrected desktop refresh throttling so a missing screening snapshot does not force a full catalog download on every application restart.
+
+### Fixed
+- Withdrew bundled conjunction results whose former collision probability values used synthetic covariance. With no verified screening event snapshot, OrbitGuard now reports screening unavailable and explicitly says that this is not orbit-clearance evidence.
+- Removed unsupported current-release claims about synthetic covariance, live conjunction probabilities, measured performance, and offline data freshness from user and technical documentation.
+
+### Verified
+- Frontend: 46 tests passed; desktop: 33 tests passed.
+- Frontend and desktop TypeScript checks passed.
+- 10 backend numerical/screening tests passed; the 5 TestClient endpoint tests remain inconclusive because the installed FastAPI/Starlette/httpx versions differ from the pinned backend requirements and the first request stalled.
+
+> The v4.3 entry below is historical. Its synthetic-covariance and real-time conjunction claims are superseded by this release and must not be used to describe v5.0 behavior.
+
 ## [v4.3] - 2026-11-08 (Release: 4K NASA Globe, Curvature-Preserving Extrapolation, Dynamic Conjunction Telemetry & Hardened Desktop)
 ### Added
 - **Curvature-Preserving Spherical Shell Extrapolation**:

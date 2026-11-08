@@ -138,7 +138,7 @@ export function createApplicationMenu(
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About OrbitGuard',
-              message: `OrbitGuard SSA & RF Ground Station v4.2.0`,
+              message: `OrbitGuard SSA & RF Ground Station v5.0.0`,
               detail: [
                 `Electron: ${process.versions.electron}`,
                 `Chromium: ${process.versions.chrome}`,

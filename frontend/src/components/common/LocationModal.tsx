@@ -18,108 +18,16 @@ interface LocationModalProps {
   onClose: () => void;
 }
 
-interface StationPreset {
-  name: string;
-  category: 'ISRO' | 'National' | 'Global';
-  lat: number;
-  lon: number;
-  alt_m: number;
-  description: string;
-}
-
-const PRESET_STATIONS: StationPreset[] = [
-  {
-    name: 'ISRO HQ / ISTRAC (Bengaluru)',
-    category: 'ISRO',
-    lat: 12.9716,
-    lon: 77.5946,
-    alt_m: 920,
-    description: 'ISRO Telemetry, Tracking and Command Network',
-  },
-  {
-    name: 'SDSC SHAR (Sriharikota)',
-    category: 'ISRO',
-    lat: 13.7199,
-    lon: 80.2305,
-    alt_m: 10,
-    description: 'Satish Dhawan Space Centre - Primary Launch Port',
-  },
-  {
-    name: 'Master Control Facility (Hassan)',
-    category: 'ISRO',
-    lat: 13.0033,
-    lon: 76.1004,
-    alt_m: 957,
-    description: 'Geo-stationary Satellite Orbit Control & Stationkeeping',
-  },
-  {
-    name: 'VSSC / Thumba (Thiruvananthapuram)',
-    category: 'ISRO',
-    lat: 8.5362,
-    lon: 76.8687,
-    alt_m: 15,
-    description: 'Vikram Sarabhai Space Centre - Launch Vehicle R&D',
-  },
-  {
-    name: 'SAC (Ahmedabad)',
-    category: 'ISRO',
-    lat: 23.0225,
-    lon: 72.5714,
-    alt_m: 53,
-    description: 'Space Applications Centre - Payloads & Sensors',
-  },
-  {
-    name: 'NRSC (Hyderabad)',
-    category: 'ISRO',
-    lat: 17.3850,
-    lon: 78.4867,
-    alt_m: 505,
-    description: 'National Remote Sensing Centre - Earth Observation',
-  },
-  {
-    name: 'New Delhi (Northern Station)',
-    category: 'National',
-    lat: 28.6139,
-    lon: 77.2090,
-    alt_m: 216,
-    description: 'Northern India Telemetry & Earth Station',
-  },
-  {
-    name: 'Mumbai (Western Coast)',
-    category: 'National',
-    lat: 19.0760,
-    lon: 72.8777,
-    alt_m: 14,
-    description: 'Western Coast Maritime & Atmospheric Radar',
-  },
-  {
-    name: 'NASA JPL (Goldstone, USA)',
-    category: 'Global',
-    lat: 35.4267,
-    lon: -116.8900,
-    alt_m: 1000,
-    description: 'Deep Space Network (DSN) Primary Node',
-  },
-  {
-    name: 'ESA Kourou (French Guiana)',
-    category: 'Global',
-    lat: 5.1611,
-    lon: -52.6497,
-    alt_m: 15,
-    description: 'Guiana Space Centre - Equatorial Tracking',
-  },
-];
-
 export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose }) => {
   const observerLocation = useOrbitStore((state) => state.observerLocation);
   const setObserverLocation = useOrbitStore((state) => state.setObserverLocation);
   const fetchPasses = useOrbitStore((state) => state.fetchPasses);
 
-  const [activeTab, setActiveTab] = useState<'presets' | 'custom'>('presets');
+  const [activeTab, setActiveTab] = useState<'presets' | 'custom'>('custom');
   const [customName, setCustomName] = useState('');
   const [customLat, setCustomLat] = useState('');
   const [customLon, setCustomLon] = useState('');
-  const [customAlt, setCustomAlt] = useState('100');
+  const [customAlt, setCustomAlt] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [locateStatus, setLocateStatus] = useState<string | null>(null);
@@ -130,65 +38,22 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
     setIsLocating(true);
     setLocateStatus('Querying browser geolocation...');
 
-    const applyLocation = (lat: number, lon: number, alt_m: number, name: string) => {
-      const loc = {
-        lat: Number(lat.toFixed(4)),
-        lon: Number(lon.toFixed(4)),
-        alt_m: Math.round(alt_m),
-        name,
-        isLive: true,
-      };
-      setObserverLocation(loc);
-      fetchPasses(loc.name, 25544);
-      setIsLocating(false);
-      setLocateStatus(null);
-      onClose();
-    };
-
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
-          const alt = pos.coords.altitude ? Math.round(pos.coords.altitude) : 100;
-
-          let tzCity = 'Browser Location';
-          try {
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            tzCity = tz.split('/')[1]?.replace(/_/g, ' ') || 'Browser Location';
-          } catch {}
-
-          const name = `Current Location: ${tzCity} (${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'})`;
-          applyLocation(lat, lon, alt, name);
+          // Browser GPS altitude is ellipsoidal; this predictor requires mean-sea-level elevation.
+          setCustomLat(lat.toFixed(4));
+          setCustomLon(lon.toFixed(4));
+          setActiveTab('custom');
+          setIsLocating(false);
+          setLocateStatus('GPS provides coordinates, but its altitude is ellipsoidal. Enter site elevation above mean sea level before predicting passes.');
         },
-        async (err) => {
+        (err) => {
           console.warn('[LocationModal] Browser geolocation warning:', err.message);
-          setLocateStatus('Falling back to IP-based location...');
-          // Fast IP Geolocation fallback
-          try {
-            const res = await fetch('https://ipapi.co/json/');
-            if (res.ok) {
-              const data = await res.json();
-              if (data.latitude && data.longitude) {
-                const lat = Number(data.latitude);
-                const lon = Number(data.longitude);
-                const city = data.city || 'Current Location';
-                const name = `Current Location: ${city} (${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'})`;
-                applyLocation(lat, lon, 100, name);
-                return;
-              }
-            }
-          } catch {}
-
-          // Timezone fallback if offline
-          try {
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
-            const city = tz.split('/')[1]?.replace(/_/g, ' ') || 'Hyderabad';
-            applyLocation(17.3850, 78.4867, 505, `Current Location: ${city} (Inferred)`);
-          } catch {
-            setIsLocating(false);
-            setLocateStatus(null);
-          }
+          setIsLocating(false);
+          setLocateStatus('Browser location unavailable. Enter latitude, longitude, and altitude above mean sea level.');
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
@@ -198,24 +63,11 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
     }
   };
 
-  const handleSelectPreset = (preset: StationPreset) => {
-    const loc = {
-      lat: preset.lat,
-      lon: preset.lon,
-      alt_m: preset.alt_m,
-      name: `${preset.name} (${preset.lat}°N, ${preset.lon}°E)`,
-      isLive: true,
-    };
-    setObserverLocation(loc);
-    fetchPasses(loc.name, 25544);
-    onClose();
-  };
-
   const handleSaveCustom = (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(customLat);
     const lon = parseFloat(customLon);
-    const alt = parseFloat(customAlt) || 100;
+    const alt = Number(customAlt);
 
     if (isNaN(lat) || lat < -90 || lat > 90) {
       setErrorMsg('Latitude must be between -90° and +90°');
@@ -225,18 +77,23 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
       setErrorMsg('Longitude must be between -180° and +180°');
       return;
     }
+    if (!Number.isFinite(alt) || alt < -500 || alt > 10000) {
+      setErrorMsg('Altitude must be provided in meters and between -500 and 10,000.');
+      return;
+    }
 
     const name = customName.trim() || `Custom Station (${lat}°, ${lon}°)`;
     const loc = {
       lat: Number(lat.toFixed(4)),
       lon: Number(lon.toFixed(4)),
       alt_m: Math.round(alt),
+      altitude_source: 'user_supplied_msl',
       name: `${name} (${Math.abs(lat)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon)}°${lon >= 0 ? 'E' : 'W'})`,
       isLive: true,
     };
 
     setObserverLocation(loc);
-    fetchPasses(loc.name, 25544);
+    fetchPasses(`${loc.lat},${loc.lon},${loc.alt_m}`, 25544);
     onClose();
   };
 
@@ -281,7 +138,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
                   </span>
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-                  {locateStatus || 'Click to access device location from browser for real-time local satellite passes'}
+                  {locateStatus || 'Use device coordinates for SGP4 pass predictions when browser location is available'}
                 </div>
               </div>
             </div>
@@ -295,7 +152,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-slate-400 text-[11px] shrink-0">Active Station:</span>
             <span className="text-emerald-300 font-bold truncate">
-              {observerLocation?.name || 'Bengaluru, India'}
+              {observerLocation?.name || 'No observer station selected'}
             </span>
           </div>
         </div>
@@ -304,6 +161,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
         <div className="flex border-b border-slate-800 bg-space-950/40 text-[11px] shrink-0">
           <button
             onClick={() => setActiveTab('presets')}
+            disabled
+            title="No station presets are available until their coordinates and elevations are verified."
             className={`flex-1 py-2.5 font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === 'presets'
                 ? 'text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/10'
@@ -311,7 +170,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
             }`}
           >
             <Satellite className="w-3.5 h-3.5" />
-            <span>Space Agency Presets (ISRO / Global)</span>
+            <span>Station presets unavailable</span>
           </button>
           <button
             onClick={() => setActiveTab('custom')}
@@ -329,46 +188,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
         {/* Modal Body */}
         <div className="p-4 overflow-y-auto flex-1 space-y-3">
           {activeTab === 'presets' ? (
-            <div className="space-y-2">
-              <div className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                <span>🇮🇳 Indian Space Research Organisation (ISRO) Stations</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {PRESET_STATIONS.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSelectPreset(preset)}
-                    className="p-2.5 rounded-xl text-left bg-space-950/80 border border-slate-800 hover:border-cyan-500/60 hover:bg-cyan-950/30 transition flex flex-col justify-between group"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-200 group-hover:text-cyan-300 text-xs">
-                          {preset.name}
-                        </span>
-                        <span
-                          className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
-                            preset.category === 'ISRO'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              : preset.category === 'National'
-                              ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                              : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          }`}
-                        >
-                          {preset.category}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
-                        {preset.description}
-                      </p>
-                    </div>
-                    <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-cyan-400/90">
-                      <span>{preset.lat}°N, {preset.lon}°E</span>
-                      <span className="text-slate-500">({preset.alt_m}m)</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="p-3 rounded-lg border border-slate-700 text-slate-400">No station presets are available until their coordinates and elevations are verified. Enter your observer coordinates manually.</div>
           ) : (
             <form onSubmit={handleSaveCustom} className="space-y-3">
               {errorMsg && (
@@ -416,7 +236,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
                 <label className="block text-slate-400 text-[11px] mb-1">Altitude Above Sea Level (meters)</label>
                 <input
                   type="number"
-                  placeholder="100"
+                  placeholder="Altitude above sea level (meters)"
                   value={customAlt}
                   onChange={(e) => setCustomAlt(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-space-950 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"

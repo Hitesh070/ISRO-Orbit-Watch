@@ -1,8 +1,8 @@
 """
 OrbitGuard FastAPI Server Entrypoint
 ====================================
-High-performance REST API delivering real-time satellite orbital propagation,
-space debris risk calculations, conjunction warnings, ground station passes, and analytics.
+REST API serving catalog-based SGP4 predictions, geometric conjunction screening,
+ground station pass predictions, and related analytics. It does not provide sensor telemetry.
 """
 
 import json
@@ -24,7 +24,6 @@ try:  # load .env for local development (optional dependency on Vercel)
 except ImportError:  # pragma: no cover
     pass
 
-from backend.conjunction import conjunction_detector
 from backend.pass_predictor import FAMOUS_GROUND_STATIONS, pass_predictor
 from backend.propagator import propagator
 from backend.risk_engine import risk_engine
@@ -58,8 +57,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="OrbitGuard API",
-    description="Real-Time Satellite Orbit Tracker & Space Debris Risk Dashboard REST API",
-    version="4.2.0",
+    description="Catalog-based SGP4 orbit prediction and space-object screening API",
+    version="5.0.0",
     lifespan=lifespan,
 )
 
@@ -94,7 +93,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "OrbitGuard SSA API",
-        "version": "4.2.0",
+        "version": "5.0.0",
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "pipeline_metadata": pipeline_meta,
     }
@@ -106,8 +105,8 @@ def root():
     return {
         "service": "OrbitGuard API",
         "status": "OPERATIONAL",
-        "version": "4.2.0",
-        "description": "Real-Time Satellite Orbit Tracker & Space Debris Risk Dashboard",
+        "version": "5.0.0",
+        "description": "Catalog-based SGP4 orbit prediction and space-object screening",
         "endpoints": [
             "/api/satellites",
             "/api/satellite/{norad_id}",
@@ -130,8 +129,8 @@ def get_satellites(
     search: Optional[str] = Query(default=None, description="Search query by name or NORAD ID"),
 ):
     """
-    Returns real-time propagated positions (lat, lon, alt, velocity) and orbital elements
-    for operational satellites, annotated with real-time risk scores.
+    Returns current-time SGP4-predicted positions from the available GP element catalog,
+    with catalog proximity counts where inputs are available.
     """
     effective_limit = limit if (limit and limit > 0) else 150
     active_data = propagator.propagate_catalog(tle_fetcher.active_file, limit=effective_limit)
@@ -146,10 +145,10 @@ def get_satellites(
         nid = sat["norad_id"]
         risk_info = risk_map.get(nid, {})
         sat_copy = dict(sat)
-        sat_copy["risk_score"] = risk_info.get("risk_score", 15.0)
-        sat_copy["risk_level"] = risk_info.get("risk_level", "SAFE")
-        sat_copy["status_color"] = risk_info.get("status_color", "green")
-        sat_copy["collision_probability"] = risk_info.get("collision_probability", 0.0001)
+        sat_copy["risk_score"] = risk_info.get("risk_score")
+        sat_copy["risk_level"] = risk_info.get("risk_level", "UNAVAILABLE")
+        sat_copy["status_color"] = risk_info.get("status_color", "gray")
+        sat_copy["collision_probability"] = None
 
         # Filters
         if regime and sat_copy["regime"].upper() != regime.upper():
@@ -219,7 +218,7 @@ def get_debris(
     limit: Optional[int] = Query(default=None, ge=1, le=500, description="Limit count of debris pieces (1-500)"),
 ):
     """
-    Returns real-time orbital positions and elements for cataloged space debris pieces
+    Returns current-time SGP4-predicted positions and elements for cataloged space debris pieces
     and spent rocket stages.
     """
     debris_data = propagator.propagate_catalog(tle_fetcher.debris_file, limit=limit)
@@ -232,8 +231,7 @@ def get_debris(
 @app.get("/api/risk")
 def get_risk_overview():
     """
-    Returns risk scores for all active satellites, top 10 highest-risk satellites,
-    orbital shell breakdown (LEO, MEO, GEO), and altitude x inclination risk heatmap.
+    Returns sample-scoped instantaneous proximity counts and orbital catalog counts.
     """
     active_data = propagator.propagate_catalog(tle_fetcher.active_file, limit=100)
     debris_data = propagator.propagate_catalog(tle_fetcher.debris_file, limit=50)
@@ -245,8 +243,7 @@ def get_risk_overview():
 @app.get("/api/risk/{norad_id}")
 def get_satellite_risk(norad_id: int):
     """
-    Returns a detailed risk assessment for a specific satellite, including nearby debris counts,
-    closest approach object, and recommended avoidance maneuvers.
+    Returns catalog proximity counts for a specific satellite. This is not a maneuver recommendation.
     """
     active_sats = propagator.parse_tle_file(tle_fetcher.active_file)
     target_sat = None
@@ -267,77 +264,80 @@ def get_satellite_risk(norad_id: int):
 @app.get("/api/conjunctions")
 def get_conjunction_alerts():
     """
-    Returns close-approach conjunction alerts predicted over the next 24 hours
-    between operational spacecraft and debris objects using Foster-1992 Pc integration.
+    Returns the last pipeline screening snapshot. Snapshot TCAs and probability provenance
+    are preserved; stale TCAs are never rolled into future orbital cycles.
     """
     conj_file = os.path.join(os.path.dirname(__file__), "data", "conjunctions.json")
     if os.path.exists(conj_file):
         try:
             with open(conj_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                if data.get("screening_status") == "unavailable":
+                    raise ValueError(data.get("screening_reason", "Screening is unavailable."))
+                screen_time = data.get("screen_time_utc")
+                parsed_screen_time = datetime.fromisoformat(str(screen_time).replace("Z", "+00:00")) if screen_time else None
+                if parsed_screen_time is None:
+                    raise ValueError("Screening timestamp is unavailable.")
+                if parsed_screen_time.tzinfo is None:
+                    parsed_screen_time = parsed_screen_time.replace(tzinfo=timezone.utc)
+                screen_age = (datetime.now(timezone.utc) - parsed_screen_time.astimezone(timezone.utc)).total_seconds()
+                if screen_age < -300 or screen_age > 6 * 60 * 60:
+                    raise ValueError("Screening snapshot is outside the six-hour freshness window.")
                 raw_conjs = data.get("conjunctions", [])
-                now_dt = datetime.now(timezone.utc)
-                now_ms = int(now_dt.timestamp() * 1000)
-                period_ms = 95 * 60 * 1000
-
-                # Dynamically roll elapsed TCAs into active upcoming 24h orbital screening passes
                 for c in raw_conjs:
-                    tca_ms = c.get("tca_timestamp_ms", now_ms)
-                    if tca_ms < now_ms - 60000:
-                        delta = now_ms - tca_ms
-                        cycles = int((delta + period_ms - 1) // period_ms)
-                        new_tca = tca_ms + cycles * period_ms
-                        if new_tca <= now_ms:
-                            new_tca += period_ms
-                        c["tca_timestamp_ms"] = new_tca
-                        c["tca_utc"] = datetime.fromtimestamp(new_tca / 1000.0, tz=timezone.utc).isoformat()
+                    covariance_source = str(c.get("covariance_source", "")).lower()
+                    has_measured_covariance = "cdm" in covariance_source and "synthetic" not in covariance_source
+                    if not has_measured_covariance:
+                        c["pc_foster"] = None
+                        c["pc_max"] = None
+                        c["collision_probability"] = None
+                        c["mahalanobis_dist"] = None
+                        c["k_at_pc_max"] = None
+                        c["hbr_m"] = None
+                        c.pop("encounter_plane_2d", None)
+                        c["probability_status"] = "Unavailable: measured object covariance was not supplied"
 
                 return {
                     "count": data.get("total_conjunctions", len(raw_conjs)),
                     "critical_count": data.get("critical_conjunctions", 0),
                     "warning_count": data.get("warning_conjunctions", 0),
+                    "screen_time_utc": data.get("screen_time_utc"),
+                    "screening_scope": data.get("screening_scope"),
                     "conjunctions": raw_conjs,
                 }
         except Exception as e:
             logger.warning(f"Failed loading {conj_file}: {e}")
 
-    active_sats = propagator.parse_tle_file(tle_fetcher.active_file)
-    debris_sats = propagator.parse_tle_file(tle_fetcher.debris_file)
-
-    conjunctions = conjunction_detector.scan_conjunctions(
-        active_sats,
-        debris_sats,
-        hours_ahead=24,
-        step_minutes=1.0 / 6.0,  # 10 s grid: at ~15 km/s a 15-minute grid misses almost every encounter
-        miss_threshold_km=30.0,
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="No verified conjunction screening snapshot is available.",
     )
-
-    return {
-        "count": len(conjunctions),
-        "conjunctions": conjunctions,
-    }
 
 
 @app.get("/api/passes")
 def get_satellite_passes(
-    city: Optional[str] = Query(default=None, description="City or space center name (e.g. Bangalore, Sriharikota)"),
+    city: Optional[str] = Query(default=None, description="Optional label for a custom observer site; coordinates and altitude are required"),
     lat: Optional[float] = Query(default=None, ge=-90.0, le=90.0, description="Ground latitude (-90 to 90)"),
     lon: Optional[float] = Query(default=None, ge=-180.0, le=180.0, description="Ground longitude (-180 to 180)"),
-    norad_id: Optional[int] = Query(default=None, ge=1, description="Satellite NORAD ID (omitted defaults to 25544 ISS)"),
+    alt_m: Optional[float] = Query(default=None, ge=-500.0, le=10000.0, description="Observer altitude above mean sea level in meters"),
+    norad_id: int = Query(..., ge=1, description="Satellite NORAD ID"),
     days: int = Query(default=5, ge=1, le=30, description="Lookahead window in days (1 to 30)"),
 ):
     """
     Predicts upcoming ground passes (AOS, Max Elevation, LOS) over a ground station
     and returns 2D ground track trajectory points.
     """
-    location = pass_predictor.resolve_location(city, lat=lat, lon=lon)
+    try:
+        location = pass_predictor.resolve_location(city, lat=lat, lon=lon, alt_m=alt_m)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
     # Locate target satellite
     active_sats = propagator.parse_tle_file(tle_fetcher.active_file)
     debris_sats = propagator.parse_tle_file(tle_fetcher.debris_file)
     all_sats = active_sats + debris_sats
 
-    requested_id = norad_id if norad_id is not None else 25544
+    requested_id = norad_id
 
     target_sat = None
     for sat in all_sats:
@@ -346,25 +346,16 @@ def get_satellite_passes(
             break
 
     if not target_sat:
-        if norad_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Satellite with NORAD ID {norad_id} not found in current catalog.",
-            )
-        # Only fallback to first active satellite if norad_id was omitted and ISS wasn't found
-        target_sat = active_sats[0] if active_sats else None
-
-    if not target_sat:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No satellite available for pass prediction.",
+            detail=f"Satellite with NORAD ID {norad_id} not found in current catalog.",
         )
 
     passes = pass_predictor.predict_passes(
         target_sat,
         lat=location["lat"],
         lon=location["lon"],
-        alt_m=location.get("alt_m", 100.0),
+        alt_m=location["alt_m"],
         days=days,
         min_elevation_deg=10.0,
         max_results=10,
@@ -387,7 +378,7 @@ def get_satellite_passes(
 
 @app.get("/api/ground-stations")
 def get_ground_stations():
-    """Returns list of curated spaceports and ground station hubs."""
+    """Returns verified configured station presets; currently none are published."""
     return list(FAMOUS_GROUND_STATIONS.values())
 
 

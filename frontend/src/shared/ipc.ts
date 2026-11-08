@@ -79,11 +79,21 @@ export interface DataCacheMetadata {
   source: string;
   satellitesCount: number;
   debrisCount: number;
+  isroCount?: number;
   oldestEpoch?: string;
   newestEpoch?: string;
   checksum?: string;
   isOffline: boolean;
   lastSyncAttempt?: string;
+  lastRefreshAttempt?: string;
+  fetch_time_utc?: string;
+  total_objects?: number;
+  active_satellites?: number;
+  debris_objects?: number;
+  isro_assets?: number;
+  excluded_unsupported_norad_ids?: number;
+  classification_version?: number;
+  unclassified_objects?: number;
 }
 
 export interface SystemInfo {

@@ -31,8 +31,6 @@ export const Navbar = () => {
   const satellites = useOrbitStore((state) => state.satellites);
   const debris = useOrbitStore((state) => state.debris);
   const conjunctions = useOrbitStore((state) => state.conjunctions);
-  const isLoading = useOrbitStore((state) => state.isLoading);
-  const triggerRefreshTLE = useOrbitStore((state) => state.triggerRefreshTLE);
   const toggleHud = useOrbitStore((state) => state.toggleHud);
   const isHudVisible = useOrbitStore((state) => state.isHudVisible);
   const observerLocation = useOrbitStore((state) => state.observerLocation);
@@ -95,8 +93,8 @@ export const Navbar = () => {
   const criticalConjunctions = conjunctions.filter(
     (c) => c.risk_level === 'CRITICAL' && (!filters?.indianSatsOnly || c.object1?.is_isro || c.object2?.is_isro)
   ).length;
-  const isroCount = satellites.filter((s) => s.is_isro).length || 80;
-  const activeSatsCount = filters?.indianSatsOnly ? isroCount : (satellites.length || isroCount);
+  const isroCount = satellites.filter((s) => s.is_isro).length;
+  const activeSatsCount = filters?.indianSatsOnly ? isroCount : satellites.length;
 
   return (
     <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-1.5 shadow-xl select-none ">
@@ -115,20 +113,20 @@ export const Navbar = () => {
                   OrbitGuard
                 </span>
                 <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  v4.3
+                  v5.0
                 </span>
               </div>
               <p className="text-[10px] font-mono text-slate-400 hidden min-[1400px]:block">
-                Real-Time Satellite Orbit Tracker & Debris Risk
+                SGP4 Orbit Predictions & Catalog Screening
               </p>
             </div>
           </NavLink>
         </div>
 
-        {/* Live Telemetry Ticker */}
+        {/* Catalog object counters */}
         <div className="hidden min-[1680px]:flex items-center gap-3 text-xs font-mono px-2.5 py-1 rounded-lg bg-space-950/70 border border-slate-800 shrink-0">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
             <span className="text-slate-400">{filters?.indianSatsOnly ? 'ISRO Spacecraft:' : 'Active Spacecraft:'}</span>
             <span className="font-bold text-emerald-400">{activeSatsCount}</span>
           </div>
@@ -138,7 +136,7 @@ export const Navbar = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-slate-400">Tracked Debris:</span>
-            <span className="font-bold text-amber-400">{(debris && debris.length > 0) ? debris.length.toLocaleString() : '2,673'}</span>
+            <span className="font-bold text-amber-400">{(debris || []).length.toLocaleString()}</span>
           </div>
 
           <div className="w-px h-3.5 bg-slate-800" />
@@ -146,7 +144,7 @@ export const Navbar = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
             <span className="text-slate-400">Conjunctions:</span>
-            <span className="font-bold text-rose-400">{criticalConjunctions} Critical</span>
+            <span className="font-bold text-rose-400">{criticalConjunctions} Critical by distance</span>
           </div>
         </div>
 
@@ -249,7 +247,7 @@ export const Navbar = () => {
                     : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 }`}
               >
-                {simulationSpeed > 1 ? `${simulationSpeed}x` : 'LIVE'}
+                {simulationSpeed > 1 ? `${simulationSpeed}x` : 'UTC NOW'}
               </span>
             </div>
             <div className="text-[10px] text-slate-400 tracking-wider leading-tight mt-0.5">
@@ -294,16 +292,15 @@ export const Navbar = () => {
               <Settings className="w-3.5 h-3.5" />
             </button>
 
-            {/* Space Agency Auto-Sync Button */}
+            {/* Scheduled catalog refresh status */}
             <button
-              onClick={triggerRefreshTLE}
-              disabled={isLoading}
-              title="Auto-Sync Space Agencies (CelesTrak / US Space Command / ISRO). Click to refresh."
-              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 hover:text-emerald-100 transition shadow-sm text-xs font-mono font-semibold shrink-0"
+              type="button"
+              disabled
+              title="Catalog snapshots update on the configured backend schedule; this client cannot force a refresh."
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-space-950/40 border border-slate-700 text-slate-400 text-xs font-mono font-semibold shrink-0 cursor-default"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-300' : 'text-emerald-400'}`} />
-              <span className="hidden min-[1600px]:inline">Auto Sync</span>
+              <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+              <span className="hidden min-[1600px]:inline">Scheduled refresh</span>
             </button>
 
             {/* Reference & Help Modal Toggle */}

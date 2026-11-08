@@ -7,7 +7,7 @@ Stages
 3. Candidate search: cKDTree ball query + linearised time-of-closest-approach prefilter
    (see screening_core.py for why a fixed 40 km ball on a coarse grid is insufficient).
 4. TCA refinement with true SGP4 (scipy bounded minimisation).
-5. Encounter-plane projection, Foster-1992 Pc and Akella-Alfriend Pc_max.
+5. Records TCA geometry and screening distance; no collision probability is claimed without covariance.
 6. Writes frontend/public/data/conjunctions.json (+ backend/data copy).
 """
 
@@ -27,18 +27,10 @@ from scipy.optimize import minimize_scalar
 from sgp4.api import Satrec, SatrecArray, jday
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from scripts.pipeline.conjunction_engine import (  # noqa: E402
-    SyntheticRTNCovariance,
-    encounter_plane_state,
-)
 from scripts.pipeline.screening_core import screen_candidates  # noqa: E402
 
 EARTH_RADIUS_KM = 6378.137
 MU_EARTH = 398600.4418  # km^3 / s^2
-
-# Hard-body radius assumptions (km), matching config/covariance.yaml defaults.
-HBR_KM = {"Satellite": 0.0075, "Debris": 0.0020, "Rocket Body": 0.012}
-DEFAULT_HBR_KM = 0.0075
 
 
 def parse_epoch_age_days(line1: str, ref_date: datetime.datetime) -> float:
@@ -158,7 +150,6 @@ def run_screening_pipeline(
                     candidates[key] = cand
     print(f"{len(candidates)} candidate pairs after linearised TCA prefilter.")
 
-    cov_provider = SyntheticRTNCovariance()
     events: List[Dict[str, Any]] = []
 
     for (tgt_idx, th_idx), (_lin_miss, tca_offset_sec) in candidates.items():
@@ -191,11 +182,6 @@ def run_screening_pipeline(
         r2, v2 = pv2
         r_rel, v_rel = r1 - r2, v1 - v2
         rel_speed = float(np.linalg.norm(v_rel))
-        hbr_km = HBR_KM.get(tgt["object_type"], DEFAULT_HBR_KM) + HBR_KM.get(th["object_type"], DEFAULT_HBR_KM)
-
-        c1 = cov_provider.get_covariance_eci(tgt["norad_id"], r1, v1, tgt["age_days"])
-        c2 = cov_provider.get_covariance_eci(th["norad_id"], r2, v2, th["age_days"])
-        enc = encounter_plane_state(r_rel, v_rel, c1, c2, hbr_km)
 
         r1_hat = r1 / float(np.linalg.norm(r1))
         h1 = np.cross(r1, v1)
@@ -208,9 +194,9 @@ def run_screening_pipeline(
         is_co_orbital = rel_speed < 0.080
         if is_co_orbital:
             risk_level, status_color = "CO-ORBITAL", "yellow"
-        elif miss_km < 1.0 or enc.pc_foster >= 1e-4:
+        elif miss_km < 1.0:
             risk_level, status_color = "CRITICAL", "red"
-        elif miss_km < 5.0 or enc.pc_foster >= 1e-7:
+        elif miss_km < 5.0:
             risk_level, status_color = "WARNING", "yellow"
         else:
             risk_level, status_color = "MONITORED", "green"
@@ -222,27 +208,19 @@ def run_screening_pipeline(
                 "tca_timestamp_ms": int(refined_tca.timestamp() * 1000),
                 "miss_distance_km": round(miss_km, 3),
                 "relative_speed_kms": round(rel_speed, 3),
-                "pc_foster": float(f"{enc.pc_foster:.4e}"),
-                "pc_max": float(f"{enc.pc_max:.4e}"),
-                "k_at_pc_max": round(enc.k_at_pc_max, 2),
-                "mahalanobis_dist": round(enc.mahalanobis_dist, 2),
-                "hbr_m": round(hbr_km * 1000.0, 1),
+                "pc_foster": None,
+                "pc_max": None,
+                "mahalanobis_dist": None,
+                "probability_status": "Unavailable: object covariance is not supplied by GP elements",
                 "risk_level": risk_level,
                 "status_color": status_color,
                 "is_co_orbital": is_co_orbital,
-                "covariance_source": "Synthetic RTN (Screening-Grade)",
+                "covariance_source": "Not supplied by GP elements",
                 "disclaimer": "Screening advisory only - Not an operational maneuver directive. Use official CDMs for CAM.",
                 "miss_vector_rtn_m": {
                     "radial": round(miss_r_m, 1),
                     "transverse": round(miss_t_m, 1),
                     "normal": round(miss_n_m, 1),
-                },
-                "encounter_plane_2d": {
-                    "miss_x_km": round(float(enc.miss_vector_km[0]), 4),
-                    "miss_y_km": round(float(enc.miss_vector_km[1]), 4),
-                    "cov_xx": float(f"{enc.combined_cov_2d[0, 0]:.4e}"),
-                    "cov_xy": float(f"{enc.combined_cov_2d[0, 1]:.4e}"),
-                    "cov_yy": float(f"{enc.combined_cov_2d[1, 1]:.4e}"),
                 },
                 "object1": {
                     "norad_id": tgt["norad_id"],
@@ -263,7 +241,7 @@ def run_screening_pipeline(
             }
         )
 
-    events.sort(key=lambda x: (-x["pc_foster"], x["miss_distance_km"]))
+    events.sort(key=lambda x: x["miss_distance_km"])
     critical = sum(1 for e in events if e["risk_level"] == "CRITICAL")
     warning = sum(1 for e in events if e["risk_level"] == "WARNING")
     print(f"[Done] {time.time() - start_time:.1f} s. {len(events)} events: {critical} CRITICAL, {warning} WARNING.")
@@ -274,6 +252,13 @@ def run_screening_pipeline(
             {
                 "screen_time_utc": now.isoformat(),
                 "window_hours": window_hours,
+                "screening_scope": {
+                    "target_satellites_total": len(targets),
+                    "target_satellites_screened": len(selected),
+                    "debris_objects_screened": len(threats),
+                    "target_coverage_percent": round(100.0 * len(selected) / len(targets), 2) if targets else 0.0,
+                    "max_non_isro_targets": max_other_targets,
+                },
                 "total_conjunctions": len(events),
                 "critical_conjunctions": critical,
                 "warning_conjunctions": warning,

@@ -93,7 +93,7 @@ export const Home = () => {
           <span className={`w-2 h-2 rounded-full ${simulationSpeed === 1 ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
           <span className="hidden sm:inline">Orbit Simulation:</span>
           <span className="text-cyan-400 font-bold">
-            {simulationSpeed === 1 ? '1x (LIVE)' : `${simulationSpeed}x`}
+            {simulationSpeed === 1 ? '1x (CURRENT UTC)' : `${simulationSpeed}x`}
           </span>
         </div>
 
@@ -103,14 +103,14 @@ export const Home = () => {
             <button
               key={speed}
               onClick={() => setSimulationSpeed(speed)}
-              title={speed === 1 ? 'Reset to Real-Time Live Status' : `Fast-forward ${speed}x`}
+              title={speed === 1 ? 'Set propagation time to current UTC' : `Fast-forward ${speed}x`}
               className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition ${
                 simulationSpeed === speed
                   ? 'bg-cyan-500 text-space-950 shadow-glow-cyan'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              {speed === 1 ? '1x Live' : `${speed}x`}
+              {speed === 1 ? '1x Current UTC' : `${speed}x`}
             </button>
           ))}
         </div>

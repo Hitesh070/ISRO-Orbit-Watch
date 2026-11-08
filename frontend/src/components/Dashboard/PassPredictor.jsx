@@ -29,16 +29,18 @@ export const PassPredictor = () => {
   const groundStations = useOrbitStore((state) => state.groundStations);
   const passesData = useOrbitStore((state) => state.passesData);
   const passesError = useOrbitStore((state) => state.passesError);
+  const passesLoading = useOrbitStore((state) => state.passesLoading);
   const fetchPasses = useOrbitStore((state) => state.fetchPasses);
   const satellites = useOrbitStore((state) => state.satellites);
   const catalog = useOrbitStore((state) => state.catalog);
   const selectedSatellite = useOrbitStore((state) => state.selectedSatellite);
 
-  const [selectedCity, setSelectedCity] = useState('bengaluru');
-  const [selectedNorad, setSelectedNorad] = useState(36795); // Default to ISRO CARTOSAT-2B
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedNorad, setSelectedNorad] = useState(null);
   const [isroOnly, setIsroOnly] = useState(true);
   const [customLat, setCustomLat] = useState('');
   const [customLon, setCustomLon] = useState('');
+  const [customAlt, setCustomAlt] = useState('');
   const [isCustom, setIsCustom] = useState(false);
   const [geoStatus, setGeoStatus] = useState('');
 
@@ -69,7 +71,7 @@ export const PassPredictor = () => {
   const allSatellites = useMemo(() => {
     const pool = catalog && catalog.length > 0 ? catalog : satellites;
     const filtered = pool.filter(
-      (s) => s.object_type === 'Satellite' || !s.object_type || s.type === 'PAYLOAD'
+      (s) => s.object_type === 'Satellite' || s.type === 'PAYLOAD'
     );
     const map = new Map();
     const priorityIds = [25544, 48274, 36795, 44804, 44857, 101228, 20580];
@@ -111,7 +113,7 @@ export const PassPredictor = () => {
     );
   }, [allSatellites, isroOnly, searchTerm]);
 
-  // Auto-detect user's real location on load with smooth fallback
+  // Use a granted device location or a location already saved by the user.
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -120,9 +122,9 @@ export const PassPredictor = () => {
           const lon = Number(position.coords.longitude.toFixed(4));
           setCustomLat(String(lat));
           setCustomLon(String(lon));
+          setCustomAlt('');
           setIsCustom(true);
-          setGeoStatus(`Auto-detected: ${lat}°, ${lon}°`);
-          fetchPasses(`${lat},${lon}`, selectedNorad);
+          setGeoStatus(`GPS coordinates acquired (${lat}°, ${lon}°); enter station altitude above sea level in meters to predict.`);
         },
         () => {
           applyFallbackLocation();
@@ -141,36 +143,19 @@ export const PassPredictor = () => {
     return () => clearTimeout(timer);
   }, [geoStatus]);
 
-  const applyFallbackLocation = async () => {
-    // 1. Try fast IP-based geolocation fallback
-    try {
-      const res = await fetch('https://ipapi.co/json/');
-      if (res.ok) {
-        const ipData = await res.json();
-        if (ipData.latitude && ipData.longitude) {
-          const lat = Number(Number(ipData.latitude).toFixed(4));
-          const lon = Number(Number(ipData.longitude).toFixed(4));
-          const city = ipData.city || 'Local Station';
-          setCustomLat(String(lat));
-          setCustomLon(String(lon));
-          setIsCustom(true);
-          setGeoStatus(`Active Location: ${city} (${lat}°, ${lon}°)`);
-          fetchPasses(`${lat},${lon}`, selectedNorad);
-          return;
-        }
-      }
-    } catch {}
-
-    // 2. Fallback to active Ground Station from store (e.g. NRSC Hyderabad / ISRO HQ)
+  const applyFallbackLocation = () => {
     const obs = useOrbitStore.getState().observerLocation;
-    const fallbackLat = obs?.lat ?? 17.3850;
-    const fallbackLon = obs?.lon ?? 78.4867;
-    const fallbackName = obs?.name || 'NRSC Hyderabad (ISRO Ground Station)';
-    setCustomLat(String(fallbackLat));
-    setCustomLon(String(fallbackLon));
-    setIsCustom(true);
-    setGeoStatus(`Ground Station: ${fallbackName}`);
-    fetchPasses(`${fallbackLat},${fallbackLon}`, selectedNorad);
+    if (Number.isFinite(obs?.lat) && Number.isFinite(obs?.lon)) {
+      setCustomLat(String(obs.lat));
+      setCustomLon(String(obs.lon));
+      setCustomAlt(Number.isFinite(obs.alt_m) ? String(obs.alt_m) : '');
+      setIsCustom(true);
+      setGeoStatus(Number.isFinite(obs.alt_m) ? `Using saved observer location: ${obs.name || `${obs.lat}, ${obs.lon}`}` : 'Saved coordinates have no altitude. Enter altitude in meters to predict.');
+      if (selectedNorad && Number.isFinite(obs.alt_m)) fetchPasses(`${obs.lat},${obs.lon},${obs.alt_m}`, selectedNorad);
+      return;
+    }
+    setIsCustom(false);
+    setGeoStatus('Location unavailable. Select a ground station or enter coordinates.');
   };
 
   const handleDetectLocation = () => {
@@ -185,9 +170,9 @@ export const PassPredictor = () => {
         const lon = Number(position.coords.longitude.toFixed(4));
         setCustomLat(String(lat));
         setCustomLon(String(lon));
+        setCustomAlt('');
         setIsCustom(true);
-        setGeoStatus(`GPS Acquired: ${lat}° N, ${lon}° E`);
-        fetchPasses(`${lat},${lon}`, selectedNorad);
+        setGeoStatus(`GPS coordinates acquired (${lat}°, ${lon}°); enter station altitude above sea level in meters to predict.`);
       },
       () => {
         // Smoothly fall back without showing error banner
@@ -199,10 +184,18 @@ export const PassPredictor = () => {
 
   const handlePredict = (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (isCustom && customLat && customLon) {
-      fetchPasses(`${customLat},${customLon}`, selectedNorad);
-    } else {
+    if (!selectedNorad) {
+      setGeoStatus('Select a catalog spacecraft before predicting passes.');
+      return;
+    }
+    if (isCustom && customLat && customLon && customAlt !== '') {
+      fetchPasses(`${customLat},${customLon},${customAlt}`, selectedNorad);
+    } else if (isCustom) {
+      setGeoStatus('Enter latitude, longitude, and altitude in meters before predicting.');
+    } else if (selectedCity) {
       fetchPasses(selectedCity, selectedNorad);
+    } else {
+      setGeoStatus('Select a ground station or enter coordinates.');
     }
   };
 
@@ -210,9 +203,9 @@ export const PassPredictor = () => {
     setSelectedNorad(noradId);
     setSearchTerm('');
     setIsDropdownOpen(false);
-    if (isCustom && customLat && customLon) {
-      fetchPasses(`${customLat},${customLon}`, noradId);
-    } else {
+    if (isCustom && customLat && customLon && customAlt !== '') {
+      fetchPasses(`${customLat},${customLon},${customAlt}`, noradId);
+    } else if (selectedCity) {
       fetchPasses(selectedCity, noradId);
     }
   };
@@ -228,6 +221,13 @@ export const PassPredictor = () => {
   const groundTrack = passesData?.ground_track || [];
   const stationInfo = passesData?.ground_station || {};
   const satInfo = passesData?.satellite || {};
+  const missingPassInputs = !selectedNorad
+    ? 'Select a catalog spacecraft to calculate pass predictions.'
+    : isCustom && (!customLat || !customLon || customAlt === '')
+      ? 'Enter latitude, longitude, and altitude in meters to calculate pass predictions.'
+      : !isCustom && !selectedCity
+        ? 'Select a ground station or enter coordinates to calculate pass predictions.'
+        : null;
 
   return (
     <div className="glass-panel rounded-xl p-5 shadow-2xl">
@@ -297,12 +297,13 @@ export const PassPredictor = () => {
                   setIsCustom(true);
                 } else {
                   setIsCustom(false);
-                  setSelectedCity(e.target.value);
-                  fetchPasses(e.target.value, selectedNorad);
+                   setSelectedCity(e.target.value);
+                   if (selectedNorad && e.target.value) fetchPasses(e.target.value, selectedNorad);
                 }
               }}
               className="w-full px-3 py-2 rounded-lg bg-space-950/80 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-400"
             >
+              <option value="">Select a ground station</option>
               <option value="custom">📍 Custom / Browser GPS Coordinates</option>
               {groundStations.map((gs) => (
                 <option key={gs.city.toLowerCase()} value={gs.city.toLowerCase()}>
@@ -351,7 +352,7 @@ export const PassPredictor = () => {
                 />
               ) : (
                 <span className="truncate text-slate-200 font-medium">
-                  {selectedSatObj ? `${selectedSatObj.name} (${selectedSatObj.norad_id})` : `NORAD #${selectedNorad}`}
+                  {selectedSatObj ? `${selectedSatObj.name} (${selectedSatObj.norad_id})` : 'Select a catalog spacecraft'}
                 </span>
               )}
             </div>
@@ -430,13 +431,21 @@ export const PassPredictor = () => {
 
         {/* Custom Lat / Lon Inputs if selected */}
         {isCustom && (
-          <div className="md:col-span-4 grid grid-cols-2 gap-3 mt-1">
+          <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1">
             <input
               type="number"
               step="0.0001"
               value={customLat}
               onChange={(e) => setCustomLat(e.target.value)}
               placeholder="Latitude (e.g. 13.0827)"
+              className="px-3 py-2 rounded-lg bg-space-950 border border-slate-700 text-slate-200"
+            />
+            <input
+              type="number"
+              step="1"
+              value={customAlt}
+              onChange={(e) => setCustomAlt(e.target.value)}
+              placeholder="Altitude above sea level (m)"
               className="px-3 py-2 rounded-lg bg-space-950 border border-slate-700 text-slate-200"
             />
             <input
@@ -456,13 +465,13 @@ export const PassPredictor = () => {
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-cyan-400" />
           <span>
-            Target Location: <strong className="text-cyan-200">{stationInfo.name || (isCustom && customLat && customLon ? `Custom Station (${Number(customLat).toFixed(2)}°, ${Number(customLon).toFixed(2)}°)` : 'Selected Ground Station')}</strong> ({typeof stationInfo.lat === 'number' ? stationInfo.lat.toFixed(2) : customLat ? Number(customLat).toFixed(2) : '--'}°, {typeof stationInfo.lon === 'number' ? stationInfo.lon.toFixed(2) : customLon ? Number(customLon).toFixed(2) : '--'}°)
+            Target Location: <strong className="text-cyan-200">{stationInfo.name || (isCustom && customLat && customLon ? `Custom Station (${Number(customLat).toFixed(2)}°, ${Number(customLon).toFixed(2)}°)` : selectedCity || 'Location unavailable')}</strong> ({typeof stationInfo.lat === 'number' ? stationInfo.lat.toFixed(2) : customLat ? Number(customLat).toFixed(2) : '--'}°, {typeof stationInfo.lon === 'number' ? stationInfo.lon.toFixed(2) : customLon ? Number(customLon).toFixed(2) : '--'}°)
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-emerald-400" />
           <span>
-            Spacecraft: <strong className="text-emerald-300">{satInfo.name || selectedSatObj?.name || 'ISS (ZARYA)'}</strong> (NORAD: {satInfo.norad_id || selectedNorad})
+            Spacecraft: <strong className="text-emerald-300">{satInfo.name || selectedSatObj?.name || 'Spacecraft unavailable'}</strong> (NORAD: {satInfo.norad_id || selectedNorad || '—'})
           </span>
         </div>
       </div>
@@ -531,7 +540,7 @@ export const PassPredictor = () => {
             ) : (
               <tr>
                 <td colSpan={7} className={`py-6 text-center font-mono ${passesError ? 'text-amber-400 bg-amber-950/20' : 'text-slate-400'}`}>
-                  {passesError || 'Evaluating upcoming pass geometry over your location...'}
+                  {passesError || missingPassInputs || (passesLoading ? 'Calculating pass opportunities…' : 'Press “Predict Passes” to calculate the selected spacecraft at this location.')}
                 </td>
               </tr>
             )}

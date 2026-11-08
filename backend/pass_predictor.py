@@ -3,8 +3,8 @@ OrbitGuard Ground Station Pass Predictor
 =========================================
 Predicts satellite pass opportunities (AOS, Culmination/Max Elevation, LOS)
 over user-specified ground stations and geographic coordinates using Skyfield's find_events.
-Includes predefined space hubs (Sriharikota ISRO SDSC, Bengaluru ISTRAC, Cape Canaveral, etc.)
-and generates 2D ground track coordinate trajectories.
+Requires explicit observer coordinates and altitude above mean sea level and generates
+2D ground track coordinate trajectories. No unverified station presets are published.
 """
 
 import logging
@@ -15,19 +15,8 @@ from skyfield.api import EarthSatellite, load, wgs84
 
 logger = logging.getLogger("orbitguard.pass_predictor")
 
-# Pre-configured global ground stations and space centers
-FAMOUS_GROUND_STATIONS = {
-    "sriharikota": {"name": "Satish Dhawan Space Centre (SDSC SHAR)", "city": "Sriharikota", "country": "India", "lat": 13.7199, "lon": 80.2304, "alt_m": 10},
-    "bengaluru": {"name": "ISTRAC Ground Station", "city": "Bengaluru", "country": "India", "lat": 12.9716, "lon": 77.5946, "alt_m": 920},
-    "new delhi": {"name": "New Delhi Earth Station", "city": "New Delhi", "country": "India", "lat": 28.6139, "lon": 77.2090, "alt_m": 216},
-    "mumbai": {"name": "Mumbai Marine Gateway", "city": "Mumbai", "country": "India", "lat": 19.0760, "lon": 72.8777, "alt_m": 14},
-    "cape canaveral": {"name": "Cape Canaveral Space Force Station", "city": "Cape Canaveral", "country": "USA", "lat": 28.3922, "lon": -80.6077, "alt_m": 3},
-    "houston": {"name": "Johnson Space Center (NASA JSC)", "city": "Houston", "country": "USA", "lat": 29.5593, "lon": -95.0900, "alt_m": 6},
-    "london": {"name": "London Ground Station", "city": "London", "country": "UK", "lat": 51.5074, "lon": -0.1278, "alt_m": 35},
-    "tokyo": {"name": "Tsukuba Space Center (JAXA)", "city": "Tokyo", "country": "Japan", "lat": 36.0667, "lon": 140.1264, "alt_m": 25},
-    "sydney": {"name": "Sydney Ground Terminal", "city": "Sydney", "country": "Australia", "lat": -33.8688, "lon": 151.2093, "alt_m": 19},
-    "kourou": {"name": "Guiana Space Centre (CSG)", "city": "Kourou", "country": "French Guiana", "lat": 5.2390, "lon": -52.7680, "alt_m": 15},
-}
+# No preset coordinates are published until verified against authoritative station records.
+FAMOUS_GROUND_STATIONS = {}
 
 
 def compass_direction(az_deg: float) -> str:
@@ -45,8 +34,8 @@ class PassPredictor:
     def __init__(self):
         self.ts = load.timescale()
 
-    def resolve_location(self, city_or_key: str, lat: Optional[float] = None, lon: Optional[float] = None) -> Dict[str, Any]:
-        """Resolve city name or fallback to explicit lat/lon."""
+    def resolve_location(self, city_or_key: str, lat: Optional[float] = None, lon: Optional[float] = None, alt_m: Optional[float] = None) -> Dict[str, Any]:
+        """Resolve fully specified observer coordinates; reject unknown location names."""
         key = (city_or_key or "").lower().strip()
         if key in FAMOUS_GROUND_STATIONS:
             return FAMOUS_GROUND_STATIONS[key]
@@ -56,34 +45,39 @@ class PassPredictor:
                 parts = key.split(",")
                 p_lat = float(parts[0].strip())
                 p_lon = float(parts[1].strip())
+                if len(parts) < 3:
+                    raise ValueError("Custom coordinates require latitude, longitude, and altitude in meters.")
+                p_alt = float(parts[2].strip())
+                if not (-90 <= p_lat <= 90 and -180 <= p_lon <= 180 and -500 <= p_alt <= 10000):
+                    raise ValueError("Custom location coordinates or altitude are outside the supported range.")
                 return {
                     "name": f"Custom Ground Station ({p_lat:.2f}°, {p_lon:.2f}°)",
                     "city": "Custom GPS",
                     "country": "User Specified",
                     "lat": p_lat,
                     "lon": p_lon,
-                    "alt_m": 100.0,
+                    "alt_m": p_alt,
                 }
             except Exception:
                 pass
 
-        # Partial match (only for a non-empty query: "" is a substring of everything and
-        # used to silently return the first station, ignoring explicit lat/lon)
-        if key:
-            for k, station in FAMOUS_GROUND_STATIONS.items():
-                if k in key or key in station["city"].lower() or key in station["name"].lower():
-                    return station
+        for station in FAMOUS_GROUND_STATIONS.values():
+            if key and key in {station["city"].lower(), station["name"].lower()}:
+                return station
 
-        # Use explicit coordinates or default to Bengaluru (ISRO HQ)
-        final_lat = lat if lat is not None else 12.9716
-        final_lon = lon if lon is not None else 77.5946
+        if lat is None or lon is None or alt_m is None:
+            raise ValueError("Unknown station. Provide a configured station name or latitude, longitude, and altitude in meters.")
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180 and -500 <= alt_m <= 10000):
+            raise ValueError("Custom location coordinates or altitude are outside the supported range.")
+        final_lat = lat
+        final_lon = lon
         return {
             "name": f"Custom Ground Station ({final_lat:.2f}°, {final_lon:.2f}°)",
             "city": city_or_key or "Custom Location",
             "country": "User Specified",
             "lat": final_lat,
             "lon": final_lon,
-            "alt_m": 100.0,
+            "alt_m": alt_m,
         }
 
     def predict_passes(
@@ -91,7 +85,7 @@ class PassPredictor:
         satellite: EarthSatellite,
         lat: float,
         lon: float,
-        alt_m: float = 100.0,
+        alt_m: float,
         days: int = 5,
         min_elevation_deg: float = 10.0,
         max_results: int = 10,

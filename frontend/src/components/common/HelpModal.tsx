@@ -146,7 +146,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                     2. GPU Vertex Shader Extrapolation (Single Draw Call)
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    Renders 25,000+ objects in one single Three.js draw call. The vertex shader performs real-time linear velocity extrapolation at 60 FPS:
+                    Renders the objects present in the loaded catalog. The vertex shader interpolates between propagated positions for display:
                     <code className="text-cyan-200 ml-1">pos = aPos + aVel * uDt</code>.
                   </p>
                 </div>
@@ -182,8 +182,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-space-900/60 border border-slate-800">
-                  <strong className="text-cyan-300 font-mono text-[11px] block">Synthetic RTN Covariance:</strong>
-                  Public CelesTrak element sets do not distribute true error covariance matrices. OrbitGuard synthesizes an age-scaled Radial-Transverse-Normal covariance matrix for screening-grade Foster-1992 Pc integration.
+                  <strong className="text-cyan-300 font-mono text-[11px] block">Covariance and Collision Probability:</strong>
+                  Public CelesTrak element sets do not include measured object covariance. Collision probability and covariance-based encounter plots are unavailable unless measured covariance is supplied in a conjunction data message.
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-space-900/60 border border-slate-800">
@@ -197,7 +197,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-slate-800 bg-space-950/70 text-slate-400 text-[11px]">
-          <span>OrbitGuard v4.3 • Astrodynamics & Space Systems Suite</span>
+          <span>OrbitGuard v5.0 • Astrodynamics & Space Systems Suite</span>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded-lg bg-space-900 hover:bg-space-850 text-slate-200 border border-slate-700 transition"

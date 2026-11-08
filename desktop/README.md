@@ -1,6 +1,6 @@
 # OrbitGuard Desktop Architecture & Native Windows Runtime 🖥️
 
-The **OrbitGuard Desktop Application** packages OrbitGuard as a hardened, native Windows x64 executable powered by **Electron 31**, **Node.js 20**, and **TypeScript**. It gives mission operators direct access to physical hardware interfaces while maintaining the complete 60 FPS 3D Three.js astrodynamic experience.
+The **OrbitGuard Desktop Application** packages OrbitGuard as a Windows x64 executable powered by **Electron 31**, **Node.js 20**, and **TypeScript**. It offers optional interfaces for compatible hardware; behavior depends on the connected device, protocol, configuration, and operator safety checks.
 
 ---
 
@@ -31,7 +31,7 @@ The **OrbitGuard Desktop Application** packages OrbitGuard as a hardened, native
    - Built-in TCP socket client connecting to local or network rotctld daemons (`127.0.0.1:4533`).
 3. **Offline-First Data Storage (`dataManager.ts`)**:
    - Atomic cache writes in `%APPDATA%/OrbitGuard/data/` (`.tmp` write followed by atomic rename).
-   - Bundled fallback catalog snapshot (3,789 tracked space objects) seeded on clean installs for field operation with zero internet access.
+   - Bundled fallback catalog snapshot (3,782 records at build time) seeded on clean installs. The snapshot becomes stale and the UI reports its source timestamp and freshness; offline mode does not make the data current.
 4. **Native Windows Notifications & System Tray**:
    - Background pass reminders via Windows Toast Notifications.
    - System tray minimization and quick action menu.
@@ -53,7 +53,7 @@ desktop/
 │   └── updater.ts          # Auto-updater with motion safety lock
 ├── preload/                # Security bridge
 │   └── index.ts            # contextBridge.exposeInMainWorld('orbitguardPlatform', api)
-├── tests/                  # 31 Vitest automated security & hardware tests
+├── tests/                  # 33 Vitest automated security, cache, and hardware-safety tests
 │   ├── dataManager.test.ts # Offline seeding, atomic writes, cache wipes
 │   ├── ipcSecurity.test.ts # Zod schema validation, reject malformed payloads
 │   └── serialSafety.test.ts# Rate limiter, deadman watchdog, angle clamping

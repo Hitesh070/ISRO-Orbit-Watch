@@ -1,7 +1,7 @@
 /**
  * OrbitGuard High-Performance GPU Point Cloud Renderer (Phase 2 & 3)
  * ===================================================================
- * Renders 25,000+ satellites and space debris in exactly ONE draw call using
+ * Renders loaded catalog satellites and space debris in one draw call using
  * THREE.Points and a custom GLSL ShaderMaterial with linear velocity extrapolation.
  *
  * Implements direct screen-space pixel picking on the WebGL canvas so clicking

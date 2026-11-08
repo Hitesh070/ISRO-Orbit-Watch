@@ -15,6 +15,7 @@ import HelpModal from './components/common/HelpModal';
 import SettingsDrawer from './components/common/SettingsDrawer';
 import OnboardingModal from './components/common/OnboardingModal';
 import StartupCalibrationModal from './components/common/StartupCalibrationModal';
+import StaleDataBanner from './components/common/StaleDataBanner';
 import { platform } from './platform';
 
 // In desktop Electron (file:// protocol), HashRouter guarantees reliable navigation;
@@ -153,7 +154,7 @@ const AppContent = () => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-        const sats = catalog.filter((s) => s.object_type !== 'Debris');
+        const sats = catalog.filter((s) => s.object_type === 'Satellite');
         if (!sats.length) return;
         const currIdx = sats.findIndex((s) => s.norad_id === selectedSatellite?.norad_id);
         const nextIdx =
@@ -213,6 +214,7 @@ const AppContent = () => {
       }`}
     >
       <Navbar />
+      <StaleDataBanner />
       <PerformanceHUD />
       <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
       <SettingsDrawer isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />

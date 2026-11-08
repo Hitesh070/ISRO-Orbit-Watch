@@ -9,14 +9,16 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { platform } from '../platform';
 
 export interface CatalogMetadata {
-  fetch_time_utc: string;
+  fetch_time_utc?: string;
   source: string;
   total_objects: number;
   active_satellites: number;
   debris_objects: number;
-  isro_assets: number;
-  stale_objects: number;
-  decayed_objects: number;
+  isro_assets?: number;
+  excluded_unsupported_norad_ids?: number;
+  unclassified_objects?: number;
+  stale_objects?: number;
+  decayed_objects?: number;
   oldest_epoch: string;
   newest_epoch: string;
   compression: string;
@@ -76,6 +78,27 @@ async function fetchWithRetry<T>(config: AxiosRequestConfig, retries = 2, delayM
   }
 }
 
+function sanitizeConjunctionSnapshot(snapshot: any): any {
+  if (!snapshot || !Array.isArray(snapshot.conjunctions)) return { count: 0, conjunctions: [] };
+  const conjunctions = snapshot.conjunctions.map((event: any) => {
+    const source = String(event.covariance_source || '').toLowerCase();
+    const hasMeasuredCovariance = source.includes('cdm') && !source.includes('synthetic');
+    if (hasMeasuredCovariance) return event;
+    return {
+      ...event,
+      pc_foster: null,
+      pc_max: null,
+      collision_probability: null,
+      mahalanobis_dist: null,
+      k_at_pc_max: null,
+      hbr_m: null,
+      encounter_plane_2d: undefined,
+      probability_status: 'Unavailable: measured object covariance was not supplied',
+    };
+  });
+  return { ...snapshot, count: conjunctions.length, conjunctions };
+}
+
 export const orbitApi = {
   /**
    * Fetch health diagnostics & metadata
@@ -92,18 +115,18 @@ export const orbitApi = {
       const meta = await platform.data.getMetadata();
       if (meta) {
         return {
-          fetch_time_utc: meta.fetchTime,
+          fetch_time_utc: meta.fetchTime || meta.fetch_time_utc,
           source: meta.source,
-          total_objects: (meta.satellitesCount || 0) + (meta.debrisCount || 0),
-          active_satellites: meta.satellitesCount || 0,
-          debris_objects: meta.debrisCount || 0,
-          isro_assets: 80,
-          stale_objects: 44,
-          decayed_objects: 0,
+          total_objects: meta.total_objects ?? ((meta.satellitesCount || meta.active_satellites || 0) + (meta.debrisCount || meta.debris_objects || 0)),
+          active_satellites: meta.satellitesCount ?? meta.active_satellites ?? 0,
+          debris_objects: meta.debrisCount ?? meta.debris_objects ?? 0,
+          isro_assets: meta.isroCount ?? meta.isro_assets,
+          excluded_unsupported_norad_ids: meta.excluded_unsupported_norad_ids,
+          unclassified_objects: meta.unclassified_objects,
           oldest_epoch: meta.oldestEpoch || '',
           newest_epoch: meta.newestEpoch || '',
-          compression: 'gzip',
-          schema_version: 'v4.3-desktop',
+          compression: 'none',
+          schema_version: 'v5.0-desktop',
         };
       }
     }
@@ -135,7 +158,7 @@ export const orbitApi = {
   },
 
   /**
-   * Fetch active satellites with positions and risk scores (with static fallback)
+   * Fetch SGP4-predicted active satellite positions (with catalog snapshot fallback)
    */
   getSatellites: async (params: Record<string, any> = {}): Promise<{ count: number; total_active: number; satellites: SatelliteItem[] }> => {
     if (platform.isDesktop) {
@@ -174,7 +197,7 @@ export const orbitApi = {
   getDebris: async (limit: number | null = null): Promise<{ count: number; debris: SatelliteItem[] }> => {
     if (platform.isDesktop) {
       const staticData = await orbitApi.getStaticCatalog();
-      const debris = staticData.filter((s) => s.object_type !== 'Satellite');
+      const debris = staticData.filter((s) => s.object_type === 'Debris');
       return {
         count: debris.length,
         debris: limit ? debris.slice(0, limit) : debris,
@@ -185,7 +208,7 @@ export const orbitApi = {
     } catch (err) {
       console.warn('API /api/debris unavailable. Falling back to cached catalog.');
       const staticData = await orbitApi.getStaticCatalog();
-      const debris = staticData.filter((s) => s.object_type !== 'Satellite');
+      const debris = staticData.filter((s) => s.object_type === 'Debris');
       return {
         count: debris.length,
         debris: limit ? debris.slice(0, limit) : debris,
@@ -194,7 +217,7 @@ export const orbitApi = {
   },
 
   /**
-   * Fetch global risk summary, top 10 high-risk satellites, shell counts, and heatmap
+   * Fetch sample-scoped proximity counts and catalog shell counts
    */
   getRiskOverview: async (): Promise<any> => {
     if (platform.isDesktop) {
@@ -220,15 +243,16 @@ export const orbitApi = {
   getConjunctions: async (): Promise<any> => {
     if (platform.isDesktop) {
       const cached = await platform.data.getCachedConjunctions();
-      if (cached) return cached;
+      if (cached) return sanitizeConjunctionSnapshot(cached);
     }
     try {
-      return await fetchWithRetry({ url: '/api/conjunctions', method: 'GET' });
+      const response = await fetchWithRetry({ url: '/api/conjunctions', method: 'GET' });
+      return sanitizeConjunctionSnapshot(response);
     } catch (err) {
       console.warn('API /api/conjunctions unavailable. Falling back to /data/conjunctions.json');
       try {
         const res = await axios.get('/data/conjunctions.json', { timeout: 8000 });
-        return res.data;
+        return sanitizeConjunctionSnapshot(res.data);
       } catch {
         return { total_conjunctions: 0, conjunctions: [] };
       }
@@ -273,12 +297,6 @@ export const orbitApi = {
     }
   },
 
-  /**
-   * Trigger immediate TLE refresh from CelesTrak
-   */
-  refreshTLE: async (): Promise<any> => {
-    return fetchWithRetry({ url: '/api/refresh', method: 'POST' });
-  },
 };
 
 export default orbitApi;
