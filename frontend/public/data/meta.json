@@ -1,14 +1,1 @@
-{
-  "fetch_time_utc": "2026-11-08T04:16:07.127328+00:00",
-  "source": "CelesTrak CCSDS OMM/GP API",
-  "total_objects": 3794,
-  "active_satellites": 1121,
-  "debris_objects": 2673,
-  "isro_assets": 80,
-  "stale_objects": 44,
-  "decayed_objects": 0,
-  "oldest_epoch": "2026-10-07T08:57:59.892768",
-  "newest_epoch": "2026-11-08T04:16:07.127328",
-  "compression": "gzip",
-  "schema_version": "3.0.0"
-}
+{"source":"CelesTrak SATCAT (India ownership) + GP/OMM orbital elements","fetch_time_utc":"2026-11-08T14:54:54Z","satcat_time_utc":"2026-11-08T14:54:54Z","total_objects":77,"stale_after_hours":6,"min_element_epoch_utc":"2026-10-09T22:27:47Z","max_element_epoch_utc":"2026-11-08T08:30:44Z","update_interval_hours":2,"position_note":"SGP4 predictions from catalog elements; not live spacecraft telemetry."}

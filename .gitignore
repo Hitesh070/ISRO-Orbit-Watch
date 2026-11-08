@@ -1,34 +1,11 @@
-# Dependencies
 node_modules/
-backend/venv/
-venv/
-
-# Secrets (real env files are ignored, the template is kept)
+frontend/node_modules/
+frontend/dist/
+release/
+release-final/
+__pycache__/
+*.pyc
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.pytest_cache/
-.ruff_cache/
-
-# Vite / Build
-frontend/dist/
-dist/
-.vite/
-
-# Electron
-dist-electron/
-dist-desktop/
-desktop/dist/
-
-# System / OS
-.DS_Store
-Thumbs.db
-*.log
-*.zip
-.vercel

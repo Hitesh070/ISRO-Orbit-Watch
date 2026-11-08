@@ -1,65 +1,35 @@
-# OrbitGuard Data Sources, Provenance & Attribution
+# Public data sources and freshness
 
-This document describes upstream orbital data used by OrbitGuard and the limits of the packaged snapshot. The application does not receive live tracking telemetry. Its displayed positions are SGP4 predictions from timestamped catalog elements.
+## Orbital elements
 
----
+The refresh task retrieves CelesTrak's active GP/OMM JSON group. Each orbital record is joined to SATCAT by numeric NORAD catalog identifier. It keeps only records whose SATCAT `OWNER` is `IND` or `ISRO`, and whose `OBJECT_TYPE` is `PAY`. The code does not infer ownership from names or use generated/sample orbit records.
 
-## 1. Primary Orbital Data Feeds
+Each record must include a parseable element epoch, plausible finite orbital values, and a successful SGP4 propagation at fetch time. The output catalog and manifest are atomically replaced only after the nonempty candidate set passes validation. A failed network request or failed validation leaves the previous published files intact.
 
-### 1.1 CelesTrak (Center for Space Standards & Innovation)
-* **Provider:** Dr. T.S. Kelso / CelesTrak
-* **URL:** [https://celestrak.org](https://celestrak.org)
-* **Format:** CCSDS Orbit Mean-Elements Message (OMM) in JSON format (`FORMAT=json`) and standard Two-Line Element (TLE) sets.
-* **Groups Ingested:**
-  - `stations`: International Space Station (ISS), Tiangong Space Station (CSS), crewed spacecraft.
-  - `visual`: 100+ brightest satellites visible to naked eye / optical ground stations.
-  - `weather`: Meteorological satellites (NOAA, GOES, Meteosat, INSAT-3DR, Fengyun).
-  - `resource`: Earth observation assets (Landsat, Sentinel, Cartosat, Resourcesat, Terra, Aqua).
-  - `science`: Astrophysical & scientific observatories (Hubble, Astrosat, CHEOPS).
-  - `gnss`: Navigation constellations (GPS Navstar, Galileo, GLONASS, NavIC / IRNSS).
-  - `geo`: Geostationary telecommunications & broadcasting satellites.
-  - `cosmos-2251-debris`: Debris fragments from the 2009 Cosmos-2251 / Iridium-33 collision.
-  - `iridium-33-debris`: Fragments from the Iridium-33 collision.
-  - `INTDES=1999-025`: 1,900+ tracked fragments from the 2007 Fengyun-1C ASAT event.
-* **Update Frequency:** The repository's scheduled pipeline is configured to run periodically (see `.github/workflows/refresh-data.yml`); a schedule is an attempted refresh, not a freshness guarantee. Desktop builds and offline installs use the bundled snapshot until a valid refresh succeeds. The app displays the snapshot timestamp and marks data older than six hours as stale.
-* **Citation & Attribution:**
-  > Kelso, T.S., "CelesTrak: Educational and Operational Astrodynamics Data", Center for Space Standards & Innovation (CSSI). Data redistributed under CelesTrak open educational and scientific terms.
+- [CelesTrak GP/OMM formats](https://celestrak.org/NORAD/documentation/gp-data-formats.php)
+- [CelesTrak SATCAT fields and query format](https://celestrak.org/satcat/satcat-format.php)
+- [CelesTrak ownership codes](https://celestrak.org/satcat/sources.php)
+- [CelesTrak usage policy](https://celestrak.org/usage-policy.php)
+- [NASA Visible Earth planet textures](https://visibleearth.nasa.gov/collection/1484/planet-textures)
+- [ISRO spacecraft missions](https://www.isro.gov.in/SpacecraftMissions.html)
+- [ISRO Earth observation missions](https://www.isro.gov.in/ISRO_EN/EarthObservationSatellites.html)
 
----
+CelesTrak's policy says GP updates occur every two hours and SATCAT is manually updated once or twice a day. The updater is capped at one GP retrieval every two hours and SATCAT refresh every twelve hours. SATCAT launch date and site fields are displayed when supplied by the feed. The application checks its public manifest once a minute; this only detects already-published changes and does not increase source polling.
 
-### 1.2 Space-Track.org (18th Space Defense Squadron, USSF)
-* **Provider:** Combined Space Operations Center (CSpOC) / 18th SDS.
-* **URL:** [https://www.space-track.org](https://www.space-track.org)
-* **Format:** General Perturbations (GP) class data via REST API.
-* **Authentication:** Secure server-side basic authentication via `SPACETRACK_USER` and `SPACETRACK_PASS`.
-* **Terms of Use Notice:** In compliance with Space-Track's User Agreement, raw bulk catalog dumps requiring authentication are processed server-side or in private pipeline runners; only derived client-safe positional buffers and screening results are presented to end users.
+## Globe imagery and scale
 
----
+The globe uses bundled NASA Visible Earth Blue Marble imagery plus NASA global night-lights, cloud, and ocean-specular textures recovered from the project's earlier public-data assets. The images are static global composites, not live weather imagery or Google Earth tile imagery. The app attributes the source here and does not claim that NASA imagery is real-time. Google Earth imagery and tiles are not redistributed.
 
-### 1.3 ISRO & National Asset Tracking
-* **Indian Space Research Organisation (ISRO):**
-  - High-priority assets monitored: Cartosat-2B, Cartosat-3, RISAT-2BR1, EOS-04, GSAT-30, INSAT-3DR, NavIC (IRNSS-1A through 1I), Chandrayaan, and Aditya-L1 relay orbits.
-  - Satellite IDs, international designators, and orbital characteristics cross-checked against ISRO public mission disclosures.
+The globe uses 1 scene unit per 6,378.137 km Earth radius. Marker radius is `1 + altitudeKm / 6378.137`; heights are not compressed or clamped. Selecting a geostationary object moves the camera farther out so it remains visible at its actual plotted radius.
 
----
+## Mission descriptions, images, data products and telemetry
 
-## 2. Graphical & Ephemeris Assets
+[ISRO Upagrah](https://bhoonidhi.nrsc.gov.in/upagrah) is an official public visual tracker for Earth-observation missions. It is useful for comparison; Orbit Watch does not scrape it. The Overview panel links to official mission pages and data portals only for exact profiles. It currently includes AstroSat archive access, NISAR Earth-observation products through Bhoonidhi, INSAT-3DS products through MOSDAC, and Bhoonidhi access for Cartosat-3 and EOS-06. Download access and product coverage are controlled by each official portal and can require registration.
 
-### 2.1 NASA Visible Earth
-* **Provider:** NASA Goddard Space Flight Center / Visible Earth Team.
-* **Assets:**
-  - `earth_daymap.jpg`: NASA Blue Marble: Next Generation (2048x1024 cylindrical equidistant projection).
-  - `earth_nightmap.jpg`: Earth at Night / City Lights composite.
-  - `earth_clouds.jpg`: Moderate Resolution Imaging Spectroradiometer (MODIS) cloud layer mosaic.
-* **Licensing:** Public domain NASA imagery.
+[Bhoonidhi's API](https://bhoonidhi.nrsc.gov.in/bhoonidhi-api/) requires account registration and an access token and concerns Earth-observation products. [ISRO's science archives](https://www.isro.gov.in/Sciencedata.html) publish selected mission/science data. These are not a general public engineering-telemetry/downlink feed. The app therefore makes no claim to show received spacecraft sensor telemetry, spacecraft commands, or private TTC data. Data product links point to source archives; the app does not claim that source imagery is being streamed into the globe.
 
----
+## What “current position” means here
 
-## 3. SGP4 Reference Data & Verification Standards
+The clock in the app is the device's current clock. The displayed position is a prediction calculated from the selected record's element epoch using SGP4. If an element set is old, its age is shown and an amber marker/warning appears; after the manifest freshness threshold, the app announces a stale snapshot. A fresh device clock never makes stale elements fresh.
 
-### 3.1 AIAA 2006-6753 Benchmark
-* **Reference:** Vallado, D. A., Crawford, P., Hujsak, R., and Kelso, T. S., *"Revisiting Spacetrack Report #3,"* AIAA/AAS Astrodynamics Specialist Conference, Keystone, CO, 2006.
-* **Verification File:** `SGP4-VER.TLE` with companion C++ reference output `tcppver.out`.
-* **Standard Tolerances:**
-  - Position: $\Delta r < 10^{-3}\text{ km}$ ($1\text{ meter}$)
-  - Velocity: $\Delta v < 10^{-5}\text{ km/s}$ ($10\text{ mm/s}$)
+The desktop app reads its public catalog from this repository's `main` branch. The bundled dated snapshot is used when the public catalog cannot be reached. Published snapshot times are shown in the app; a current UI clock does not make the catalog or its elements live.

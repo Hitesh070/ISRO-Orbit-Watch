@@ -1,15 +1,30 @@
-# OrbitGuard / SOCRATES Validation Status
+# Build and data validation report
 
-## Result
+**Target branch:** `main`
+**Snapshot retrieved:** 2026-11-08 14:54:54 UTC
+**Build runtime:** Electron 45.2.3
 
-**No event-level cross-validation has been performed.** The repository utility only
-checks whether the SOCRATES endpoint is reachable; it does not parse its records or
-match them against OrbitGuard events. Historical sample comparisons and collision
-probabilities have been withdrawn because they were not independently verified.
+## Completed checks
 
-Collision probability is unavailable without measured covariance from an authoritative
-Conjunction Data Message (CDM). GP/TLE screening can provide geometric miss-distance
-candidates, but it does not establish an operational collision probability or a
-validated maneuver warning.
+- The CelesTrak SATCAT active-payload query returned data in the documented JSON format.
+- The GP/OMM and SATCAT datasets joined on NORAD catalog ID; 77 India-owned active payload records passed field and SGP4 propagation validation.
+- The published snapshot has 77 distinct catalog IDs, only `IND` ownership codes, only `PAY` object types, and matches its manifest count.
+- The frontend passed strict TypeScript compilation and a production Vite build. The production bundle is split into UI, mapping, SGP4, and globe-engine assets.
+- `node scripts/orbit_smoke.mjs` propagated all 77 records and validated geodetic coordinates, altitude, speed, and a 145-point orbit track. It found an ASTROSAT next pass over Bengaluru with 16.7° maximum elevation in the 72-hour search window. It also verifies scale: 525 km = 1.082 Earth radii; 35,786 km = 6.611 Earth radii.
+- The Earth uses bundled NASA Blue Marble day, night-lights, cloud, and ocean texture assets. The starfield is deterministic and does not use a random generator.
+- Verified image, launch date, mission purpose, and data archive details are available for AstroSat, NISAR, INSAT-3DS, Cartosat-3, EOS-06, and GSAT-30. Profile image URLs were checked against ISRO-hosted files. Other spacecraft show only SATCAT launch date when present and clearly label unverified descriptions/images as unavailable.
+- The Electron main process passed Node syntax checking. The packaged app contains the main process, frontend, textures, catalog, and mission profiles.
+- Windows NSIS setup and portable x64 executables were rebuilt in `release/`. The executables are unsigned because no code-signing certificate is configured.
+- Electron is pinned to the then-current stable supported release line (45.2.3). `npm audit` reported zero vulnerabilities after pinning the packaging transitive dependency.
+- The data pipeline's two-hour GP cadence and twelve-hour SATCAT cadence are enforced in code; failed updates preserve the prior catalog.
+- The app has no generated satellite coordinates, mock catalog, name-based ownership inference, location permission request, or remote font dependency. Decorative stars use a fixed deterministic layout.
 
-No synthetic benchmark or substitute values are generated when a source is unavailable.
+## Manual desktop check
+
+The rebuilt portable app was opened on this Windows device and checked with mouse input. The NASA Earth texture and stars rendered; mouse drag rotated the globe; mouse-wheel zoom changed its framing; search and spacecraft selection worked; AstroSat and NISAR mission profiles displayed their official images, launch dates, purpose and data archive links; GSAT-30 displayed a geostationary radius and its verified mission profile; Overview, Passes and About tabs worked. AstroSat next-pass prediction over Bengaluru returned a pass with a 16.7° maximum elevation.
+
+During this manual run the app correctly remained in offline-cache mode: the existing public `main` branch still contains the former Orbit Guard catalog, so its manifest/catalog fails the India-only validation. Once this replacement is published to `main`, the app's one-minute checker can begin loading its India-only public catalog. This is not a live ISRO telemetry stream.
+
+## Accuracy limits
+
+The list represents SATCAT owner-country metadata (`IND`/`ISRO`) and payload object type; it does not assert that every listed payload is built or operated by ISRO. Orbit positions are SGP4 predictions from element epochs, not live tracking sensor telemetry. Earth textures are static composites, not live imagery. A real one-to-one physical scale means geostationary spacecraft appear much farther from Earth; the camera backs out when one is selected.
