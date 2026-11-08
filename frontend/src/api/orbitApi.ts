@@ -97,7 +97,7 @@ export const orbitApi = {
           total_objects: (meta.satellitesCount || 0) + (meta.debrisCount || 0),
           active_satellites: meta.satellitesCount || 0,
           debris_objects: meta.debrisCount || 0,
-          isro_assets: 79,
+          isro_assets: 80,
           stale_objects: 44,
           decayed_objects: 0,
           oldest_epoch: meta.oldestEpoch || '',

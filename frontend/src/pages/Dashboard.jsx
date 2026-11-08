@@ -733,6 +733,8 @@ export const Dashboard = () => {
 
   const fetchAnalytics = useOrbitStore((state) => state.fetchAnalytics);
 
+  const fetchInitialData = useOrbitStore((state) => state.fetchInitialData);
+
   const satellites = useOrbitStore((state) => state.satellites);
 
   const debris = useOrbitStore((state) => state.debris);
@@ -753,8 +755,11 @@ export const Dashboard = () => {
   useEffect(() => {
 
     fetchAnalytics();
+    if (!catalog || catalog.length === 0) {
+      fetchInitialData();
+    }
 
-  }, []);
+  }, [fetchAnalytics, fetchInitialData, catalog]);
 
 
 
@@ -784,14 +789,14 @@ export const Dashboard = () => {
   }, [allDebris]);
 
   const totalTracked = isroOnly
-    ? (isroSatellites.length || 105)
-    : (catalog.length || ((allSatellites.length || 1121) + (allDebris.length || 2672)));
+    ? (isroSatellites.length || 80)
+    : (catalog.length || ((allSatellites.length || 1121) + (allDebris.length || 2673)));
 
-  const activeCount = isroOnly ? (isroSatellites.length || 105) : (allSatellites.length || 1121);
+  const activeCount = isroOnly ? (isroSatellites.length || 80) : (allSatellites.length || 1121);
 
   const debrisCount = isroOnly
     ? (isroDebris.length > 0 ? isroDebris.length : 12)
-    : (allDebris.length > 0 ? allDebris.length : 2672);
+    : (allDebris.length > 0 ? allDebris.length : 2673);
 
   const meanVelocity = useMemo(() => {
     const pool = isroOnly ? isroSatellites : allSatellites;
@@ -801,7 +806,7 @@ export const Dashboard = () => {
       const alt = s.alt_km || s.altitude;
       return alt !== undefined && alt > 150 && alt <= 2000;
     });
-    if (leoObjects.length === 0) return isroOnly ? '7.54' : '7.46';
+    if (leoObjects.length === 0) return '7.54';
     const GM = 398600.4418;
     let totalV = 0;
     for (const s of leoObjects) {
@@ -815,12 +820,12 @@ export const Dashboard = () => {
     if (isroOnly) {
       return [
         { name: 'Active ISRO Payloads', value: isroSatellites.length || 80, color: '#10b981' },
-        { name: 'Monitored Debris Hazards', value: allDebris.length || 2672, color: '#ef4444' },
+        { name: 'Monitored Debris Hazards', value: allDebris.length || 2673, color: '#ef4444' },
       ];
     }
     return [
       { name: 'Operational Satellites', value: allSatellites.length || 1121, color: '#10b981' },
-      { name: 'Space Debris & Fragments', value: allDebris.length || 2672, color: '#ef4444' },
+      { name: 'Space Debris & Fragments', value: allDebris.length || 2673, color: '#ef4444' },
     ];
   }, [isroOnly, isroSatellites, allSatellites, allDebris]);
 

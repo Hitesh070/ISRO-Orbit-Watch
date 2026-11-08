@@ -507,7 +507,7 @@ export const useOrbitStore = create((set, get) => ({
             { shell: 'MEO (2000-35786 km)', count: meoCount || 820, density: 'Moderate' },
             { shell: 'GEO (≥35786 km)', count: geoCount || 2150, density: 'High' },
           ],
-          total_debris_analyzed: activeDebris.length || 2672,
+          total_debris_analyzed: activeDebris.length || 2673,
           total_active_analyzed: activeSats.length || 1121,
         };
       }
@@ -543,7 +543,7 @@ export const useOrbitStore = create((set, get) => ({
             { shell: 'MEO (2000-35786 km)', count: 820, density: 'Moderate' },
             { shell: 'GEO (≥35786 km)', count: 2150, density: 'High' },
           ],
-          total_debris_analyzed: fallbackDebris.length || 2672,
+          total_debris_analyzed: fallbackDebris.length || 2673,
           total_active_analyzed: fallbackCat.length || 1121,
         },
         conjunctions: normalizeConjunctionTimes(conjRes?.conjunctions || []),

@@ -40,7 +40,7 @@ export const DebrisStats = () => {
           else geo++;
         }
         return [
-          { shell: 'LEO (<2000 km)', count: leo || 2672, density: 'Critical' },
+          { shell: 'LEO (<2000 km)', count: leo || 2673, density: 'Critical' },
           { shell: 'MEO (2000-35786 km)', count: meo || 145, density: 'Moderate' },
           { shell: 'GEO (≥35786 km)', count: geo || 320, density: 'High' },
         ];

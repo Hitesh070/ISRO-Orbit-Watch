@@ -325,7 +325,7 @@ export const FilterPanel = () => {
       <div className="mt-3.5 pt-2.5 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center">
         <span>Tracking:</span>
         <span className="text-cyan-300 font-bold">
-          {filters.indianSatsOnly ? `${satellites.filter(s => s.is_isro).length || 105} ISRO Active` : `${satellites.length} Active`} | {debris.length || 2673} Debris
+          {filters.indianSatsOnly ? `${satellites.filter(s => s.is_isro).length || 80} ISRO Active` : `${satellites.length} Active`} | {debris.length || 2673} Debris
         </span>
       </div>
     </div>

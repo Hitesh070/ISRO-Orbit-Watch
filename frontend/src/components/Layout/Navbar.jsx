@@ -92,7 +92,7 @@ export const Navbar = () => {
   const criticalConjunctions = conjunctions.filter(
     (c) => c.risk_level === 'CRITICAL' && (!filters?.indianSatsOnly || c.object1?.is_isro || c.object2?.is_isro)
   ).length;
-  const isroCount = satellites.filter((s) => s.is_isro).length || 79;
+  const isroCount = satellites.filter((s) => s.is_isro).length || 80;
   const activeSatsCount = filters?.indianSatsOnly ? isroCount : (satellites.length || isroCount);
 
   return (
