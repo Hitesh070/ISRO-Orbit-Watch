@@ -83,14 +83,21 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
   const lastWallTimeRef = useRef<number>(performance.now());
   const lastRevisionRef = useRef<string>('');
   const totalAllocsRef = useRef<number>(0);
+  const runTickRef = useRef<((forceTimeMs?: number) => void) | null>(null);
 
-  // Synchronize internal sim clock when store changes
+  // Synchronize internal sim clock when store changes or speed resets to real-time (1x)
   useEffect(() => {
-    if (simulatedTimeMs) {
+    if (simulationSpeed === 1) {
+      simTimeRef.current = Date.now();
+      lastWallTimeRef.current = performance.now();
+      if (!isWorkerBusyRef.current) {
+        runTickRef.current?.(Date.now());
+      }
+    } else if (simulatedTimeMs) {
       simTimeRef.current = simulatedTimeMs;
       lastWallTimeRef.current = performance.now();
     }
-  }, [simulatedTimeMs]);
+  }, [simulatedTimeMs, simulationSpeed]);
 
   // Instantiate worker
   useEffect(() => {
@@ -106,7 +113,7 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
       if (type === 'INIT_COMPLETE') {
         setIsReady(true);
       } else if (type === 'TICK_RESULT') {
-        const { workerMs: latencyMs, validCount: count, posBuffer, velBuffer, statusBuffer } = payload;
+        const { targetTimeMs: resultTimeMs, workerMs: latencyMs, validCount: count, posBuffer, velBuffer, statusBuffer } = payload;
 
         // The PREVIOUS render buffer has already been copied into Three.js GPU attributes by PointCloud.
         // Recycle it back into the spare pool so no new buffers ever need to be allocated!
@@ -145,6 +152,12 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
         setWorkerMs(latencyMs);
         setValidCount(count);
         isWorkerBusyRef.current = false;
+
+        // If user returned to 1x Live while a fast-forward tick was in-flight, immediately dispatch real-time tick
+        const currentSpeed = useOrbitStore.getState().simulationSpeed;
+        if (currentSpeed === 1 && resultTimeMs && Math.abs(resultTimeMs - Date.now()) > 2000) {
+          runTickRef.current?.(Date.now());
+        }
       } else if (type === 'ORBIT_PATH_RESULT') {
         setOrbitPoints(payload.points || []);
       }
@@ -199,18 +212,26 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
 
     const tickInterval = 500; // ms
 
-    const intervalId = setInterval(() => {
-      if (isWorkerBusyRef.current || !workerRef.current) {
+    const runTick = (forceTimeMs?: number) => {
+      if (isWorkerBusyRef.current || !workerRef.current || !catalog.length) {
         return;
       }
 
-      // Advance simulated time based on elapsed wall time and simulationSpeed
       const nowWall = performance.now();
       const elapsedWall = (nowWall - lastWallTimeRef.current) / 1000;
       lastWallTimeRef.current = nowWall;
 
-      simTimeRef.current += elapsedWall * 1000 * simulationSpeed;
-      const targetTimeMs = simTimeRef.current;
+      let targetTimeMs: number;
+      if (forceTimeMs !== undefined) {
+        simTimeRef.current = forceTimeMs;
+        targetTimeMs = forceTimeMs;
+      } else if (simulationSpeed === 1) {
+        simTimeRef.current = Date.now();
+        targetTimeMs = simTimeRef.current;
+      } else {
+        simTimeRef.current += elapsedWall * 1000 * simulationSpeed;
+        targetTimeMs = simTimeRef.current;
+      }
 
       // Obtain a buffer set from the recycled spare pool, or allocate only if pool is empty
       let buffers: BufferSet;
@@ -242,9 +263,27 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
         },
         [buffers.pos.buffer, buffers.vel.buffer, buffers.status.buffer]
       );
+    };
+
+    runTickRef.current = runTick;
+
+    // Immediate tick when speed changes (especially returning to 1x Live)
+    if (simulationSpeed === 1) {
+      runTick(Date.now());
+    } else {
+      runTick();
+    }
+
+    const intervalId = setInterval(() => {
+      runTick();
     }, tickInterval);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      clearInterval(intervalId);
+      if (runTickRef.current === runTick) {
+        runTickRef.current = null;
+      }
+    };
   }, [isReady, catalog.length, simulationSpeed]);
 
   // Request orbit path calculation for a satellite

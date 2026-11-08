@@ -193,10 +193,24 @@ export const useOrbitStore = create((set, get) => ({
 
   // App Theme, Simulation Speed & Mission Clock
   theme: getInitialTheme(),
-  simulationSpeed: 1, // 1x, 5x, 15x, 60x fast-forward
+  simulationSpeed: 1, // 1x (Live Real-Time), 5x, 15x, 60x fast-forward
   simulatedTimeMs: Date.now(),
   setSimulatedTimeMs: (ms) => set({ simulatedTimeMs: ms }),
-  setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
+  setSimulationSpeed: (speed) => {
+    const numericSpeed = Number(speed);
+    if (numericSpeed === 1) {
+      // 1x represents Real-Time Live status: always snap simulated time back to actual current clock
+      const realNow = Date.now();
+      set({ simulationSpeed: 1, simulatedTimeMs: realNow });
+    } else {
+      set((state) => ({
+        simulationSpeed: numericSpeed,
+        // If starting fast-forward from real-time (speed was 1), ensure simulatedTimeMs begins at current real-time
+        simulatedTimeMs: state.simulationSpeed === 1 ? Date.now() : state.simulatedTimeMs,
+      }));
+    }
+  },
+  resetToRealTime: () => set({ simulationSpeed: 1, simulatedTimeMs: Date.now() }),
 
   // 3D Viewport Camera Controls
   cameraAction: null,
@@ -288,7 +302,19 @@ export const useOrbitStore = create((set, get) => ({
     set({ theme: nextTheme });
   },
 
-  setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
+  setSimulationSpeed: (speed) => {
+    const numericSpeed = Number(speed);
+    if (numericSpeed === 1) {
+      const realNow = Date.now();
+      set({ simulationSpeed: 1, simulatedTimeMs: realNow });
+    } else {
+      set((state) => ({
+        simulationSpeed: numericSpeed,
+        simulatedTimeMs: state.simulationSpeed === 1 ? Date.now() : state.simulatedTimeMs,
+      }));
+    }
+  },
+  resetToRealTime: () => set({ simulationSpeed: 1, simulatedTimeMs: Date.now() }),
 
   // Layer toggle action
   toggleLayer: (layerName) => {

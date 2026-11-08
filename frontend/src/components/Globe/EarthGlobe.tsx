@@ -299,12 +299,22 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
   const layers = useOrbitStore((state) => state.layers);
   const settings = useOrbitStore((state) => state.settings);
   const simulationSpeed = useOrbitStore((state) => state.simulationSpeed);
+  const simulatedTimeMs = useOrbitStore((state) => state.simulatedTimeMs);
   const observerLocation = useOrbitStore((state) => state.observerLocation);
   const setSimulatedTimeMs = useOrbitStore((state) => state.setSimulatedTimeMs);
 
   const simTimeRef = useRef(Date.now());
   const cloudDriftRef = useRef(0);
   const lastSyncRef = useRef(0);
+
+  // Synchronize internal clock ref when simulation speed or simulated time resets in store
+  useEffect(() => {
+    if (simulationSpeed === 1) {
+      simTimeRef.current = Date.now();
+    } else if (simulatedTimeMs) {
+      simTimeRef.current = simulatedTimeMs;
+    }
+  }, [simulationSpeed, simulatedTimeMs]);
 
   // Load 4K Ultra-HD NASA Blue Marble daymap, night lights, specular ocean reflection, and clouds
   const [dayTexture, nightTexture, cloudsTexture, specularTexture] = useLoader(THREE.TextureLoader, [
@@ -369,8 +379,12 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
   }, []);
 
   useFrame((_, delta) => {
-    // Advance simulated time with user-selected simulation speed (1x = real-world physical time)
-    simTimeRef.current += delta * 1000 * simulationSpeed;
+    // In 1x mode, always track the actual real-world physical time; otherwise advance with fast-forward multiplier
+    if (simulationSpeed === 1) {
+      simTimeRef.current = Date.now();
+    } else if (simulationSpeed > 0) {
+      simTimeRef.current += delta * 1000 * simulationSpeed;
+    }
     const simDate = new Date(simTimeRef.current);
 
     // Exact Greenwich Mean Sidereal Time in radians
@@ -395,8 +409,8 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
       cloudsRef.current.rotation.y = gmst + cloudDriftRef.current;
     }
 
-    // Throttle sync of simulated time to Zustand store (~10 Hz)
-    if (Math.abs(simTimeRef.current - lastSyncRef.current) > 100) {
+    // Throttle sync of simulated time to Zustand store (~10 Hz) only during fast-forward
+    if (simulationSpeed > 1 && Math.abs(simTimeRef.current - lastSyncRef.current) > 100) {
       lastSyncRef.current = simTimeRef.current;
       setSimulatedTimeMs(simTimeRef.current);
     }
@@ -528,12 +542,13 @@ const GlobeScene = () => {
     setWorkerLatencyMs(workerMs);
   }, [workerMs, setWorkerLatencyMs]);
 
-  // Request high-precision 180-point orbit path calculation when a satellite is selected
+  // Request high-precision 180-point orbit path calculation when a satellite is selected or simulation speed resets
   useEffect(() => {
     if (selectedSatellite?.norad_id) {
-      requestOrbitPath(selectedSatellite.norad_id);
+      const targetTime = simulationSpeed === 1 ? Date.now() : (simulatedTimeMs || Date.now());
+      requestOrbitPath(selectedSatellite.norad_id, targetTime);
     }
-  }, [selectedSatellite?.norad_id, requestOrbitPath]);
+  }, [selectedSatellite?.norad_id, simulationSpeed, requestOrbitPath]);
 
   // Update real-time astronomical sun light in TEME
   useFrame(() => {

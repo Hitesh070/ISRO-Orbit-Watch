@@ -101,6 +101,15 @@ const AppContent = () => {
   useEffect(() => {
     if (simulationSpeed === 0) return;
 
+    if (simulationSpeed === 1) {
+      // 1x represents Real-Time: strictly locked to real-world current UTC
+      useOrbitStore.setState({ simulatedTimeMs: Date.now() });
+      const interval = setInterval(() => {
+        useOrbitStore.setState({ simulatedTimeMs: Date.now() });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+
     let lastTick = performance.now();
     const interval = setInterval(() => {
       const now = performance.now();

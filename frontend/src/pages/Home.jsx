@@ -90,9 +90,11 @@ export const Home = () => {
       {/* Bottom Floating Telemetry & Simulation Controls Bar */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 glass-panel px-4 py-2 rounded-2xl shadow-2xl text-xs font-mono">
         <div className="flex items-center gap-2 pr-3 border-r border-slate-800 text-slate-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className={`w-2 h-2 rounded-full ${simulationSpeed === 1 ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
           <span className="hidden sm:inline">Orbit Simulation:</span>
-          <span className="text-cyan-400 font-bold">{simulationSpeed}x</span>
+          <span className="text-cyan-400 font-bold">
+            {simulationSpeed === 1 ? '1x (LIVE)' : `${simulationSpeed}x`}
+          </span>
         </div>
 
         {/* Speed presets */}
@@ -101,13 +103,14 @@ export const Home = () => {
             <button
               key={speed}
               onClick={() => setSimulationSpeed(speed)}
+              title={speed === 1 ? 'Reset to Real-Time Live Status' : `Fast-forward ${speed}x`}
               className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition ${
                 simulationSpeed === speed
                   ? 'bg-cyan-500 text-space-950 shadow-glow-cyan'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              {speed}x
+              {speed === 1 ? '1x Live' : `${speed}x`}
             </button>
           ))}
         </div>
