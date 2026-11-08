@@ -21,7 +21,9 @@
 
 ## Manual desktop check
 
-The rebuilt portable app was opened on this Windows device and checked with mouse input. The NASA Earth texture and stars rendered; mouse drag rotated the globe; mouse-wheel zoom changed its framing; search and spacecraft selection worked; AstroSat and NISAR mission profiles displayed their official images, launch dates, purpose and data archive links; GSAT-30 displayed a geostationary radius and its verified mission profile; Overview, Passes and About tabs worked. AstroSat next-pass prediction over Bengaluru returned a pass with a 16.7° maximum elevation. Satellite locations now use small 3D spacecraft icons instead of dots, with selection glow and amber stale-data coloring.
+The rebuilt portable app was opened on this Windows device and checked with mouse input. The NASA Earth texture and stars rendered; mouse drag rotated the globe; mouse-wheel zoom changed its framing; search and spacecraft selection worked; AstroSat and NISAR mission profiles displayed their official images, launch dates, purpose and data archive links; GSAT-30 displayed a geostationary radius and its verified mission profile; Overview, Passes and About tabs worked. AstroSat next-pass prediction over Bengaluru returned a pass with a 16.7° maximum elevation.
+
+The later marker redesign replaces dots with 3D spacecraft icons, selection glow, and amber stale-data coloring. It passed compilation, orbit checks, and Windows packaging. The marker redesign itself has not yet been manually inspected in the open window.
 
 The first manual run happened before the replacement was published and therefore used its bundled snapshot. After publication, the GitHub `main` manifest and catalog endpoints were verified to return the 77-record India-only snapshot. The already-open desktop window had not yet visibly confirmed its next scheduled online refresh when the UI check ended. The app does not provide live ISRO telemetry.
 
