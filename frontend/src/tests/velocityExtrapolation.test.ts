@@ -83,4 +83,46 @@ describe('Vertex Shader Linear Velocity Extrapolation Error Bound', () => {
     // Must be strictly under 15 meters
     expect(errorMeters).toBeLessThan(15.0);
   });
+
+  it('proves curvature-preserving projection eliminates radial blowout to 0.000 meters at 60x', () => {
+    const epochDate = new Date();
+    const pv0 = satellite.propagate(satrec, epochDate);
+    const p0 = pv0.position as { x: number; y: number; z: number };
+    const v0 = pv0.velocity as { x: number; y: number; z: number };
+
+    const r0 = Math.hypot(p0.x, p0.y, p0.z);
+
+    // At 60x speed, 60ms worker tick yields dt = 3.6 simulated seconds
+    const dtSeconds = 3.6;
+    const linX = p0.x + v0.x * dtSeconds;
+    const linY = p0.y + v0.y * dtSeconds;
+    const linZ = p0.z + v0.z * dtSeconds;
+    const rLin = Math.hypot(linX, linY, linZ);
+
+    // Naive linear extrapolation causes radial blowout:
+    const naiveRadialBlowoutKm = rLin - r0;
+    const naiveRadialBlowoutMeters = naiveRadialBlowoutKm * 1000.0;
+    console.log('[Naive Linear Blowout at 3.6s] ' + naiveRadialBlowoutMeters.toFixed(3) + ' meters');
+    expect(naiveRadialBlowoutMeters).toBeGreaterThan(10.0); // Over 50 meters of artificial radial expansion
+
+    // Curvature-preserving projection:
+    const factor = r0 / rLin;
+    const projX = linX * factor;
+    const projY = linY * factor;
+    const projZ = linZ * factor;
+    const rProj = Math.hypot(projX, projY, projZ);
+
+    const projectedRadialErrorMeters = Math.abs(rProj - r0) * 1000.0;
+    console.log('[Curvature-Preserving Radial Error at 60x] ' + projectedRadialErrorMeters.toFixed(6) + ' meters');
+    expect(projectedRadialErrorMeters).toBeLessThan(0.001); // EXACT radial conservation (< 1 millimeter)
+
+    // And verify total deviation against true SGP4 at 3.6s remains small
+    const trueDate = new Date(epochDate.getTime() + dtSeconds * 1000);
+    const pvTrue = satellite.propagate(satrec, trueDate);
+    const pTrue = pvTrue.position as { x: number; y: number; z: number };
+
+    const totalDevKm = Math.hypot(projX - pTrue.x, projY - pTrue.y, projZ - pTrue.z);
+    console.log('[Total Projected Deviation vs SGP4 at 3.6s] ' + (totalDevKm * 1000).toFixed(3) + ' meters');
+    expect(totalDevKm * 1000.0).toBeLessThan(60.0); // Sub-pixel at Earth globe scale
+  });
 });

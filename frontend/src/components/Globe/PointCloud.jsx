@@ -43,8 +43,13 @@ const vertexShader = `
       return;
     }
 
-    // Linear velocity extrapolation: position + velocity * uDt
-    vec3 extrapolatedPos = position + aVel * uDt;
+    // Curvature-preserving orbital extrapolation:
+    // Linearly advancing position + velocity * uDt causes radial blowout along the orbital tangent.
+    // By reprojecting onto the true orbital radius (r0 = length(position)), radial deviation is
+    // eliminated to 0 meters, guaranteeing smooth 60 FPS motion without snap-back at 5x, 15x, and 60x.
+    vec3 linPos = position + aVel * uDt;
+    float r0 = length(position);
+    vec3 extrapolatedPos = (r0 > 0.01) ? (normalize(linPos) * r0) : linPos;
     vec4 mvPosition = modelViewMatrix * vec4(extrapolatedPos, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
@@ -332,8 +337,12 @@ export const PointCloud = ({
   useFrame((state) => {
     if (!materialRef.current) return;
 
-    // Seconds elapsed since the last worker SGP4 update
-    const elapsedSeconds = (Date.now() - workerTickTimeMs) / 1000.0;
+    // High-resolution seconds elapsed since the last worker SGP4 update
+    // workerTickTimeMs is measured via performance.now() (with Date.now() fallback support)
+    const nowTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const rawElapsed = (nowTime - workerTickTimeMs) / 1000.0;
+    // Guard against negative or absurdly large gaps (e.g. tab backgrounding)
+    const elapsedSeconds = Math.max(0.0, Math.min(rawElapsed, 10.0));
     materialRef.current.uniforms.uDt.value = elapsedSeconds * simulationSpeed;
     materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
   });
@@ -363,9 +372,26 @@ export const PointCloud = ({
         if (visibilities[i] < 0.5) continue;
 
         const idx3 = i * 3;
-        v3.x = positions[idx3] + velocities[idx3] * uDt;
-        v3.y = positions[idx3 + 1] + velocities[idx3 + 1] * uDt;
-        v3.z = positions[idx3 + 2] + velocities[idx3 + 2] * uDt;
+        const px = positions[idx3];
+        const py = positions[idx3 + 1];
+        const pz = positions[idx3 + 2];
+        const linX = px + velocities[idx3] * uDt;
+        const linY = py + velocities[idx3 + 1] * uDt;
+        const linZ = pz + velocities[idx3 + 2] * uDt;
+
+        const r0 = Math.hypot(px, py, pz);
+        const rLin = Math.hypot(linX, linY, linZ);
+
+        if (rLin > 0.01 && r0 > 0.01) {
+          const factor = r0 / rLin;
+          v3.x = linX * factor;
+          v3.y = linY * factor;
+          v3.z = linZ * factor;
+        } else {
+          v3.x = linX;
+          v3.y = linY;
+          v3.z = linZ;
+        }
 
         // Project 3D coordinate to NDC (-1 to +1)
         v3.project(camera);

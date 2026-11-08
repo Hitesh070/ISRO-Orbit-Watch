@@ -142,7 +142,7 @@ const AppContent = () => {
       useOrbitStore.setState((state) => ({
         simulatedTimeMs: state.simulatedTimeMs + deltaSimMs,
       }));
-    }, 100);
+    }, 50);
 
     return () => clearInterval(interval);
   }, [simulationSpeed]);

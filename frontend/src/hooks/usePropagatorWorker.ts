@@ -56,7 +56,7 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
   const [workerMs, setWorkerMs] = useState(0);
   const [validCount, setValidCount] = useState(0);
   const [allocCount, setAllocCount] = useState(0);
-  const [workerTickTimeMs, setWorkerTickTimeMs] = useState(Date.now());
+  const [workerTickTimeMs, setWorkerTickTimeMs] = useState(typeof performance !== 'undefined' ? performance.now() : Date.now());
   const [orbitPoints, setOrbitPoints] = useState<[number, number, number][]>([]);
 
   // Active buffers passed to PointCloud
@@ -85,19 +85,14 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
   const totalAllocsRef = useRef<number>(0);
   const runTickRef = useRef<((forceTimeMs?: number) => void) | null>(null);
 
-  // Synchronize internal sim clock when store changes or speed resets to real-time (1x)
+  // Synchronize internal sim clock when speed resets to real-time (1x)
   useEffect(() => {
     if (simulationSpeed === 1) {
-      simTimeRef.current = Date.now();
-      lastWallTimeRef.current = performance.now();
       if (!isWorkerBusyRef.current) {
         runTickRef.current?.(Date.now());
       }
-    } else if (simulatedTimeMs) {
-      simTimeRef.current = simulatedTimeMs;
-      lastWallTimeRef.current = performance.now();
     }
-  }, [simulatedTimeMs, simulationSpeed]);
+  }, [simulationSpeed]);
 
   // Instantiate worker
   useEffect(() => {
@@ -148,7 +143,7 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
           status: statusBuffer,
         });
 
-        setWorkerTickTimeMs(Date.now());
+        setWorkerTickTimeMs(typeof performance !== 'undefined' ? performance.now() : Date.now());
         setWorkerMs(latencyMs);
         setValidCount(count);
         isWorkerBusyRef.current = false;
@@ -210,27 +205,27 @@ export function usePropagatorWorker(catalog: any[]): UsePropagatorWorkerResult {
   useEffect(() => {
     if (!isReady || catalog.length === 0) return;
 
-    const tickInterval = 500; // ms
+    // Adaptive tick interval based on simulation speed:
+    // Faster speeds need higher worker refresh rates so extrapolation intervals remain tiny (< 3.6s simulated)
+    const tickInterval =
+      simulationSpeed >= 60 ? 60 :
+      simulationSpeed >= 15 ? 100 :
+      simulationSpeed >= 5 ? 150 :
+      500;
 
     const runTick = (forceTimeMs?: number) => {
       if (isWorkerBusyRef.current || !workerRef.current || !catalog.length) {
         return;
       }
 
-      const nowWall = performance.now();
-      const elapsedWall = (nowWall - lastWallTimeRef.current) / 1000;
-      lastWallTimeRef.current = nowWall;
-
       let targetTimeMs: number;
       if (forceTimeMs !== undefined) {
-        simTimeRef.current = forceTimeMs;
         targetTimeMs = forceTimeMs;
       } else if (simulationSpeed === 1) {
-        simTimeRef.current = Date.now();
-        targetTimeMs = simTimeRef.current;
+        targetTimeMs = Date.now();
       } else {
-        simTimeRef.current += elapsedWall * 1000 * simulationSpeed;
-        targetTimeMs = simTimeRef.current;
+        const storeMs = useOrbitStore.getState().simulatedTimeMs;
+        targetTimeMs = storeMs || Date.now();
       }
 
       // Obtain a buffer set from the recycled spare pool, or allocate only if pool is empty

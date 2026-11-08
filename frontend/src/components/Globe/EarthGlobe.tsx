@@ -408,12 +408,6 @@ const RealisticEarthMesh = ({ sunPosition }: RealisticEarthMeshProps) => {
       }
       cloudsRef.current.rotation.y = gmst + cloudDriftRef.current;
     }
-
-    // Throttle sync of simulated time to Zustand store (~10 Hz) only during fast-forward
-    if (simulationSpeed > 1 && Math.abs(simTimeRef.current - lastSyncRef.current) > 100) {
-      lastSyncRef.current = simTimeRef.current;
-      setSimulatedTimeMs(simTimeRef.current);
-    }
   });
 
   return (

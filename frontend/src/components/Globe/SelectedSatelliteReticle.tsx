@@ -13,6 +13,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import * as satelliteJs from 'satellite.js';
+import { useOrbitStore } from '../../store/useOrbitStore';
 
 interface SelectedSatelliteReticleProps {
   satellite: any;
@@ -90,25 +91,41 @@ export const SelectedSatelliteReticle: React.FC<SelectedSatelliteReticleProps> =
       const pz = positions[idx3 + 2];
 
       if (!isNaN(px) && (px !== 0 || py !== 0 || pz !== 0)) {
-        const elapsedSeconds = (Date.now() - workerTickTimeMs) / 1000.0;
+        const nowTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const rawElapsed = (nowTime - workerTickTimeMs) / 1000.0;
+        const elapsedSeconds = Math.max(0.0, Math.min(rawElapsed, 10.0));
         const uDt = elapsedSeconds * simulationSpeed;
         const vx = velocities ? velocities[idx3] * uDt : 0;
         const vy = velocities ? velocities[idx3 + 1] * uDt : 0;
         const vz = velocities ? velocities[idx3 + 2] * uDt : 0;
 
-        currentX = px + vx;
-        currentY = py + vy;
-        currentZ = pz + vz;
+        const linX = px + vx;
+        const linY = py + vy;
+        const linZ = pz + vz;
+        const r0 = Math.hypot(px, py, pz);
+        const rLin = Math.hypot(linX, linY, linZ);
+
+        if (rLin > 0.01 && r0 > 0.01) {
+          const factor = r0 / rLin;
+          currentX = linX * factor;
+          currentY = linY * factor;
+          currentZ = linZ * factor;
+        } else {
+          currentX = linX;
+          currentY = linY;
+          currentZ = linZ;
+        }
         hasPos = true;
       }
     }
 
-    // Secondary / Fallback: Real-time SGP4 propagation directly from TLE lines
+    // Secondary / Fallback: SGP4 propagation directly from TLE lines at current simulation time
     if (!hasPos && satellite?.line1 && satellite?.line2) {
       try {
         const satrec = satelliteJs.twoline2satrec(satellite.line1, satellite.line2);
         if (satrec && !satrec.error) {
-          const pv = satelliteJs.propagate(satrec, new Date());
+          const simMs = simulationSpeed === 1 ? Date.now() : useOrbitStore.getState().simulatedTimeMs;
+          const pv = satelliteJs.propagate(satrec, new Date(simMs));
           if (pv.position && typeof pv.position !== 'boolean') {
             const p = pv.position as { x: number; y: number; z: number };
             const KM_TO_SCENE = 1.0 / 6378.137;
