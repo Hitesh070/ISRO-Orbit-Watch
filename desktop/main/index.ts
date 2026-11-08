@@ -56,6 +56,22 @@ if (!gotTheLock) {
   process.exit(0);
 }
 
+// =========================================================================
+// High-Performance & Memory Optimization Flags (Phase W8 Efficiency Suite)
+// =========================================================================
+// 1. Cap V8 old space heap to 384MB to prevent dormant memory hoarding
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=384 --expose-gc');
+// 2. Direct GPU rasterization and zero-copy framebuffers (moves rendering to VRAM, freeing system RAM)
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+// 3. Cap Chromium in-memory disk cache buffer to 32MB (prevents 200MB+ cache bloat)
+app.commandLine.appendSwitch('disk-cache-size', '33554432');
+// 4. Limit auxiliary renderer processes
+app.commandLine.appendSwitch('renderer-process-limit', '2');
+// 5. Smooth simulation timing without memory accumulation
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+
 let mainWindow: BrowserWindow | null = null;
 const dataManager = new DataManager();
 const serialManager = new SerialManager();
