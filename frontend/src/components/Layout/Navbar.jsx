@@ -96,7 +96,7 @@ export const Navbar = () => {
   const activeSatsCount = filters?.indianSatsOnly ? isroCount : (satellites.length || isroCount);
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-1.5 shadow-xl select-none overflow-x-hidden">
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 px-2 sm:px-4 py-1.5 shadow-xl select-none ">
       <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export const Navbar = () => {
                   v4.3
                 </span>
               </div>
-              <p className="text-[10px] font-mono text-slate-400 hidden sm:block">
+              <p className="text-[10px] font-mono text-slate-400 hidden min-[1400px]:block">
                 Real-Time Satellite Orbit Tracker & Debris Risk
               </p>
             </div>
@@ -123,7 +123,7 @@ export const Navbar = () => {
         </div>
 
         {/* Live Telemetry Ticker */}
-        <div className="hidden 2xl:flex items-center gap-3 text-xs font-mono px-2.5 py-1 rounded-lg bg-space-950/70 border border-slate-800 shrink-0">
+        <div className="hidden min-[1680px]:flex items-center gap-3 text-xs font-mono px-2.5 py-1 rounded-lg bg-space-950/70 border border-slate-800 shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-slate-400">{filters?.indianSatsOnly ? 'ISRO Spacecraft:' : 'Active Spacecraft:'}</span>
@@ -135,7 +135,7 @@ export const Navbar = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-slate-400">Tracked Debris:</span>
-            <span className="font-bold text-amber-400">{(debris && debris.length > 0) ? debris.length.toLocaleString() : '2,672'}</span>
+            <span className="font-bold text-amber-400">{(debris && debris.length > 0) ? debris.length.toLocaleString() : '2,673'}</span>
           </div>
 
           <div className="w-px h-3.5 bg-slate-800" />
@@ -176,7 +176,7 @@ export const Navbar = () => {
           >
             <BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span className="hidden md:inline">Analytics</span>
-            <span className="hidden xl:inline"> &amp; Risk</span>
+            <span className="hidden min-[1400px]:inline"> &amp; Risk</span>
           </NavLink>
 
           <NavLink
@@ -217,7 +217,7 @@ export const Navbar = () => {
           <button
             onClick={() => setIsLocationModalOpen(true)}
             title="Click to select Ground Station preset or enter custom coordinates"
-            className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-400 text-[11px] font-mono text-slate-300 hover:text-cyan-300 transition shrink-0"
+            className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-space-950/80 border border-slate-700 hover:border-cyan-400 text-[11px] font-mono text-slate-300 hover:text-cyan-300 transition shrink-0"
           >
             <MapPin className="w-3.5 h-3.5 text-emerald-400 animate-pulse shrink-0" />
             <span className="truncate max-w-[130px] font-medium">
@@ -230,7 +230,7 @@ export const Navbar = () => {
           </button>
 
           {/* Clock Widget */}
-          <div className="hidden sm:flex flex-col items-end justify-center shrink-0 whitespace-nowrap text-right font-mono px-2 py-0.5 rounded-lg bg-space-950/60 border border-slate-800">
+          <div className="flex flex-col items-end justify-center shrink-0 whitespace-nowrap text-right font-mono px-2 py-0.5 rounded-lg bg-space-950/60 border border-slate-800">
             <div className="text-xs text-cyan-300 font-bold flex items-center justify-end gap-1.5 leading-tight">
               <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
               <span className="tracking-wider">
@@ -300,7 +300,7 @@ export const Navbar = () => {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-300' : 'text-emerald-400'}`} />
-              <span className="hidden 2xl:inline">Auto Sync</span>
+              <span className="hidden min-[1600px]:inline">Auto Sync</span>
             </button>
 
             {/* Reference & Help Modal Toggle */}
