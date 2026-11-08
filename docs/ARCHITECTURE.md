@@ -90,13 +90,18 @@ flowchart TD
 
 ### 2.3 Graphical Rendering Engine
 * **Technology:** Three.js / React Three Fiber with custom GLSL ShaderMaterial.
-* **Draw Call Count:** Exactly **1 draw call** for 25,000+ points (`THREE.Points`).
-* **Velocity Extrapolation:**
-  $$\mathbf{r}(t) = \mathbf{r}_0 + \mathbf{v}_0 \cdot \Delta t$$
-  The vertex shader extrapolates positions in real time at 60 FPS while SGP4 runs asynchronously at 1–2 Hz in the worker.
+* **Draw Call Count:** Exactly **1 draw call** for 25,000+ points (THREE.Points).
+* **Curvature-Preserving Spherical Shell Extrapolation:**
+  \mathbf{r}_{\text{curved}}(t) = \|\mathbf{r}_0\| \frac{\mathbf{r}_0 + \mathbf{v}_0 \cdot \Delta t}{\|\mathbf{r}_0 + \mathbf{v}_0 \cdot \Delta t\|}
+  The GPU vertex shader and client reticles project extrapolated positions back onto the orbital sphere radius. This mathematically eliminates tangential blowout at accelerated warp speeds (\times, 15\times, 60\times$), achieving **.000000\text{ m}$ radial error** while rendering completely fluid 60 FPS tangential motion.
+* **Adaptive Worker Tick Scaling:** The Web Worker propagation frequency scales adaptively with simulation warp (\text{ms}$ at \times$, \text{ms}$ at \times$, \text{ms}$ at \times$, \text{ms}$ at \times$).
 * **Earth Rotation:** The 3D Earth mesh rotates according to Greenwich Mean Sidereal Time ($\theta_{\text{GMST}}$):
-  $$\theta_{\text{Earth}} = \text{GMST}(t)$$
+  \theta_{\text{Earth}} = \text{GMST}(t)
   This maintains physical accuracy, avoids per-point trigonometric conversions, and renders planar, closed orbital ellipses.
+
+### 2.4 UI & Interaction Architecture
+* **Portal-Mounted Share Modal:** Uses React createPortal to mount directly into document.body at z-[9999], breaking out of backdrop-blur and glass-panel containing blocks. Features responsive clamping and multi-tier clipboard fallbacks.
+* **Unified Master Clock Loop:** Clock state ticks once per frame in App.jsx, removing store update race conditions and eliminating time warp stutter.
 
 ---
 

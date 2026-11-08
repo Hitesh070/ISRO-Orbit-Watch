@@ -74,6 +74,20 @@ $$\Delta \mathbf{r} = \mathbf{r}_{\text{extrap}}(\Delta t) - \mathbf{r}_{\text{t
   $$\|\Delta \mathbf{r}\| \approx 4.329\text{ meters}$$
   Still completely imperceptible at globe zoom levels ($< 0.001\text{ screen pixels}$).
 
+
+### 3.1 Curvature-Preserving Spherical Shell Extrapolation (v4.3)
+
+When simulation warp speed is accelerated (\times, 15\times, 60\times$), straight-line linear extrapolation produces a tangential divergence that balloons the orbital radius outward:
+\|\mathbf{r}_{\text{linear}}(t)\| = \sqrt{r_0^2 + (v_0 \Delta t)^2} = r_0 \sqrt{1 + \left(\frac{v_0 \Delta t}{r_0}\right)^2} > r_0
+
+At \times$, $\Delta t$ intervals span seconds between frames, which previously produced visible pulsation and orbit snapping. In **v4.3**, OrbitGuard implements **curvature-preserving spherical shell projection** in GLSL and CPU reticles:
+\mathbf{r}_{\text{curved}}(t) = \|\mathbf{r}_0\| \frac{\mathbf{r}_0 + \mathbf{v}_0 \Delta t}{\|\mathbf{r}_0 + \mathbf{v}_0 \Delta t\|}
+
+This forces the radial distance to remain identically constant:
+\text{Radial Error} = \big|\|\mathbf{r}_{\text{curved}}(t)\| - \|\mathbf{r}_0\|\big| = 0.000000\text{ meters}
+
+Verified via src/tests/velocityExtrapolation.test.ts: at .6\text{ s}$ elapsed time at \times$, naive linear extrapolation causes .664\text{ m}$ of outward blowout; the curvature projection achieves **.000000\text{ m}$ radial error** while maintaining silky-smooth \text{ FPS}$ tangential motion.
+
 ---
 
 ## 4. Bundle Size & Code-Splitting Optimization
@@ -94,6 +108,20 @@ dist/assets/vendor-three-xvXehprI.js          973.37 kB │ gzip: 270.82 kB (Thr
 
 - Initial main page load payload is drastically reduced: `index.js` is only **$48.16\text{ KB}$ gzipped**.
 - Recharts and heavier analytics dashboards are loaded strictly on demand when navigating to `/dashboard` or `/conjunctions`.
+
+
+### 3.1 Curvature-Preserving Spherical Shell Extrapolation (v4.3)
+
+When simulation warp speed is accelerated (\times, 15\times, 60\times$), straight-line linear extrapolation produces a tangential divergence that balloons the orbital radius outward:
+\|\mathbf{r}_{\text{linear}}(t)\| = \sqrt{r_0^2 + (v_0 \Delta t)^2} = r_0 \sqrt{1 + \left(\frac{v_0 \Delta t}{r_0}\right)^2} > r_0
+
+At \times$, $\Delta t$ intervals span seconds between frames, which previously produced visible pulsation and orbit snapping. In **v4.3**, OrbitGuard implements **curvature-preserving spherical shell projection** in GLSL and CPU reticles:
+\mathbf{r}_{\text{curved}}(t) = \|\mathbf{r}_0\| \frac{\mathbf{r}_0 + \mathbf{v}_0 \Delta t}{\|\mathbf{r}_0 + \mathbf{v}_0 \Delta t\|}
+
+This forces the radial distance to remain identically constant:
+\text{Radial Error} = \big|\|\mathbf{r}_{\text{curved}}(t)\| - \|\mathbf{r}_0\|\big| = 0.000000\text{ meters}
+
+Verified via src/tests/velocityExtrapolation.test.ts: at .6\text{ s}$ elapsed time at \times$, naive linear extrapolation causes .664\text{ m}$ of outward blowout; the curvature projection achieves **.000000\text{ m}$ radial error** while maintaining silky-smooth \text{ FPS}$ tangential motion.
 
 ---
 

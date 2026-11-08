@@ -7,16 +7,18 @@
  * - Offline cached orbital catalogs (data/catalog.json & data/meta.json)
  */
 
-const CACHE_NAME = 'orbitguard-cache-v4.2';
+const CACHE_NAME = 'orbitguard-cache-v4.3';
 
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/textures/earth_daymap.jpg',
-  '/textures/earth_nightmap.jpg',
-  '/textures/earth_clouds.jpg',
+  '/textures/earth_day_4096.jpg',
+  '/textures/earth_night_4096.jpg',
+  '/textures/earth_clouds_hd.png',
+  '/textures/earth_specular_2048.jpg',
+  '/textures/night-sky.png',
   '/data/catalog.json',
   '/data/meta.json',
 ];

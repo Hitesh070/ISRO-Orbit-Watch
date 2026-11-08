@@ -5,6 +5,41 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 
 ---
 
+## [v4.3] - 2026-11-08 (Release: 4K NASA Globe, Curvature-Preserving Extrapolation, Dynamic Conjunction Telemetry & Hardened Desktop)
+### Added
+- **Curvature-Preserving Spherical Shell Extrapolation**:
+  - Replaced naive linear extrapolation in `PointCloud.jsx` and `SelectedSatelliteReticle.tsx` with spherical projection onto the orbital shell:
+    $$\mathbf{r}_{\text{curved}}(t) = \|\mathbf{r}_0\| \frac{\mathbf{r}_0 + \mathbf{v}_0 \Delta t}{\|\mathbf{r}_0 + \mathbf{v}_0 \Delta t\|}$$
+  - Eliminates tangential blowout during time-acceleration ($5\times, 15\times, 60\times$) with mathematically proven **$0.000000\text{ m}$ radial error** at $60\times$.
+- **Adaptive Worker Tick Rate**:
+  - Dynamically scales propagation refresh intervals based on simulation speed ($60\text{ms}$ at $60\times$, $100\text{ms}$ at $15\times$, $150\text{ms}$ at $5\times$, $500\text{ms}$ at $1\times$) in `usePropagatorWorker.ts`.
+- **Dynamic Real-Time Conjunction & Risk Telemetry**:
+  - `ConjunctionPanel.tsx` and `RiskTable.tsx` dynamically compute live encounter metrics in real time:
+    - Live separation distance: $D(t) = \|\mathbf{r}_1(t) - \mathbf{r}_2(t)\|$
+    - Live relative velocity: $v_{\text{rel}}(t) = \|\mathbf{v}_1(t) - \mathbf{v}_2(t)\|$
+    - Dynamic Akella-Alfriend maximum probability: $P_{c,\text{max}}(t) = \frac{1}{e}\left(\frac{R_{\text{HBR}}}{D(t)}\right)^2$
+    - Smooth live Foster $P_c(t)$ animation and numeric sanitization (`< 1e-9` for raw infinitesimals).
+- **Portal-Mounted Share Modal (`ShareModal.tsx`)**:
+  - Mounts to `document.body` via React `createPortal` with `z-[9999]`, escaping parent header `glass-panel` clipping.
+  - Added responsive viewport centering (`my-auto`, `overflow-y-auto`), keyboard Escape dismissal, and multi-tier clipboard fallbacks.
+- **4K Ultra-HD NASA Blue Marble & Google Earth Textures**: 4096x2048 high-resolution day map, night city lights, specular ocean reflection, and 96x96 sphere geometry.
+- **Continuous Alpha Cloud Deck**: True continuous opacity cloud layer with smooth feathered edges, eliminating chunky 8-bit staircase artifacts.
+- **4K Google Earth Cosmic Skybox**: Panoramic deep-space Milky Way background with anti-aliased Gaussian Airy disc pinpoint stars.
+- **Spacecraft vs Debris Distinct Visuals**: Crisp high-tech diamond reticles with solar diffraction spikes and telemetry beacons for satellites, compact dots for debris.
+- **Autonomous Desktop Risk Engine**: Client-side synthesis of the 4x4 Altitude x Inclination risk density matrix and LEO/MEO/GEO shell breakdown.
+- **Comprehensive Subproject Documentation**: Added dedicated `README.md` files for `frontend/`, `desktop/`, and `backend/`.
+- **Expanded Automated Test Suite**: Expanded to **92 total automated tests** (46 frontend Vitest + 31 desktop Vitest + 15 backend Pytest).
+
+### Fixed
+- **Simulation Time Warp Jitter & Stutter**: Unified the master simulation clock ticker in `App.jsx` and removed competing store updates from `EarthGlobe.tsx`.
+- **RF Doppler S-Curve & Pass Planning**: Fixed chart axis formatting, S-curve zero-crossing labels, and proper UTC hour/minute display.
+- **RTN Decomposition Variance Partitioning**: Normalized RTN decomposition ensuring $(R^2 + T^2 + N^2) / \|\mathbf{m}\|^2 = 1.000$ geometric consistency.
+- **Terminator Smear**: Removed artificial dark orange streak, rendering physical solar twilight.
+- **Night-Side Violet Wash**: Replaced indexed night texture with pure #000000 velvet oceans/land and warm golden city emitters.
+- **Pass Predictor Topocentric SGP4**: Reliable client-side propagation for custom GPS coordinates.
+
+---
+
 ## [v4.2.0] - 2026-11-06 (Phase W: Native Windows Desktop App & Phase 5 Hardware Extension)
 ### Added
 - **Native Windows Desktop Application (Electron 31 + Node.js 20)**:
@@ -35,23 +70,8 @@ The project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   - `docs/WINDOWS_TESTING.md`: High-DPI display matrix (100% to 200%), offline launch, and SmartScreen disclaimer.
   - `docs/adr/003-electron-over-tauri.md`: Architecture Decision Record detailing selection of Electron over Tauri.
 - **Desktop CI/CD Workflows**:
-  - `.github/workflows/ci.yml`: Desktop typecheck and full 66-test verification suite on Windows.
+  - `.github/workflows/ci.yml`: Desktop typecheck and full verification suite on Windows.
   - `.github/workflows/release-desktop.yml`: Automated tag-triggered release packaging with SHA-256 checksum generation.
-
----
-
-## [v4.3] - 2026-11-07 (Release: 4K NASA Globe, Continuous Clouds, Cosmic Skybox & Astrodynamics Parity)
-### Added
-- **4K Ultra-HD NASA Blue Marble & Google Earth Textures**: 4096x2048 high-resolution day map, night city lights, specular ocean reflection, and 96x96 sphere geometry.
-- **Continuous Alpha Cloud Deck**: True continuous opacity cloud layer with smooth feathered edges, eliminating chunky 8-bit staircase artifacts.
-- **4K Google Earth Cosmic Skybox**: Panoramic deep-space Milky Way background with anti-aliased Gaussian Airy disc pinpoint stars.
-- **Spacecraft vs Debris Distinct Visuals**: Crisp high-tech diamond reticles with solar diffraction spikes and telemetry beacons for satellites, compact dots for debris.
-- **Autonomous Desktop Risk Engine**: Client-side synthesis of the 4x4 Altitude x Inclination risk density matrix and LEO/MEO/GEO shell breakdown.
-
-### Fixed
-- **Terminator Smear**: Removed artificial dark orange streak, rendering physical solar twilight.
-- **Night-Side Violet Wash**: Replaced indexed night texture with pure #000000 velvet oceans/land and warm golden city emitters.
-- **Pass Predictor Topocentric SGP4**: Reliable client-side propagation for custom GPS coordinates.
 
 ---
 
