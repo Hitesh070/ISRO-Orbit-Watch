@@ -46,14 +46,38 @@ function getLiveEncounterTelemetry(conj: any, nowMs: number) {
 
   const dtSec = (effectiveTcaMs - nowMs) / 1000;
   const missDist = typeof conj.miss_distance_km === 'number' ? conj.miss_distance_km : 5.0;
-  const relSpeed = typeof conj.relative_speed_kms === 'number' ? conj.relative_speed_kms : 10.0;
+  const relSpeedAtTca = typeof conj.relative_speed_kms === 'number' ? conj.relative_speed_kms : 10.0;
+  const pcFosterNominal = typeof conj.pc_foster === 'number' ? conj.pc_foster : 0;
+  const pcMaxNominal = typeof conj.pc_max === 'number' ? conj.pc_max : 0;
+  const hbrKm = (conj.hbr_m || 12.0) / 1000.0;
 
   // Closed-orbit relative separation D(t): varies smoothly and continuously every second between d_miss and D_max (~12,742 km)
   const periodSec = 95 * 60;
   const D_max = 12742.0;
+  const phase = (Math.PI * dtSec) / periodSec;
+  const sinSq = Math.pow(Math.sin(phase), 2);
+  const cosSq = Math.pow(Math.cos(phase), 2);
   const currentSeparationKm = Math.sqrt(
-    missDist * missDist + (D_max * D_max - missDist * missDist) * Math.pow(Math.sin((Math.PI * dtSec) / periodSec), 2)
+    missDist * missDist + (D_max * D_max - missDist * missDist) * sinSq
   );
+
+  // Live Instantaneous Relative Velocity (v_rel varies with orbital phase around Earth):
+  const vOrb = 7.55; // km/s typical circular LEO orbital speed
+  const vOpp = Math.sqrt(Math.max(1.0, 4 * vOrb * vOrb - relSpeedAtTca * relSpeedAtTca));
+  const currentRelSpeedKms = Math.sqrt(
+    relSpeedAtTca * relSpeedAtTca * cosSq + vOpp * vOpp * sinSq
+  );
+
+  // Akella-Alfriend dynamic maximum probability bound based on live separation:
+  const currentPcMax = (1.0 / Math.E) * Math.pow(hbrKm / Math.max(0.001, currentSeparationKm), 2);
+
+  // Live Foster-1992 encounter collision probability scaled by proximity to TCA:
+  const currentPcFoster = pcFosterNominal > 0
+    ? Math.min(
+        currentPcMax,
+        pcFosterNominal * Math.pow(missDist / Math.max(missDist, currentSeparationKm), 2)
+      )
+    : 0;
 
   let statusText = 'CLOSING';
   let statusColor = 'text-cyan-400';
@@ -75,6 +99,9 @@ function getLiveEncounterTelemetry(conj: any, nowMs: number) {
     effectiveTcaMs,
     dtSec,
     currentSeparationKm,
+    currentRelSpeedKms,
+    currentPcFoster,
+    currentPcMax,
     statusText,
     statusColor,
     isEncounterActive,
@@ -105,7 +132,7 @@ function formatTcaCountdown(dtSec: number): string {
 function formatPc(val?: any, digits = 3): string {
   if (val === undefined || val === null) return '< 1e-9';
   const num = Number(val);
-  if (isNaN(num) || num <= 0) return '< 1e-9';
+  if (isNaN(num) || num < 1e-9) return '< 1e-9';
   return num.toExponential(digits);
 }
 
@@ -548,23 +575,40 @@ export const RiskTable = () => {
                     </div>
                   </td>
 
-                  {/* Relative Velocity */}
-                  <td className="py-3 px-3 text-slate-300">{formatSpeed(sat.relative_speed_kms, settings?.units, 2)}</td>
-
-                  {/* Foster Pc */}
-                  <td className="py-3 px-3 font-bold whitespace-nowrap">
-                    <span
-                      className={
-                        isCriticalPc ? 'text-rose-400 font-extrabold' : isWarningPc ? 'text-amber-400' : 'text-slate-400'
-                      }
-                    >
-                      {formatPc(pc, 3)}
-                    </span>
+                  {/* Relative Velocity (Live Instantaneous + TCA Nominal) */}
+                  <td className="py-3 px-3">
+                    <div className="text-slate-100 font-bold">
+                      {formatSpeed(live.currentRelSpeedKms, settings?.units, 2)}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      TCA: {formatSpeed(sat.relative_speed_kms, settings?.units, 2)}
+                    </div>
                   </td>
 
-                  {/* Pc Max */}
+                  {/* Foster Pc (Live Proximity Scaled + Peak Nominal) */}
+                  <td className="py-3 px-3 font-bold whitespace-nowrap">
+                    <div
+                      className={
+                        (live.currentPcFoster || 0) >= 1e-4
+                          ? 'text-rose-400 font-extrabold'
+                          : (live.currentPcFoster || 0) >= 1e-7
+                          ? 'text-amber-400'
+                          : 'text-slate-400'
+                      }
+                    >
+                      {formatPc(live.currentPcFoster, 3)}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-normal">
+                      Peak: {formatPc(pc, 2)}
+                    </div>
+                  </td>
+
+                  {/* Pc Max (Live Instantaneous Upper Bound + Peak Bound) */}
                   <td className="py-3 px-3 text-cyan-300 font-bold whitespace-nowrap">
-                    {formatPc(sat.pc_max, 3)}
+                    <div>{formatPc(live.currentPcMax, 3)}</div>
+                    <div className="text-[10px] text-cyan-600 font-normal">
+                      Peak: {formatPc(sat.pc_max, 2)}
+                    </div>
                   </td>
 
                   {/* Real-Time Live TCA Countdown */}
