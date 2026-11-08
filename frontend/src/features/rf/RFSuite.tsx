@@ -477,7 +477,7 @@ export const RFSuite: React.FC = () => {
                       <td className="py-2.5 px-3">
                         <span className="font-bold text-cyan-400">{p.maxElevationDeg}°</span>
                         <div className="text-[10px] text-slate-500">
-                          {tcaDate.toLocaleTimeString([], { minute: '2-digit', second: '2-digit' })}
+                          {tcaDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </div>
                       </td>
                       <td className="py-2.5 px-3 text-slate-400">

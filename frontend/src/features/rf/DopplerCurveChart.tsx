@@ -41,20 +41,25 @@ export const DopplerCurveChart: React.FC<DopplerCurveChartProps> = ({
 
   // Format data for Recharts
   const chartData = pass.samples.map((s) => {
-    const timeLabel = new Date(s.epochMs).toLocaleTimeString([], {
+    const d = new Date(s.epochMs);
+    const clockLabel = d.toLocaleTimeString([], {
+      hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
     });
+    const elapsedSec = Math.max(0, Math.round((s.epochMs - pass.aosEpochMs) / 1000));
+    const elapsedLabel = `T+${Math.floor(elapsedSec / 60)}:${String(elapsedSec % 60).padStart(2, '0')}`;
 
     // Uplink pre-compensation shift is the negative of received shift to arrive at satellite at nominal f0
     const uplinkShiftHz = -s.dopplerShiftHz;
 
     return {
-      time: timeLabel,
+      time: clockLabel,
+      elapsed: elapsedLabel,
       epochMs: s.epochMs,
-      dopplerShiftHz: s.dopplerShiftHz,
-      uplinkShiftHz: uplinkShiftHz,
+      dopplerShiftHz: Number(s.dopplerShiftHz.toFixed(1)),
+      uplinkShiftHz: Number(uplinkShiftHz.toFixed(1)),
       elevationDeg: s.elDeg,
       rangeKm: s.rangeKm,
       sample: s,
@@ -88,7 +93,7 @@ export const DopplerCurveChart: React.FC<DopplerCurveChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            margin={{ top: 10, right: 15, left: 15, bottom: 0 }}
             onMouseMove={(e) => {
               if (e.activePayload && e.activePayload[0] && onHoverSample) {
                 onHoverSample(e.activePayload[0].payload.sample);
@@ -103,12 +108,21 @@ export const DopplerCurveChart: React.FC<DopplerCurveChartProps> = ({
               fontSize={10}
               tickLine={false}
               interval="preserveStartEnd"
+              minTickGap={35}
             />
             <YAxis
+              width={72}
               stroke="#64748b"
               fontSize={10}
               tickLine={false}
-              tickFormatter={(v) => `${v > 0 ? '+' : ''}${v}Hz`}
+              tickFormatter={(v: number) => {
+                if (Math.abs(v) < 1) return '0 Hz';
+                const sign = v > 0 ? '+' : '';
+                if (Math.abs(v) >= 1000) {
+                  return `${sign}${(v / 1000).toFixed(1)} kHz`;
+                }
+                return `${sign}${Math.round(v)} Hz`;
+              }}
               domain={[-maxShift * 1.15, maxShift * 1.15]}
             />
             <Tooltip
@@ -116,16 +130,19 @@ export const DopplerCurveChart: React.FC<DopplerCurveChartProps> = ({
                 if (!active || !payload || !payload.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div className="p-2 rounded-lg bg-space-950 border border-cyan-500/30 text-slate-200 text-[11px] font-mono shadow-xl">
-                    <div className="font-bold text-cyan-400">{d.time} (UTC)</div>
+                  <div className="p-2.5 rounded-lg bg-space-950 border border-cyan-500/30 text-slate-200 text-[11px] font-mono shadow-xl space-y-1">
+                    <div className="font-bold text-cyan-400 flex items-center justify-between gap-3">
+                      <span>{d.time} (UTC/Local)</span>
+                      <span className="text-slate-400 text-[10px] font-normal">{d.elapsed}</span>
+                    </div>
                     <div className="text-amber-300">
-                      Downlink Δf: {d.dopplerShiftHz >= 0 ? '+' : ''}{d.dopplerShiftHz} Hz
+                      Downlink Δf: {d.dopplerShiftHz >= 0 ? '+' : ''}{d.dopplerShiftHz.toLocaleString()} Hz
                     </div>
                     <div className="text-sky-300">
-                      Uplink Pre-Comp: {d.uplinkShiftHz >= 0 ? '+' : ''}{d.uplinkShiftHz} Hz
+                      Uplink Pre-Comp: {d.uplinkShiftHz >= 0 ? '+' : ''}{d.uplinkShiftHz.toLocaleString()} Hz
                     </div>
-                    <div className="text-slate-400">
-                      Elevation: {d.elevationDeg}° | Range: {d.rangeKm} km
+                    <div className="text-slate-400 text-[10.5px]">
+                      Elevation: {d.elevationDeg}° | Range: {d.rangeKm.toLocaleString()} km
                     </div>
                   </div>
                 );

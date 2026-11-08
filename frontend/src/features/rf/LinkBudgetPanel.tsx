@@ -76,6 +76,7 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
 
       return {
         time: new Date(s.epochMs).toLocaleTimeString([], {
+          hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
           hour12: false,
@@ -181,10 +182,10 @@ export const LinkBudgetPanel: React.FC<LinkBudgetPanelProps> = ({ pass, carrierF
 
           <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={marginTimeSeries} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <LineChart data={marginTimeSeries} margin={{ top: 5, right: 15, left: 15, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} tickFormatter={(v) => `${v}dB`} />
+                <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} interval="preserveStartEnd" minTickGap={35} />
+                <YAxis width={55} stroke="#64748b" fontSize={10} tickLine={false} tickFormatter={(v) => `${Math.round(v)} dB`} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
