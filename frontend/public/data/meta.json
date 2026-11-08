@@ -1,14 +1,14 @@
 {
-  "fetch_time_utc": "2026-11-08T04:16:07.127328+00:00",
+  "fetch_time_utc": "2026-11-08T13:06:11.256594+00:00",
   "source": "CelesTrak CCSDS OMM/GP API",
-  "total_objects": 3794,
-  "active_satellites": 1121,
-  "debris_objects": 2673,
-  "isro_assets": 80,
-  "stale_objects": 44,
+  "total_objects": 1683,
+  "active_satellites": 991,
+  "debris_objects": 692,
+  "isro_assets": 46,
+  "stale_objects": 14,
   "decayed_objects": 0,
-  "oldest_epoch": "2026-10-07T08:57:59.892768",
-  "newest_epoch": "2026-11-08T04:16:07.127328",
+  "oldest_epoch": "2026-10-11T17:31:09.794208",
+  "newest_epoch": "2026-11-10T19:43:23.687616",
   "compression": "gzip",
   "schema_version": "3.0.0"
 }
