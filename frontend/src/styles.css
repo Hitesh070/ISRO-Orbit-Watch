@@ -39,6 +39,30 @@ a { color: inherit; text-decoration: none; }
 .status-led.warn { background: var(--amber); box-shadow: 0 0 8px rgba(242, 180, 97, .35); }
 .clock-pill { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; color: #b1c6d1; background: rgba(255,255,255,.025); }
 .clock-pill svg { color: var(--cyan); }
+.app-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.app-nav button { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; color: #8299a7; background: transparent; cursor: pointer; font-size: 10px; }
+.app-nav button:hover, .app-nav button.active { color: var(--cyan); border-color: rgba(86, 214, 237, .18); background: rgba(86, 214, 237, .06); }
+.clock-pill { margin-left: 4px; }
+.data-page { min-height: 0; flex: 1; overflow-y: auto; padding: 34px clamp(18px, 5vw, 72px); background: radial-gradient(ellipse at 50% 0%, rgba(18, 54, 72, .3), transparent 60%), #09151f; }
+.data-page-heading { max-width: 760px; margin: 0 auto 22px; }
+.data-page-heading h1 { margin: 7px 0; color: #e8f5f8; font-size: 28px; letter-spacing: -.04em; }
+.data-page-heading p { margin: 0; color: #92aab6; font-size: 12px; line-height: 1.6; }
+.telemetry-note { max-width: 760px; display: flex; gap: 11px; align-items: flex-start; margin: 0 auto 22px; padding: 13px 15px; border: 1px solid rgba(242, 180, 97, .2); border-radius: 8px; color: #c6ad8d; background: rgba(118, 78, 34, .12); font-size: 10px; line-height: 1.5; }
+.telemetry-note svg { flex: 0 0 auto; color: var(--amber); }
+.telemetry-note strong { color: #f0c987; }
+.data-card-grid { max-width: 1050px; display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 13px; margin: auto; }
+.archive-card { padding: 17px; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(145deg, rgba(17, 37, 50, .92), rgba(9, 21, 31, .94)); }
+.archive-card-top { display: flex; justify-content: space-between; color: #6b8796; }
+.archive-tag { color: var(--cyan); font: 8px var(--mono); letter-spacing: .1em; }
+.archive-card h2 { margin: 13px 0 7px; font-size: 15px; }
+.archive-card > p { min-height: 44px; margin: 0 0 12px; color: #91a7b2; font-size: 10px; line-height: 1.55; }
+.archive-source { display: flex; align-items: center; gap: 7px; padding: 9px 0; border-top: 1px solid var(--line); color: #d0e0e6; font-size: 10px; }
+.archive-source svg { color: var(--cyan); }
+.archive-card .archive-note { min-height: 57px; margin: 0; color: #778f9c; font-size: 9px; }
+.archive-card > a { display: flex; align-items: center; gap: 5px; margin-top: 12px; color: var(--cyan); font-size: 9px; }
+.archive-card > a.archive-mission-link { margin-top: 8px; color: #8299a6; font-size: 8px; }
+.data-page-footer { max-width: 1050px; display: flex; gap: 8px; margin: 20px auto 0; color: #69818e; font: 9px var(--mono); }
+.data-page-footer a { color: #8ccbd8; }
 .sourcebar { height: 38px; flex: 0 0 38px; padding: 0 22px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(13, 27, 38, .6); font: 9px var(--mono); letter-spacing: .035em; color: #a2b3bd; }
 .sourcebar-copy, .sourcebar-right { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .sourcebar-copy svg { color: var(--cyan); flex: 0 0 auto; }
@@ -186,6 +210,7 @@ a { color: inherit; text-decoration: none; }
   body { overflow: auto; }
   .app-shell { min-height: 100vh; height: auto; }
   .titlebar { padding-inline: 12px; }
+  .app-nav { margin-left: auto; }
   .titlebar-status { display: none; }
   .sourcebar { padding-inline: 12px; }
   .sourcebar-right > span { display: none; }
@@ -202,6 +227,11 @@ a { color: inherit; text-decoration: none; }
   .brand-copy strong { font-size: 9px; }
   .brand-copy span { font-size: 7px; }
   .clock-pill { font-size: 8px; padding: 7px; }
+  .titlebar { gap: 6px; }
+  .brand-copy { min-width: 0; }
+  .app-nav button { padding: 7px 6px; font-size: 0; }
+  .app-nav button svg { width: 16px; height: 16px; }
+  .data-page { padding: 24px 14px; }
   .globe-legend { flex-direction: column; gap: 6px; }
   .globe-footer { gap: 15px; padding-inline: 11px; }
   .globe-footer > div:nth-child(2) { display: none; }

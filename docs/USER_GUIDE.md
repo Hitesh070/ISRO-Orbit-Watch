@@ -25,3 +25,7 @@ Open **Passes** and enter latitude, longitude, site altitude in metres, and mini
 The app checks the public manifest every minute and downloads catalog elements only after the snapshot timestamp changes. The public refresh pipeline is limited to two hours for GP/OMM elements and twelve hours for SATCAT. If the public branch is not available, the app identifies the bundled snapshot or cached snapshot and displays its recorded fetch time.
 
 For official Earth-observation visuals, use the link to [ISRO Upagrah](https://bhoonidhi.nrsc.gov.in/upagrah). The app links to published, processed science/product archives where verified. It does not claim access to live spacecraft sensor/downlink telemetry. Source notes and texture attribution are in [DATA_SOURCES.md](DATA_SOURCES.md).
+
+## Public satellite data
+
+Choose **Public data** in the top navigation to browse verified official portals for AstroSat, NISAR, INSAT-3DS, Cartosat-3, and EOS-06. Each card links to its mission page and data portal and notes that product availability or registration may vary. These portals publish processed science or Earth-observation products; this view does not display live spacecraft telemetry.

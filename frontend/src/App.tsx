@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, AlertTriangle, ArrowUpRight, CalendarClock, ChevronRight, CircleHelp, Clock3, Compass, Crosshair, Database, Globe2, LoaderCircle, MapPin, Orbit, Radio, RefreshCw, Search, Satellite, ShieldCheck, Signal, Sparkles } from 'lucide-react';
 import Globe from './Globe';
 import { calculatePosition, makeSatRec, predictNextPass, predictOrbitTrack } from './orbit';
-import { missionProfile } from './missionProfiles';
+import { MISSION_PROFILES, missionProfile } from './missionProfiles';
 import type { CatalogManifest, OmmRecord, SatellitePosition } from './types';
 
 const BUNDLED_DATA_ROOT = 'data';
@@ -108,6 +108,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [panel, setPanel] = useState<'overview' | 'passes' | 'about'>('overview');
+  const [section, setSection] = useState<'orbit' | 'data'>('orbit');
   const [observerFields, setObserverFields] = useState({ latitude: '', longitude: '', altitude: '', mask: '10' });
   const [pass, setPass] = useState<{ aos: Date; los: Date; maxElevationDeg: number } | null>(null);
   const [passError, setPassError] = useState('');
@@ -251,6 +252,10 @@ export default function App() {
         <div className="titlebar-status"><span className={`status-led ${loadState === 'online' && !dataIsStale ? 'live' : 'warn'}`} />
           <span>{loadState === 'online' ? 'PUBLIC CATALOG CONNECTED' : loadState === 'bundled' ? 'PACKAGED SNAPSHOT' : loadState === 'offline' ? 'OFFLINE CACHE' : loadState === 'loading' ? 'CONNECTING' : 'DATA UNAVAILABLE'}</span>
         </div>
+        <nav className="app-nav" aria-label="Main sections">
+          <button className={section === 'orbit' ? 'active' : ''} onClick={() => setSection('orbit')}><Orbit size={14} />Orbit watch</button>
+          <button className={section === 'data' ? 'active' : ''} onClick={() => setSection('data')}><Database size={14} />Public data</button>
+        </nav>
         <div className="clock-pill"><Clock3 size={14} /><span>{clockText}</span></div>
       </header>
 
@@ -279,7 +284,19 @@ export default function App() {
         </div>
       )}
 
-      <main className="main-layout">
+      {section === 'data' ? <main className="data-page">
+        <div className="data-page-heading"><div className="eyebrow">OFFICIAL MISSION ARCHIVES</div><h1>Public satellite data</h1><p>Browse published science and Earth-observation products from Indian missions. Availability, registration, and download terms are set by each source portal.</p></div>
+        <div className="telemetry-note"><Radio size={17}/><span><strong>These are archived data products, not live spacecraft telemetry.</strong> Public engineering downlink and command feeds are not provided here.</span></div>
+        <div className="data-card-grid">{Object.entries(MISSION_PROFILES).filter(([, profile]) => profile.dataUrl).map(([name, profile]) => <article className="archive-card" key={name}>
+          <div className="archive-card-top"><span className="archive-tag">{name.includes('NISAR') || name.includes('CARTOSAT') || name.includes('EOS-6') ? 'EARTH OBSERVATION' : name === 'INSAT-3DS' ? 'METEOROLOGY' : 'SPACE SCIENCE'}</span><ArrowUpRight size={15}/></div>
+          <h2>{name}</h2><p>{profile.purpose}</p>
+          <div className="archive-source"><Database size={14}/><span>{profile.dataLabel}</span></div>
+          <p className="archive-note">{profile.dataNote}</p>
+          <a href={profile.dataUrl} target="_blank" rel="noreferrer">Open official data portal <ArrowUpRight size={14}/></a>
+          <a className="archive-mission-link" href={profile.missionSource} target="_blank" rel="noreferrer">Mission information <ArrowUpRight size={12}/></a>
+        </article>)}</div>
+        <div className="data-page-footer">Sources: <a href="https://bhoonidhi.nrsc.gov.in/" target="_blank" rel="noreferrer">Bhoonidhi</a><span>·</span><a href="https://www.isro.gov.in/Sciencedata.html" target="_blank" rel="noreferrer">ISRO science archives</a><span>·</span><a href="https://mosdac.gov.in/" target="_blank" rel="noreferrer">MOSDAC</a></div>
+      </main> : <main className="main-layout">
         <aside className="left-rail">
           <div className="rail-heading">
             <div><div className="eyebrow">MISSION VIEW</div><h1>India in orbit</h1></div>
@@ -377,7 +394,7 @@ export default function App() {
           ) : <div className="select-prompt"><div className="prompt-icon"><Satellite size={23} /></div><strong>Choose an Indian spacecraft</strong><span>Select one from the list or click its marker on the globe to inspect its current modelled position and orbit.</span></div>}
           <div className="data-links"><div className="eyebrow">PUBLIC MISSION DATA</div><a href="https://bhoonidhi.nrsc.gov.in/" target="_blank" rel="noreferrer">Bhoonidhi earth-observation archive <ArrowUpRight size={13} /></a><a href="https://www.isro.gov.in/Sciencedata.html" target="_blank" rel="noreferrer">ISRO science data archives <ArrowUpRight size={13} /></a></div>
         </aside>
-      </main>
+      </main>}
 
       <footer className="app-footer">
         <div><span className="footer-led" /><span>{loadState === 'online' ? 'PUBLIC CATALOG CHECKED' : loadState === 'bundled' ? 'PACKAGED DATA' : loadState.toUpperCase()}</span><span className="footer-separator">·</span><span>{lastCheck ? formatUtc(lastCheck) : 'Waiting for first check'}</span></div>
