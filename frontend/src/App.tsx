@@ -247,7 +247,7 @@ export default function App() {
     <div className="app-shell">
       <header className="titlebar">
         <div className="brandmark"><Orbit size={18} /></div>
-        <div className="brand-copy"><strong>INDIA ORBIT WATCH</strong><span>PUBLIC INDIAN SPACECRAFT TRACKING</span></div>
+        <div className="brand-copy"><strong>ISRO ORBIT WATCH</strong><span>PUBLIC INDIAN SPACECRAFT TRACKING</span></div>
         <div className="titlebar-status"><span className={`status-led ${loadState === 'online' && !dataIsStale ? 'live' : 'warn'}`} />
           <span>{loadState === 'online' ? 'PUBLIC CATALOG CONNECTED' : loadState === 'bundled' ? 'PACKAGED SNAPSHOT' : loadState === 'offline' ? 'OFFLINE CACHE' : loadState === 'loading' ? 'CONNECTING' : 'DATA UNAVAILABLE'}</span>
         </div>

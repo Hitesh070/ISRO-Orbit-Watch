@@ -1,9 +1,9 @@
 {
-  "name": "india-orbit-watch",
+  "name": "isro-orbit-watch",
   "version": "1.0.0",
   "private": true,
   "description": "Windows desktop tracking of public orbital elements for Indian spacecraft",
-  "author": "India Orbit Watch contributors",
+  "author": "ISRO Orbit Watch contributors",
   "main": "desktop/main.cjs",
   "scripts": {
     "install:app": "npm --prefix frontend install",
@@ -20,7 +20,7 @@
   "overrides": { "minimatch": "^11.0.5" },
   "build": {
     "appId": "org.india.orbitwatch",
-    "productName": "India Orbit Watch",
+    "productName": "ISRO Orbit Watch",
     "directories": { "output": "release" },
     "files": ["desktop/main.cjs", "frontend/dist/**/*"],
     "win": { "icon": "resources/icon.ico", "target": ["portable"] }

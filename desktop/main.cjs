@@ -48,7 +48,7 @@ function createWindow() {
     height: 980,
     minWidth: 1040,
     minHeight: 700,
-    title: 'India Orbit Watch',
+    title: 'ISRO Orbit Watch',
     backgroundColor: '#08131c',
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },

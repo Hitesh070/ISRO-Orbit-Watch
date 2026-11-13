@@ -1,4 +1,4 @@
-# India Orbit Watch
+# ISRO Orbit Watch
 
 A Windows desktop app for viewing public orbital-element predictions for Indian spacecraft. It is an independent viewer, not an ISRO product. The globe updates each second by propagating public GP/OMM elements with SGP4. The catalog checks for a refreshed data snapshot once per minute; the data pipeline refreshes GP elements no more often than once per two hours.
 
