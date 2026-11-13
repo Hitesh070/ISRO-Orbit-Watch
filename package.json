@@ -10,7 +10,7 @@
     "build:web": "npm --prefix frontend run build",
     "check:orbit": "node scripts/orbit_smoke.mjs",
     "start": "npm run build:web && electron .",
-    "dist:win": "npm run build:web && electron-builder --win nsis portable",
+    "dist:win": "npm run build:web && electron-builder --win portable",
     "dev:web": "npm --prefix frontend run dev"
   },
   "devDependencies": {
@@ -23,7 +23,6 @@
     "productName": "India Orbit Watch",
     "directories": { "output": "release" },
     "files": ["desktop/main.cjs", "frontend/dist/**/*"],
-    "win": { "icon": "resources/icon.ico", "target": ["nsis", "portable"] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "win": { "icon": "resources/icon.ico", "target": ["portable"] }
   }
 }
