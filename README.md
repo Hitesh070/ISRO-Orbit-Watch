@@ -103,10 +103,10 @@ ISRO Orbit Watch solves these limitations through:
 ```mermaid
 flowchart TD
     subgraph DataPipeline ["Data Ingestion Pipeline (scripts/refresh_india_catalog.py)"]
-        CT_GP["CelesTrak GP/OMM API\n(Active Orbital Elements)"]
-        CT_CAT["CelesTrak SATCAT Database\n(Owner: 'IND' / 'ISRO')"]
-        Filter["Python Catalog Filter & Validator\n(Rate Limit & Schema Verification)"]
-        JSONStore["frontend/public/data/\ncatalog.json & meta.json"]
+        CT_GP["CelesTrak GP/OMM API<br/>(Active Orbital Elements)"]
+        CT_CAT["CelesTrak SATCAT Database<br/>(Owner: 'IND' / 'ISRO')"]
+        Filter["Python Catalog Filter and Validator<br/>(Rate Limit and Schema Verification)"]
+        JSONStore["frontend/public/data/<br/>catalog.json and meta.json"]
         
         CT_GP --> Filter
         CT_CAT --> Filter
@@ -114,16 +114,16 @@ flowchart TD
     end
 
     subgraph DesktopHost ["Electron Desktop Host (desktop/main.cjs)"]
-        MainProc["Electron Main Process & Window Host"]
-        Security["Context Isolation & Preload Layer"]
+        MainProc["Electron Main Process &amp; Window Host"]
+        Security["Context Isolation &amp; Preload Layer"]
         LocalCache["Bundled 77-Satellite Snapshot Cache"]
     end
 
     subgraph FrontendEngine ["Three.js 3D Visualizer (React 18 + Vite)"]
-        Globe["Three.js 3D Globe Visualizer\n(NASA Blue Marble 4K Day/Night/Specular)"]
-        SGP4["SGP4 Real-Time Propagation Engine\n(frontend/src/orbit.ts)"]
-        PassPredict["Topocentric Pass Predictor\n(AOS, TCA, LOS Horizons)"]
-        HUD["Telemetry HUD & Mission Profile Viewer"]
+        Globe["Three.js 3D Globe Visualizer<br/>(NASA Blue Marble 4K Day/Night/Specular)"]
+        SGP4["SGP4 Real-Time Propagation Engine<br/>(frontend/src/orbit.ts)"]
+        PassPredict["Topocentric Pass Predictor<br/>(AOS, TCA, LOS Horizons)"]
+        HUD["Telemetry HUD and Mission Profile Viewer"]
     end
 
     JSONStore --> LocalCache
@@ -137,16 +137,37 @@ flowchart TD
 
 ### Astrodynamics & Mathematical Modeling
 
-1. **Simplified General Perturbations (SGP4)**:
-   Ingests two-line elements and OMM state records, accounting for secular and periodic gravitational perturbations ($J_2, J_3, J_4$), atmospheric drag ($B^*$), and third-body lunisolar gravity:
-   $$\mathbf{r}_{\text{TEME}}(t), \; \mathbf{v}_{\text{TEME}}(t) = \text{SGP4}\left(\text{TLE}, \; t - t_0\right)$$
+#### 1. Simplified General Perturbations (SGP4)
+Ingests two-line elements and OMM state records, accounting for secular and periodic gravitational perturbations ($J_2, J_3, J_4$), atmospheric drag ($B^*$), and third-body lunisolar gravity:
 
-2. **TEME to Earth-Centered Earth-Fixed (ECEF) Rotation**:
-   Rotates state vectors from the True Equator, Mean Equinox (TEME) inertial frame into the rotating Greenwich geographic frame using Greenwich Mean Sidereal Time ($\theta_{\text{GMST}}$):
-   $$\begin{bmatrix} x_{\text{ECEF}} \\ y_{\text{ECEF}} \\ z_{\text{ECEF}} \end{bmatrix} = \begin{bmatrix} \cos\theta_{\text{GMST}} & \sin\theta_{\text{GMST}} & 0 \\ -\sin\theta_{\text{GMST}} & \cos\theta_{\text{GMST}} & 0 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} x_{\text{TEME}} \\ y_{\text{TEME}} \\ z_{\text{TEME}} \end{bmatrix}$$
+$$
+\mathbf{r}_{\text{TEME}}(t), \quad \mathbf{v}_{\text{TEME}}(t) = \text{SGP4}\left(\text{TLE}, \; t - t_0\right)
+$$
 
-3. **Geodetic Sub-Satellite Point (WGS-84 Ellipsoid)**:
-   Transforms Cartesian ECEF coordinates into geodetic latitude ($\phi$), longitude ($\lambda$), and ellipsoidal altitude ($h$) over the WGS-84 reference ellipsoid ($a = 6378.137\text{ km}, f = 1/298.257223563$).
+#### 2. TEME to Earth-Centered Earth-Fixed (ECEF) Rotation
+Rotates state vectors from the True Equator, Mean Equinox (TEME) inertial frame into the rotating Greenwich geographic frame using Greenwich Mean Sidereal Time ($\theta_{\text{GMST}}$):
+
+$$
+\begin{bmatrix}
+x_{\text{ECEF}} \\
+y_{\text{ECEF}} \\
+z_{\text{ECEF}}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\cos\theta_{\text{GMST}} & \sin\theta_{\text{GMST}} & 0 \\
+-\sin\theta_{\text{GMST}} & \cos\theta_{\text{GMST}} & 0 \\
+0 & 0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+x_{\text{TEME}} \\
+y_{\text{TEME}} \\
+z_{\text{TEME}}
+\end{bmatrix}
+$$
+
+#### 3. Geodetic Sub-Satellite Point (WGS-84 Ellipsoid)
+Transforms Cartesian ECEF coordinates into geodetic latitude ($\phi$), longitude ($\lambda$), and ellipsoidal altitude ($h$) over the WGS-84 reference ellipsoid ($a = 6378.137\text{ km}$, $f = 1 / 298.257223563$).
 
 ---
 
@@ -295,18 +316,18 @@ sequenceDiagram
     participant CelesTrak as CelesTrak GP/OMM API
     participant Cache as Local JSON Store
     participant SGP4 as orbit.ts (SGP4 Engine)
-    participant Scene as Three.js Globe & HUD
+    participant Scene as Three.js Globe and HUD
 
     Pipeline->>CelesTrak: Query active satellite orbital records
     CelesTrak-->>Pipeline: Return GP JSON / OMM elements
-    Pipeline->>Pipeline: Filter owner: "IND" / "ISRO" & validate epoch
+    Pipeline->>Pipeline: Filter owner IND / ISRO and validate epoch
     Pipeline->>Cache: Write frontend/public/data/catalog.json
     Cache->>SGP4: Ingest 77 active satellite TLE state vectors
     loop 1-Second Astrodynamics Loop
         SGP4->>SGP4: Compute TEME coordinates r(t), v(t) via SGP4
         SGP4->>SGP4: Apply Greenwich Mean Sidereal Time (GMST) rotation
         SGP4->>SGP4: Compute WGS-84 Sub-Satellite Geodetic Lat/Lon/Alt
-        SGP4->>Scene: Update 3D satellite mesh positions & ground tracks
+        SGP4->>Scene: Update 3D satellite mesh positions and ground tracks
         SGP4->>Scene: Re-evaluate ground station pass horizon angles
     end
 ```
