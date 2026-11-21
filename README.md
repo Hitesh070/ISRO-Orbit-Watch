@@ -64,7 +64,7 @@
 
 ### Problem Statement
 Standard orbital tracking applications suffer from three recurring visualization shortcomings:
-1. **Distorted Non-Linear Scales**: Satellite altitudes are exaggerated by $5\times - 20\times$ to look prominent, completely distorting true orbital geometries between Low Earth Orbit (LEO) and Geostationary Orbit (GEO).
+1. **Distorted Non-Linear Scales**: Satellite altitudes are exaggerated by 5× to 20× to look prominent, completely distorting true orbital geometries between Low Earth Orbit (LEO) and Geostationary Orbit (GEO).
 2. **Generic Global Catalogs**: Massive catalogs contain thousands of dead debris fragments, cluttering displays and obscuring national space mission monitoring.
 3. **Black-Box Ephemeris Calculations**: Many tools use coarse circular approximations rather than rigorous Simplified General Perturbations (SGP4) mathematical modeling accounting for Earth oblateness ($J_2$) and atmospheric drag.
 
@@ -140,14 +140,18 @@ flowchart TD
 #### 1. Simplified General Perturbations (SGP4)
 Ingests two-line elements and OMM state records, accounting for secular and periodic gravitational perturbations ($J_2, J_3, J_4$), atmospheric drag ($B^*$), and third-body lunisolar gravity:
 
-$$
+```math
 \mathbf{r}_{\text{TEME}}(t), \quad \mathbf{v}_{\text{TEME}}(t) = \text{SGP4}\left(\text{TLE}, \; t - t_0\right)
-$$
+```
 
 #### 2. TEME to Earth-Centered Earth-Fixed (ECEF) Rotation
 Rotates state vectors from the True Equator, Mean Equinox (TEME) inertial frame into the rotating Greenwich geographic frame using Greenwich Mean Sidereal Time ($\theta_{\text{GMST}}$):
 
-$$
+```math
+\mathbf{r}_{\text{ECEF}} = \mathbf{R}_z(\theta_{\text{GMST}}) \, \mathbf{r}_{\text{TEME}}
+```
+
+```math
 \begin{bmatrix}
 x_{\text{ECEF}} \\
 y_{\text{ECEF}} \\
@@ -164,7 +168,7 @@ x_{\text{TEME}} \\
 y_{\text{TEME}} \\
 z_{\text{TEME}}
 \end{bmatrix}
-$$
+```
 
 #### 3. Geodetic Sub-Satellite Point (WGS-84 Ellipsoid)
 Transforms Cartesian ECEF coordinates into geodetic latitude ($\phi$), longitude ($\lambda$), and ellipsoidal altitude ($h$) over the WGS-84 reference ellipsoid ($a = 6378.137\text{ km}$, $f = 1 / 298.257223563$).
